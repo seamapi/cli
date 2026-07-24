@@ -1,6 +1,6 @@
-import { ApiDefinitions } from "./get-api-definitions"
+import { ApiBlueprint } from "./get-api-blueprint"
 
 export interface ContextHelpers {
-  api: ApiDefinitions
+  blueprint: ApiBlueprint
   is_interactive: boolean
 }

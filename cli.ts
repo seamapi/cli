@@ -10,7 +10,7 @@ import chalk from "chalk"
 import { interactForServerSelection } from "./lib/interact-for-server-selection"
 import { getServer } from "./lib/get-server"
 import prompts from "prompts"
-import { getApiDefinitions } from "./lib/get-api-definitions"
+import { getApiBlueprint } from "./lib/get-api-blueprint"
 import commandLineUsage from "command-line-usage"
 import { ContextHelpers } from "./lib/types"
 import { version } from "./package.json"
@@ -110,7 +110,7 @@ async function cli(args: ParsedArgs) {
   const use_remote_api_defs =
     args.remote_api_defs ?? config.get("use_remote_api_defs")
 
-  const api = await getApiDefinitions(use_remote_api_defs ?? false)
+  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false)
 
   const commandParams: Record<string, any> = {}
 
@@ -120,7 +120,7 @@ async function cli(args: ParsedArgs) {
   const is_interactive = args.y !== true
 
   const ctx: ContextHelpers = {
-    api,
+    blueprint,
     is_interactive,
   }
 
@@ -249,8 +249,6 @@ const handleConnectWebviewResponse = async (connect_webview: any) => {
       const { default: open } = await import("open")
       await open(url)
     }
-  } else {
-    //TODO: Figure out how to open the webview in the browser
   }
 }
 
