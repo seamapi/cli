@@ -23,6 +23,9 @@
     "format": [
       "cjs"
     ],
+    "noExternal": [
+      "@seamapi/http"
+    ],
     "sourcemap": true
   },
   "devDependencies": {
