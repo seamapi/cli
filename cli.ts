@@ -18,6 +18,7 @@ import { interactForUseRemoteApiDefs } from "./lib/interact-for-use-remote-api-d
 import { randomBytes } from "node:crypto"
 import { interactForActionAttemptPoll } from "./lib/interact-for-action-attempt-poll"
 import { RequestSeamApi } from "./lib/util/request-seam-api"
+import { validateToken } from "./lib/validate-token"
 
 const sections = [
   {
@@ -139,7 +140,9 @@ async function cli(args: ParsedArgs) {
       config.delete("current_workspace_id")
     }
     if (args.token) {
-      config.set(`${getServer()}.pat`, args.token)
+      const token = String(args.token).trim()
+      await validateToken(token, args.workspace_id)
+      config.set(`${getServer()}.pat`, token)
       config.delete("current_workspace_id")
     }
     if (args.workspace_id) {

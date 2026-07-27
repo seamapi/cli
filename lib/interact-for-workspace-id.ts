@@ -1,11 +1,17 @@
 import { getConfigStore } from "./get-config-store"
 import prompts from "prompts"
-import { getSeam, getSeamMultiWorkspace } from "./get-seam"
+import { SeamHttpWithoutWorkspace } from "@seamapi/http/connect"
+import { getSeamMultiWorkspace } from "./get-seam"
+import { getServer } from "./get-server"
 import { withLoading } from "./util/with-loading"
 
-export const interactForWorkspaceId = async () => {
+export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const config = getConfigStore()
-  const seam = await getSeamMultiWorkspace()
+  const seam = personalAccessToken
+    ? SeamHttpWithoutWorkspace.fromPersonalAccessToken(personalAccessToken, {
+        endpoint: getServer(),
+      })
+    : await getSeamMultiWorkspace()
 
   const workspaces = await withLoading("Fetching workspaces...", () =>
     seam.workspaces.list()
