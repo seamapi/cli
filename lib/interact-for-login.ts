@@ -42,7 +42,9 @@ export const interactForLogin = async () => {
   } else if (isApiKey(token)) {
     await withLoading("Validating API key...", () => validateToken(token))
   } else {
-    throw new Error("Invalid token: expected a Personal Access Token or API Key")
+    throw new Error(
+      "Invalid token: expected a Personal Access Token or API Key"
+    )
   }
 
   config.set(`${getServer()}.pat`, token)
