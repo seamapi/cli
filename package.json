@@ -50,8 +50,8 @@
   },
   "dependencies": {
     "@seamapi/blueprint": "^1.0.0",
-    "@seamapi/http": "^1.127.0",
-    "@seamapi/types": "^1.975.0",
+    "@seamapi/http": "^1.128.0",
+    "@seamapi/types": "1.982.0",
     "nanospinner": "^1.2.2",
     "open": "^10.0.3"
   }
