@@ -25,7 +25,7 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"],
     "paths": {
-      "@seamapi/makenew-tsmodule": ["./src/index.ts"],
+      "@seamapi/cli": ["./src/index.ts"],
       "lib/*": ["./src/lib/*"]
     }
   },

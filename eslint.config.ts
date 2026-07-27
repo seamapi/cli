@@ -60,7 +60,7 @@ export default [
             ['^\\u0000'],
             ['^node:'],
             ['^@?\\w'],
-            ['@seamapi/makenew-tsmodule'],
+            ['@seamapi/cli'],
             ['^lib/'],
             ['^'],
             ['^\\.'],

@@ -1,92 +1,20 @@
-# TypeScript Module Package Skeleton
+# Seam CLI
 
-[![npm](https://img.shields.io/npm/v/@seamapi/makenew-tsmodule.svg)](https://www.npmjs.com/package/@seamapi/makenew-tsmodule)
-[![GitHub Actions](https://github.com/seamapi/makenew-tsmodule/actions/workflows/check.yml/badge.svg)](https://github.com/seamapi/makenew-tsmodule/actions/workflows/check.yml)
+[![npm](https://img.shields.io/npm/v/@seamapi/cli.svg)](https://www.npmjs.com/package/@seamapi/cli)
+[![GitHub Actions](https://github.com/seamapi/cli/actions/workflows/check.yml/badge.svg)](https://github.com/seamapi/cli/actions/workflows/check.yml)
 
-Package skeleton for a TypeScript module.
+A command line interface (CLI) for interacting with the Seam API.
 
 ## Description
 
-Bootstrap a new TypeScript module in five minutes or less.
-
-### Features
-
-- Strongly typed JavaScript with [TypeScript].
-- Native [ECMAScript module] compatible with [Node.js].
-- Package management with [npm].
-- Publish as a package to [GitHub Packages] and [npm].
-- Examples with configurable options and arguments powered by [yargs] with [landlubber].
-- Linting with the [JavaScript neostandard Style] using [ESLint].
-- [Prettier] code.
-- Futuristic debuggable unit testing with [AVA].
-- Code coverage reporting with [Istanbul] and [c8].
-- Robust static dependency analysis with [DPDM].
-- Fully automated version management and package publishing with [semantic-release].
-- Continuous testing and package publishing with [GitHub Actions].
-- Consistent coding with [EditorConfig].
-- Start coding instantly with [GitHub Codespaces].
-- Get PR reviews directly from [code owners].
-- Automatically close [stale] Issues and Pull Requests.
-- Badges from [Shields.io].
-
-[AVA]: https://github.com/avajs/ava
-[code owners]: https://github.blog/2017-07-06-introducing-code-owners/
-[DPDM]: https://github.com/acrazing/dpdm
-[ECMAScript module]: https://nodejs.org/api/esm.html
-[ESLint]: https://eslint.org/
-[EditorConfig]: https://editorconfig.org/
-[GitHub Actions]: https://github.com/features/actions
-[GitHub Codespaces]: https://github.com/features/packages
-[GitHub Packages]: https://github.com/features/packages
-[Istanbul]: https://istanbul.js.org/
-[JavaScript neostandard Style]: https://github.com/neostandard/neostandard
-[Node.js]: https://nodejs.org/
-[Prettier]: https://prettier.io/
-[semantic-release]: https://semantic-release.gitbook.io/
-[Shields.io]: https://shields.io/
-[stale]: https://github.com/marketplace/stale
-[TypeScript]: https://www.typescriptlang.org/
-[c8]: https://github.com/bcoe/c8
-[landlubber]: https://github.com/razor-x/landlubber
-[npm]: https://www.npmjs.com/
-[yargs]: https://yargs.js.org/
-
-### Bootstrapping a new project
-
-1. Enable [trusted publishing for this npm package][npm trusted publishing].
-2. [Trigger a makenew workflow from this repository][makenew workflow]. 🚀
-   - Provide a value for each required input.
-   - There are no defaults.
-   - Example values are shown in parentheses.
-3. When the workflow completes, clone your new repo and start coding!
-
-[makenew workflow]: https://github.com/seamapi/makenew-tsmodule/actions/workflows/makenew.yml
-[npm trusted publishing]: https://docs.npmjs.com/trusted-publishers#supported-cicd-providers
-
-### Updating from this skeleton
-
-If you want to pull in future updates from this skeleton,
-you can fetch and merge in changes from this repository.
-
-Add this as a new remote with
-
-```
-$ git remote add makenew git@github.com:seamapi/makenew-tsmodule.git
-```
-
-You can then fetch and merge changes with
-
-```
-$ git fetch --no-tags makenew
-$ git merge makenew/main
-```
+TODO
 
 ## Installation
 
 Add this as a dependency to your project using [npm] with
 
 ```
-$ npm install @seamapi/makenew-tsmodule
+$ npm install @seamapi/cli
 ```
 
 [npm]: https://www.npmjs.com/
@@ -96,8 +24,8 @@ $ npm install @seamapi/makenew-tsmodule
 ### Quickstart
 
 ```
-$ git clone https://github.com/seamapi/makenew-tsmodule.git
-$ cd makenew-tsmodule
+$ git clone https://github.com/seamapi/cli.git
+$ cd cli
 $ nvm install
 $ npm install
 $ npm run test:watch
@@ -117,10 +45,10 @@ The [source code] is hosted on GitHub.
 Clone the project with
 
 ```
-$ git clone git@github.com:seamapi/makenew-tsmodule.git
+$ git clone git@github.com:seamapi/cli.git
 ```
 
-[source code]: https://github.com/seamapi/makenew-tsmodule
+[source code]: https://github.com/seamapi/cli
 
 ### Requirements
 
@@ -173,7 +101,7 @@ $ gh workflow run version.yml --raw-field version=<version>
 
 [GitHub CLI]: https://cli.github.com/
 [npm-version]: https://docs.npmjs.com/cli/version
-[version workflow_dispatch on GitHub Actions]: https://github.com/seamapi/makenew-tsmodule/actions?query=workflow%3Aversion
+[version workflow_dispatch on GitHub Actions]: https://github.com/seamapi/cli/actions?query=workflow%3Aversion
 
 ## GitHub Actions
 

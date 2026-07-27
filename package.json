@@ -1,7 +1,7 @@
 {
-  "name": "@seamapi/makenew-tsmodule",
-  "version": "3.0.0",
-  "description": "Package skeleton for a TypeScript module.",
+  "name": "@seamapi/cli",
+  "version": "0.0.0",
+  "description": "A command line interface (CLI) for interacting with the Seam API.",
   "type": "module",
   "main": "index.js",
   "types": "index.d.ts",
@@ -16,9 +16,9 @@
   "keywords": [
     "node"
   ],
-  "homepage": "https://github.com/seamapi/makenew-tsmodule",
-  "bugs": "https://github.com/seamapi/makenew-tsmodule/issues",
-  "repository": "seamapi/makenew-tsmodule",
+  "homepage": "https://github.com/seamapi/cli",
+  "bugs": "https://github.com/seamapi/cli/issues",
+  "repository": "seamapi/cli",
   "license": "MIT",
   "author": {
     "name": "Seam Labs, Inc.",
