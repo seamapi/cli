@@ -1,23 +1,16 @@
-import prompts from "prompts"
 import { getSeam } from "./get-seam"
-import { withLoading } from "./util/with-loading"
+import { interactForResource } from "./interact-for-resource"
 
 export const interactForAcsEntrance = async () => {
   const seam = await getSeam()
 
-  const entrances = await withLoading("Fetching ACS entrances...", () =>
-    seam.acs.entrances.list()
-  )
-  const { acsEntranceId } = await prompts({
-    name: "acsEntranceId",
-    type: "autocomplete",
-    message: "Select an ACS Entrance:",
-    choices: entrances.map((entrance: any) => ({
+  return interactForResource({
+    resourceName: "ACS entrance",
+    fetchResources: () => seam.acs.entrances.list(),
+    toChoice: (entrance) => ({
       title: entrance.display_name ?? "<No Name>",
       value: entrance.acs_entrance_id,
       description: entrance.acs_entrance_id,
-    })),
+    }),
   })
-
-  return acsEntranceId
 }

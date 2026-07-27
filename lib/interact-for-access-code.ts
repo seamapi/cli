@@ -1,7 +1,6 @@
-import prompts from "prompts"
 import { getSeam } from "./get-seam"
 import { interactForDevice } from "./interact-for-device"
-import { withLoading } from "./util/with-loading"
+import { interactForResource } from "./interact-for-resource"
 
 export const interactForAccessCode = async ({
   device_id,
@@ -14,21 +13,13 @@ export const interactForAccessCode = async ({
     device_id = await interactForDevice()
   }
 
-  const accessCodes = await withLoading("Fetching access codes...", () =>
-    seam.accessCodes.list({
-      device_id,
-    })
-  )
-  const { accessCodeId } = await prompts({
-    name: "accessCodeId",
-    type: "autocomplete",
-    message: "Select an access_code:",
-    choices: accessCodes.map((ac: any) => ({
-      title: ac?.properties?.name ?? "<No Name>",
-      value: ac?.access_code_id,
-      description: `${ac?.type} ${ac?.access_code_id}`,
-    })),
+  return interactForResource({
+    resourceName: "access_code",
+    fetchResources: () => seam.accessCodes.list({ device_id }),
+    toChoice: (accessCode) => ({
+      title: accessCode.name ?? "<No Name>",
+      value: accessCode.access_code_id,
+      description: `${accessCode.type} ${accessCode.access_code_id}`,
+    }),
   })
-
-  return accessCodeId
 }

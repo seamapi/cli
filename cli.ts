@@ -10,7 +10,7 @@ import chalk from "chalk"
 import { interactForServerSelection } from "./lib/interact-for-server-selection"
 import { getServer } from "./lib/get-server"
 import prompts from "prompts"
-import { getApiDefinitions } from "./lib/get-api-definitions"
+import { getApiBlueprint } from "./lib/get-api-blueprint"
 import commandLineUsage from "command-line-usage"
 import { ContextHelpers } from "./lib/types"
 import { version } from "./package.json"
@@ -18,6 +18,7 @@ import { interactForUseRemoteApiDefs } from "./lib/interact-for-use-remote-api-d
 import { randomBytes } from "node:crypto"
 import { interactForActionAttemptPoll } from "./lib/interact-for-action-attempt-poll"
 import { RequestSeamApi } from "./lib/util/request-seam-api"
+import { validateToken } from "./lib/validate-token"
 
 const sections = [
   {
@@ -110,7 +111,7 @@ async function cli(args: ParsedArgs) {
   const use_remote_api_defs =
     args.remote_api_defs ?? config.get("use_remote_api_defs")
 
-  const api = await getApiDefinitions(use_remote_api_defs ?? false)
+  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false)
 
   const commandParams: Record<string, any> = {}
 
@@ -120,7 +121,7 @@ async function cli(args: ParsedArgs) {
   const is_interactive = args.y !== true
 
   const ctx: ContextHelpers = {
-    api,
+    blueprint,
     is_interactive,
   }
 
@@ -139,7 +140,9 @@ async function cli(args: ParsedArgs) {
       config.delete("current_workspace_id")
     }
     if (args.token) {
-      config.set(`${getServer()}.pat`, args.token)
+      const token = String(args.token).trim()
+      await validateToken(token, args.workspace_id)
+      config.set(`${getServer()}.pat`, token)
       config.delete("current_workspace_id")
     }
     if (args.workspace_id) {
@@ -249,8 +252,6 @@ const handleConnectWebviewResponse = async (connect_webview: any) => {
       const { default: open } = await import("open")
       await open(url)
     }
-  } else {
-    //TODO: Figure out how to open the webview in the browser
   }
 }
 

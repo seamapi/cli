@@ -1,7 +1,6 @@
-import prompts from "prompts"
 import { getSeam } from "./get-seam"
 import { interactForAcsSystem } from "./interact-for-acs-system"
-import { withLoading } from "./util/with-loading"
+import { interactForResource } from "./interact-for-resource"
 
 export const interactForAcsUser = async () => {
   const seam = await getSeam()
@@ -10,21 +9,13 @@ export const interactForAcsUser = async () => {
     "What acs_system does the acs_user belong to?"
   )
 
-  const users = await withLoading("Fetching ACS users...", () =>
-    seam.acs.users.list({
-      acs_system_id,
-    })
-  )
-  const { acsUserId } = await prompts({
-    name: "acsUserId",
-    type: "autocomplete",
-    message: "Select an acs_user:",
-    choices: users.map((user) => ({
+  return interactForResource({
+    resourceName: "ACS user",
+    fetchResources: () => seam.acs.users.list({ acs_system_id }),
+    toChoice: (user) => ({
       title: `${user.display_name} ${user.email_address}`,
       value: user.acs_user_id,
       description: user.acs_user_id,
-    })),
+    }),
   })
-
-  return acsUserId
 }

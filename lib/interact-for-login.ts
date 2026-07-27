@@ -1,8 +1,11 @@
 import prompts from "prompts"
 import { getConfigStore } from "./get-config-store"
-import { getCurrentWorkspaceId } from "./get-current-workspace-id"
+import { interactForWorkspaceId } from "./interact-for-workspace-id"
 import { getServer } from "./get-server"
 import chalk from "chalk"
+import { isApiKey, isPersonalAccessToken } from "@seamapi/http/connect"
+import { withLoading } from "./util/with-loading"
+import { validateToken } from "./validate-token"
 
 export const interactForLogin = async () => {
   const config = await getConfigStore()
@@ -28,14 +31,22 @@ export const interactForLogin = async () => {
     type: "text",
     message: "Personal Access Token:",
   })
+  const token = pat?.trim()
 
-  if (!pat) {
-    throw new Error("No PAT provided")
+  if (!token) {
+    throw new Error("No token provided")
   }
 
-  config.set(`${getServer()}.pat`, pat)
+  if (isPersonalAccessToken(token)) {
+    await interactForWorkspaceId(token)
+  } else if (isApiKey(token)) {
+    await withLoading("Validating API key...", () => validateToken(token))
+  } else {
+    throw new Error(
+      "Invalid token: expected a Personal Access Token or API Key"
+    )
+  }
 
-  console.log(`PAT saved! You may begin using the CLI!`)
-
-  await getCurrentWorkspaceId()
+  config.set(`${getServer()}.pat`, token)
+  console.log(`Token saved! You may begin using the CLI!`)
 }

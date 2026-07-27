@@ -1,7 +1,6 @@
 import prompts from "prompts"
 import uniqBy from "lodash/uniqBy"
 import isEqual from "lodash/isEqual"
-import { ApiDefinitions } from "./get-api-definitions"
 import { ContextHelpers } from "./types"
 
 const ergonomicOrder = ["create", "list", "get", "update", "unlock_door"]
@@ -19,8 +18,11 @@ export async function interactForCommandSelection(
   commandPath: string[],
   helpers: ContextHelpers
 ) {
-  const commands = Object.keys(helpers.api.paths!)
-    .map((k) => k.replace(/_/g, "-").replace(/^\//, "").split("/"))
+  const commands = helpers.blueprint.routes
+    .flatMap((route) => route.endpoints)
+    .map((endpoint) =>
+      endpoint.path.replace(/_/g, "-").replace(/^\//, "").split("/")
+    )
     .concat([
       ["login"],
       ["logout"],

@@ -40,5 +40,3 @@ const logRequest = (apiPath: string, params: Record<string, any>) => {
   console.log(`Request Params:`)
   console.log(params)
 }
-
-export default RequestSeamApi

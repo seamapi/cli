@@ -1,7 +1,8 @@
 import {
   SeamHttp,
-  SeamHttpMultiWorkspace,
-  isApiKey,
+  SeamHttpWithoutWorkspace,
+  isConsoleSessionToken,
+  isPersonalAccessToken,
 } from "@seamapi/http/connect"
 import { getConfigStore } from "./get-config-store"
 import { getServer } from "./get-server"
@@ -15,11 +16,11 @@ export const getSeam = async (): Promise<SeamHttp> => {
 
   const options = { endpoint: getServer() }
 
-  if (token.startsWith("seam_at")) {
+  if (isPersonalAccessToken(token)) {
     return SeamHttp.fromPersonalAccessToken(token, workspaceId, options)
   }
 
-  if (token.startsWith("ey")) {
+  if (isConsoleSessionToken(token)) {
     return SeamHttp.fromConsoleSessionToken(token, workspaceId, options)
   }
 
@@ -27,11 +28,15 @@ export const getSeam = async (): Promise<SeamHttp> => {
 }
 
 export const getSeamMultiWorkspace = async (): Promise<
-  SeamHttpMultiWorkspace | SeamHttp
+  SeamHttpWithoutWorkspace | SeamHttp
 > => {
   const config = getConfigStore()
   const token = config.get(`${getServer()}.pat`)
   const options = { endpoint: getServer() }
-  if (isApiKey(token)) return SeamHttp.fromApiKey(token, options)
-  return SeamHttpMultiWorkspace.fromPersonalAccessToken(token, options)
+
+  if (isPersonalAccessToken(token)) {
+    return SeamHttpWithoutWorkspace.fromPersonalAccessToken(token, options)
+  }
+
+  return getSeam()
 }
