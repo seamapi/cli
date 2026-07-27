@@ -7,8 +7,10 @@
   "types": "index.d.ts",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js"
+      "import": {
+        "types": "./index.d.ts",
+        "default": "./index.js"
+      }
     }
   },
   "module": "index.js",
