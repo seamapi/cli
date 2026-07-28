@@ -1,5 +1,4 @@
 import type { Parameter } from '@seamapi/blueprint'
-import prompts from 'prompts'
 
 import { interactForAccessCode } from './interact-for-access-code.js'
 import { interactForAcsEntrance } from './interact-for-acs-entrance.js'
@@ -11,8 +10,10 @@ import { interactForCustomMetadata } from './interact-for-custom-metadata.js'
 import { interactForDevice } from './interact-for-device.js'
 import { interactForTimestamp } from './interact-for-timestamp.js'
 import { interactForUserIdentity } from './interact-for-user-identity.js'
+import { getOutput } from './output/get-output.js'
 import type { ContextHelpers } from './types.js'
 import { ellipsis } from './util/ellipsis.js'
+import { canPrompt, prompt } from './util/prompt.js'
 
 const ergonomicPropOrder = [
   'name',
@@ -53,6 +54,15 @@ export const interactForBlueprintObject = async (
     return args.params
   }
 
+  if (!canPrompt()) {
+    if (haveAllRequiredParams) return args.params
+
+    const missing = required.filter((k) => !args.params[k])
+    throw new Error(
+      `Missing required param${missing.length === 1 ? '' : 's'} ${missing.join(', ')} for /${args.command.join('/').replace(/-/g, '_')}: pass as flags or pipe them in as JSON`,
+    )
+  }
+
   const propSortScore = (prop: string) => {
     if (required.includes(prop)) return 100 - ergonomicPropOrder.indexOf(prop)
     if (args.params[prop] !== undefined) {
@@ -66,8 +76,8 @@ export const interactForBlueprintObject = async (
     ? `Editing "${args.subPropertyPath}"`
     : `[${cmdPath}] Parameters`
 
-  console.log('')
-  const { paramToEdit } = await prompts({
+  getOutput().info()
+  const { paramToEdit } = await prompt({
     name: 'paramToEdit',
     message: parameterSelectionMessage,
     type: 'autocomplete',
@@ -187,7 +197,7 @@ export const interactForBlueprintObject = async (
         value = await interactForTimestamp()
       } else {
         value = (
-          await prompts({
+          await prompt({
             name: 'value',
             message: `${paramToEdit}:`,
             type: 'text',
@@ -198,7 +208,7 @@ export const interactForBlueprintObject = async (
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'enum') {
       const value = (
-        await prompts({
+        await prompt({
           name: 'value',
           message: `${paramToEdit}:`,
           type: 'select',
@@ -211,7 +221,7 @@ export const interactForBlueprintObject = async (
       args.params[paramToEdit] = value
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'boolean') {
-      const { value } = await prompts({
+      const { value } = await prompt({
         name: 'value',
         message: `${paramToEdit}:`,
         type: 'toggle',
@@ -225,7 +235,7 @@ export const interactForBlueprintObject = async (
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'list' && prop.itemFormat === 'enum') {
       const value = (
-        await prompts({
+        await prompt({
           name: 'value',
           message: `${paramToEdit}:`,
           type: 'autocompleteMultiselect',
@@ -256,7 +266,7 @@ export const interactForBlueprintObject = async (
       )
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'number') {
-      const { value } = await prompts({
+      const { value } = await prompt({
         name: 'value',
         message: `${paramToEdit}:`,
         type: 'number',

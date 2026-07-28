@@ -19,5 +19,7 @@ export default defineConfig({
       reporter: ['html', 'lcov', 'text'],
     },
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
+    // End to end tests spawn the CLI, which builds the API blueprint.
+    testTimeout: 60_000,
   },
 })

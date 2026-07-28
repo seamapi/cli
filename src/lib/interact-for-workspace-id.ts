@@ -1,9 +1,9 @@
 import { SeamHttpWithoutWorkspace } from '@seamapi/http/connect'
-import prompts from 'prompts'
 
 import { getConfigStore } from './get-config-store.js'
 import { getSeamMultiWorkspace } from './get-seam.js'
 import { getServer } from './get-server.js'
+import { prompt } from './util/prompt.js'
 import { withLoading } from './util/with-loading.js'
 
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {
@@ -17,7 +17,7 @@ export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const workspaces = await withLoading('Fetching workspaces...', () =>
     seam.workspaces.list(),
   )
-  const { workspaceId } = await prompts({
+  const { workspaceId } = await prompt({
     name: 'workspaceId',
     type: 'select',
     message: 'Select a workspace:',

@@ -1,8 +1,7 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
-import prompts from 'prompts'
-
 import type { ContextHelpers } from './types.js'
+import { canPrompt, prompt } from './util/prompt.js'
 
 const uniqBy = <T>(items: T[], keyOf: (item: T) => unknown): T[] => {
   const seen = new Set<unknown>()
@@ -72,7 +71,13 @@ export async function interactForCommandSelection(
 
   const commandPathStr = commandPath.join('/').replace(/-/g, '_')
 
-  const res = await prompts({
+  if (!canPrompt()) {
+    throw new Error(
+      `Ambiguous command "/${commandPathStr}": specify a full command, e.g., "seam devices list"`,
+    )
+  }
+
+  const res = await prompt({
     name: 'Command',
     type: 'autocomplete',
     choices: [

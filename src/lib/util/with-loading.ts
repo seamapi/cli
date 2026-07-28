@@ -1,10 +1,15 @@
 import { createSpinner } from 'nanospinner'
 
+import { getOutput } from 'lib/output/get-output.js'
+
 export const withLoading = async <T>(
   message: string,
   fn: () => Promise<T>,
 ): Promise<T> => {
-  const spinner = createSpinner(message).start()
+  if (!shouldSpin()) return await fn()
+
+  // Progress is not a command result, so it is rendered to stderr.
+  const spinner = createSpinner(message, { stream: process.stderr }).start()
   try {
     const result = await fn()
     spinner.success()
@@ -14,3 +19,6 @@ export const withLoading = async <T>(
     throw error
   }
 }
+
+const shouldSpin = (): boolean =>
+  getOutput().format === 'text' && process.stderr.isTTY === true

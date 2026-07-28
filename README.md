@@ -69,6 +69,48 @@ seam access-codes create --code "1234" --name "My Code"
 seam access-codes list --device-id $MY_DOOR
 ```
 
+### Output
+
+Only the response is written to stdout, so any command may be piped or
+redirected. Prompts, progress, and other information are written to stderr.
+
+The response is trimmed to the response key and pagination: no other top level
+fields are reported.
+
+```bash
+# The response, and nothing else, ends up in the file
+seam devices list > devices.json
+
+# Prompts and progress still show up in the terminal
+seam devices list | jq '.devices[].device_id'
+```
+
+### JSON
+
+Pass `--json` to read request params from stdin as JSON and write the response
+to stdout as JSON.
+
+```bash
+# Read params from a file
+seam locks unlock-door --json < params.json
+
+# Or from another program
+echo '{"device_id": "'"$MY_DOOR"'"}' | seam locks unlock-door --json
+
+# Params given as flags win over params read from stdin
+seam devices list --json --limit 5 < params.json
+```
+
+The JSON format is enabled automatically whenever stdout is not a terminal, so
+piping and redirecting produce JSON without passing `--json`. Pass `--no-json`
+to opt out and get the pretty format instead.
+
+Reading params from stdin also implies `-y`: there is nobody to prompt, so the
+CLI reports the missing required params rather than waiting for an answer.
+
+An error exits non-zero. A request that fails reports its `error` on stdout,
+so it can be inspected from a pipe; anything else is written to stderr only.
+
 ## Development and Testing
 
 ### Quickstart
