@@ -17,6 +17,13 @@ export default [
     },
   },
   {
+    // The CLI writes its output to the console: that is the product.
+    files: ['src/cli.ts', 'src/lib/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     files,
     plugins: {
       'unused-imports': unusedImports,
