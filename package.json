@@ -109,6 +109,7 @@
     "chalk": "^6.0.0",
     "command-line-usage": "^7.0.4",
     "configstore": "^8.0.0",
+    "env-paths": "^4.0.0",
     "minimist": "^1.2.8",
     "nanospinner": "^1.2.2",
     "open": "^11.0.0",

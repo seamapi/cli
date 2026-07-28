@@ -56,14 +56,35 @@ dependencies through npm: there is no bundling step.
 
 Earlier versions of the CLI bundled with `tsup` and `@vercel/ncc` and built
 binaries with `pkg`. That pipeline is gone. `pkg` was archived in 2024 in
-favour of Node's single executable applications, and bundling measurably buys
-little here: a single-file build starts in roughly 290ms against roughly
-420ms unbundled, because most of the startup cost is parsing the Seam API
-definitions rather than resolving modules.
+favour of Node's single executable applications, and bundling buys little
+here: most of the startup cost is parsing the Seam API definitions and
+building the blueprint, not resolving modules, so it is addressed by the
+blueprint cache below rather than by a bundler.
 
 If self-contained binaries are wanted later, `bun build --compile` and
 `deno compile` both cross-compile and both consume the ES modules this
 package already publishes, so nothing here needs to change first.
+
+## Blueprint cache
+
+The command list is built from the Seam API definitions on startup, which
+costs around 700ms: most of it evaluating `@seamapi/types` and running
+`createBlueprint`. The result is cached as JSON under the platform cache
+directory, which takes a full command invocation from roughly 750ms to
+roughly 300ms.
+
+The blueprint is a pure function of `@seamapi/types` and `@seamapi/blueprint`,
+so their installed versions are the cache key, alongside a format version for
+changes to how the blueprint is built. Both packages are imported dynamically
+and are never evaluated on a cache hit. Stale entries are removed when a new
+one is written.
+
+Remote definitions, selected with `seam config use-remote-api-defs`, are never
+cached: they can change without any package version changing.
+
+Set `SEAM_CLI_DISABLE_BLUEPRINT_CACHE` to a non-empty value to bypass the
+cache in both directions. A cache that cannot be read or written is not an
+error; the blueprint is simply rebuilt.
 
 ## Development and Testing
 
