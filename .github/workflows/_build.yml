@@ -32,6 +32,8 @@ jobs:
           bun-version: 1.2.14
       - name: Build
         run: npm run build
+      - name: Package
+        run: npm pack
       - name: Build standalone binaries
         run: |
           version=$(jq --raw-output '.version' package.json)
@@ -47,8 +49,6 @@ jobs:
       - name: Generate standalone binary checksums
         working-directory: release
         run: sha256sum seam-* > checksums.txt
-      - name: Package
-        run: npm pack
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:

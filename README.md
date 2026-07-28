@@ -24,6 +24,12 @@ Install the CLI globally using [npm] with
 $ npm install --global @seamapi/cli
 ```
 
+On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
+
+```
+$ paru -S seam-bin
+```
+
 Then log in and run a command
 
 ```
@@ -32,6 +38,7 @@ $ seam devices list
 $ seam --help
 ```
 
+[aur]: https://aur.archlinux.org/packages/seam-bin
 [npm]: https://www.npmjs.com/
 
 ## Development and Testing
