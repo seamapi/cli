@@ -26,13 +26,34 @@ jobs:
         uses: ./.github/actions/setup
         with:
           node_version: ${{ inputs.node_version }}
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.14
       - name: Build
         run: npm run build
       - name: Package
         run: npm pack
+      - name: Build standalone binaries
+        run: |
+          version=$(jq --raw-output '.version' package.json)
+          rm -rf release
+          mkdir -p release
+          for platform in linux-x64 linux-arm64 darwin-x64 darwin-arm64 windows-x64; do
+            binary="release/seam-v${version}-${platform}"
+            if [[ "$platform" == windows-* ]]; then
+              binary="${binary}.exe"
+            fi
+            bun build src/bin/cli.ts --compile --minify --target="bun-${platform}" --outfile="$binary"
+          done
+      - name: Generate standalone binary checksums
+        working-directory: release
+        run: sha256sum seam-* > checksums.txt
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: build-${{ github.sha }}
           if-no-files-found: error
-          path: '*.tgz'
+          path: |
+            *.tgz
+            release/*

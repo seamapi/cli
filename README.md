@@ -1,3 +1,5 @@
+![seam-cli-chromatic-dark-blog-cover-repo](https://github.com/seamapi/seam-cli/assets/852751/e63bbaaa-d8a9-4417-ac69-d21b172e6de6)
+
 # Seam CLI
 
 [![npm](https://img.shields.io/npm/v/@seamapi/cli.svg)](https://www.npmjs.com/package/@seamapi/cli)
@@ -24,15 +26,48 @@ Install the CLI globally using [npm] with
 $ npm install --global @seamapi/cli
 ```
 
-Then log in and run a command
+On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
 
 ```
-$ seam login
-$ seam devices list
-$ seam --help
+$ paru -S seam-bin
 ```
 
+[aur]: https://aur.archlinux.org/packages/seam-bin
 [npm]: https://www.npmjs.com/
+
+## Usage
+
+Every `seam` command is interactive and will prompt you for any missing
+required properties with helpful suggestions. To avoid automatic behavior,
+pass `-y`
+
+```bash
+# Login to Seam
+seam login
+
+# Select your workspace
+seam select workspace
+
+# Interactively select commands to execute
+seam
+
+# Create a connect webview to connect devices
+seam connect-webviews create
+
+# List devices in your workspace
+seam devices list
+
+MY_DOOR=$(seam devices get --name "Front Door" --id-only)
+
+# Unlock a lock
+seam locks unlock-door --device-id $MY_DOOR
+
+# Create an access code
+seam access-codes create --code "1234" --name "My Code"
+
+# List your access codes
+seam access-codes list --device-id $MY_DOOR
+```
 
 ## The generated blueprint
 

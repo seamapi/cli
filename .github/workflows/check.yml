@@ -107,6 +107,13 @@ jobs:
         run: node index.js
       - name: Run CLI
         run: npx --yes --package ${{ steps.packages.outputs.paths }} seam --version
+      - name: Verify standalone binary checksums
+        working-directory: release
+        run: sha256sum --check checksums.txt
+      - name: Run standalone binary
+        run: |
+          chmod +x release/seam-v*-linux-x64
+          release/seam-v*-linux-x64 --version
   typecheck:
     name: Typecheck (Node.js v${{ matrix.node }})
     runs-on: ubuntu-latest
