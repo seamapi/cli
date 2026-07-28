@@ -1,7 +1,7 @@
 import prompts from 'prompts'
 
 // Structurally the CustomMetadata of @seamapi/types, spelled out here so the
-// published declarations do not depend on that optional peer dependency.
+// published declarations do not depend on a development-only package.
 type CustomMetadata = Record<string, string | boolean>
 
 type UpdatedCustomMetadata = {

@@ -19,13 +19,16 @@ const getBlueprint = async (
     if (existing != null) return existing
   }
 
-  const [{ createBlueprint }, seamTypes] = await Promise.all([
+  // This branch only runs in a development checkout. Published packages have
+  // seamapiBlueprint injected above and never load @seamapi/types.
+  const [{ createBlueprint }, { openapi }] = await Promise.all([
     import('@seamapi/blueprint'),
     import('@seamapi/types/connect'),
   ])
-  const blueprint = await createBlueprint(seamTypes, {
-    omitUndocumented: true,
-  })
+  const blueprint = await createBlueprint(
+    { openapi },
+    { omitUndocumented: true },
+  )
 
   const { mkdir, rename, writeFile } = await import('node:fs/promises')
   const temporaryDirectory = new URL('./', blueprintFile)
