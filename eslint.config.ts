@@ -19,7 +19,7 @@ export default [
   {
     // The CLI writes its output to the console: that is the product.
     // Its identifiers mirror the snake_case parameter names of the Seam API.
-    files: ['src/cli.ts', 'src/lib/**/*.ts'],
+    files: ['src/cli.ts', 'src/lib/**/*.ts', 'scripts/**/*.ts'],
     rules: {
       camelcase: 'off',
       'no-console': 'off',

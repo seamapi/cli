@@ -12,6 +12,9 @@
 !src/**/*.d.ts
 !ava.config.js
 
+# Generated at build time from @seamapi/types
+/blueprint.json
+
 # Build directories
 package
 
@@ -207,7 +210,8 @@ $RECYCLE.BIN/
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*

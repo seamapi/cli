@@ -1,23 +1,16 @@
 import { readFileSync } from 'node:fs'
 
-// This module resolves to lib/version.js in the published package and to
-// src/lib/version.ts when running from source, so package.json sits one or
-// two directories up depending on how the CLI was started.
-const packageJsonUrls = [
-  new URL('../package.json', import.meta.url),
-  new URL('../../package.json', import.meta.url),
-]
+import { packageFileUrl } from './package-file.js'
 
-const readVersion = (url: URL): string | undefined => {
+const readVersion = (): string | undefined => {
   try {
-    const { version } = JSON.parse(readFileSync(url, 'utf8')) as {
-      version?: string
-    }
+    const { version } = JSON.parse(
+      readFileSync(packageFileUrl('package.json'), 'utf8'),
+    ) as { version?: string }
     return version
   } catch {
     return undefined
   }
 }
 
-export const version: string =
-  packageJsonUrls.map(readVersion).find((v) => v != null) ?? '0.0.0'
+export const version: string = readVersion() ?? '0.0.0'

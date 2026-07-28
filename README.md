@@ -57,34 +57,43 @@ dependencies through npm: there is no bundling step.
 Earlier versions of the CLI bundled with `tsup` and `@vercel/ncc` and built
 binaries with `pkg`. That pipeline is gone. `pkg` was archived in 2024 in
 favour of Node's single executable applications, and bundling buys little
-here: most of the startup cost is parsing the Seam API definitions and
-building the blueprint, not resolving modules, so it is addressed by the
-blueprint cache below rather than by a bundler.
+here: the startup cost was never module resolution, it was building the
+blueprint, which the generated `blueprint.json` below removes.
 
 If self-contained binaries are wanted later, `bun build --compile` and
 `deno compile` both cross-compile and both consume the ES modules this
 package already publishes, so nothing here needs to change first.
 
-## Blueprint cache
+## The generated blueprint
 
-The command list is built from the Seam API definitions on startup, which
-costs around 700ms: most of it evaluating `@seamapi/types` and running
-`createBlueprint`. The result is cached as JSON under the platform cache
-directory, which takes a full command invocation from roughly 750ms to
-roughly 300ms.
+The command list is derived from the Seam API definitions. Doing that at
+startup costs around 700ms, almost all of it evaluating `@seamapi/types` and
+running `createBlueprint`, so it is done once at build time instead:
+`scripts/generate-blueprint.ts` writes a `blueprint.json` that ships with the
+package and is read in around 20ms.
 
-The blueprint is a pure function of `@seamapi/types` and `@seamapi/blueprint`,
-so their installed versions are the cache key, alongside a format version for
-changes to how the blueprint is built. Both packages are imported dynamically
-and are never evaluated on a cache hit. Stale entries are removed when a new
-one is written.
+Because nothing builds a blueprint at runtime, `@seamapi/types` is a
+development dependency rather than a runtime one. That is most of the install:
+it unpacks to 63MB, because it ships ESM, CJS, TypeScript sources and both
+flavours of declarations, and the generated route types and OpenAPI document
+are several MB in each. Dropping it takes an install from around 81MB to
+around 21MB, which matters for Homebrew and the AUR.
 
-Remote definitions, selected with `seam config use-remote-api-defs`, are never
-cached: they can change without any package version changing.
+Generation is idempotent. The file records the versions it was generated from,
+and the script rewrites it only when they change, so the `prebuild` and
+`prestart` hooks are cheap to re-run. `blueprint.json` is not committed, since
+each revision would add a few MB to the repository forever.
 
-Set `SEAM_CLI_DISABLE_BLUEPRINT_CACHE` to a non-empty value to bypass the
-cache in both directions. A cache that cannot be read or written is not an
-error; the blueprint is simply rebuilt.
+Two paths still build a blueprint and so still need `@seamapi/types`, which is
+declared as an optional peer dependency:
+
+- Remote definitions, selected with `seam config use-remote-api-defs`, which
+  describe whatever the server is currently running and therefore cannot be
+  generated ahead of time.
+- A working copy where `blueprint.json` has not been generated yet.
+
+Neither happens in a published install. If one is reached without the package
+present, the CLI says so and names what to install.
 
 ## Development and Testing
 

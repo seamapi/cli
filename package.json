@@ -35,6 +35,7 @@
     "email": "devops@getseam.com"
   },
   "files": [
+    "blueprint.json",
     "index.js",
     "index.js.map",
     "index.d.ts",
@@ -48,7 +49,7 @@
   ],
   "scripts": {
     "build": "npm run build:entrypoints",
-    "prebuild": "tsx src/index.ts",
+    "prebuild": "npm run generate:blueprint && tsx src/index.ts",
     "postbuild": "node ./index.js && node ./cli.js --version",
     "build:entrypoints": "npm run build:ts",
     "build:ts": "tsc --project tsconfig.build.json",
@@ -63,11 +64,21 @@
     "lint": "eslint .",
     "postlint": "prettier --check --ignore-path .gitignore .",
     "postversion": "git push --follow-tags",
+    "generate:blueprint": "tsx scripts/generate-blueprint.ts",
     "start": "tsx src/cli.ts",
+    "prestart": "npm run generate:blueprint",
     "start:inspect": "tsx --inspect src/cli.ts",
     "format": "prettier --write --ignore-path .gitignore .",
     "preformat": "eslint --fix .",
     "report": "c8 report"
+  },
+  "peerDependencies": {
+    "@seamapi/types": "^1.983.0"
+  },
+  "peerDependenciesMeta": {
+    "@seamapi/types": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=22.11.0",
@@ -84,6 +95,7 @@
     }
   },
   "devDependencies": {
+    "@seamapi/types": "^1.983.0",
     "@types/command-line-usage": "^5.0.4",
     "@types/minimist": "^1.2.5",
     "@types/node": "^24.10.9",
@@ -105,11 +117,9 @@
   "dependencies": {
     "@seamapi/blueprint": "^1.1.0",
     "@seamapi/http": "^2.0.0",
-    "@seamapi/types": "^1.983.0",
     "chalk": "^6.0.0",
     "command-line-usage": "^7.0.4",
     "configstore": "^8.0.0",
-    "env-paths": "^4.0.0",
     "minimist": "^1.2.8",
     "nanospinner": "^1.2.2",
     "open": "^11.0.0",
