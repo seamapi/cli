@@ -26,6 +26,12 @@ Install the CLI globally using [npm] with
 $ npm install --global @seamapi/cli
 ```
 
+On macOS or Linux, install with [Homebrew] using
+
+```
+$ brew install seam
+```
+
 On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
 
 ```
@@ -33,6 +39,7 @@ $ paru -S seam-bin
 ```
 
 [aur]: https://aur.archlinux.org/packages/seam-bin
+[Homebrew]: https://formulae.brew.sh/formula/seam
 [npm]: https://www.npmjs.com/
 
 ## Usage
