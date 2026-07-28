@@ -11,6 +11,12 @@
         "types": "./index.d.ts",
         "default": "./index.js"
       }
+    },
+    "./cli": {
+      "import": {
+        "types": "./bin/cli.d.ts",
+        "default": "./bin/cli.js"
+      }
     }
   },
   "module": "index.js",
