@@ -1,6 +1,6 @@
 {
   "name": "@seamapi/cli",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A command line interface (CLI) for interacting with the Seam API.",
   "type": "module",
   "main": "index.js",
@@ -85,7 +85,6 @@
   "dependencies": {
     "@seamapi/blueprint": "^1.1.0",
     "@seamapi/http": "^2.2.0",
-    "@seamapi/types": "^1.983.0",
     "chalk": "^6.0.0",
     "command-line-usage": "^7.0.4",
     "configstore": "^8.0.0",
@@ -95,6 +94,7 @@
     "prompts": "^2.4.2"
   },
   "devDependencies": {
+    "@seamapi/types": "^1.983.0",
     "@types/command-line-usage": "^5.0.4",
     "@types/minimist": "^1.2.5",
     "@types/node": "^24.10.9",

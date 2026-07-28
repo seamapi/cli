@@ -1,7 +1,9 @@
-import type { CustomMetadata } from '@seamapi/types/connect'
-
 import { getOutput } from './output/get-output.js'
 import { prompt } from './util/prompt.js'
+
+// Structurally the CustomMetadata of @seamapi/types, spelled out here so the
+// published declarations do not depend on a development-only package.
+type CustomMetadata = Record<string, string | boolean>
 
 type UpdatedCustomMetadata = {
   [x: string]: string | boolean | null
