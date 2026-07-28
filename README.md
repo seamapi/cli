@@ -32,13 +32,6 @@ $ seam devices list
 $ seam --help
 ```
 
-The package also exports its building blocks as a library. Add it as a
-dependency to your project with
-
-```
-$ npm install @seamapi/cli
-```
-
 [npm]: https://www.npmjs.com/
 
 ## Distribution
