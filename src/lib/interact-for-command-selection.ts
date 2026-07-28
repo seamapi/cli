@@ -1,0 +1,107 @@
+import { isDeepStrictEqual as isEqual } from 'node:util'
+
+import prompts from 'prompts'
+
+import type { ContextHelpers } from './types.js'
+
+const uniqBy = <T>(items: T[], keyOf: (item: T) => unknown): T[] => {
+  const seen = new Set<unknown>()
+  return items.filter((item) => {
+    const key = keyOf(item)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const ergonomicOrder = ['create', 'list', 'get', 'update', 'unlock_door']
+
+function ergonomicSort(aStr: string, bStr: string) {
+  let a = ergonomicOrder.indexOf(aStr)
+  if (a === -1) a = ergonomicOrder.length
+  let b = ergonomicOrder.indexOf(bStr)
+  if (b === -1) b = ergonomicOrder.length
+
+  return a > b ? 1 : a < b ? -1 : 0
+}
+
+export async function interactForCommandSelection(
+  commandPath: string[],
+  helpers: ContextHelpers,
+) {
+  const commands = helpers.blueprint.routes
+    .flatMap((route) => route.endpoints)
+    .map((endpoint) =>
+      endpoint.path.replace(/_/g, '-').replace(/^\//, '').split('/'),
+    )
+    .concat([
+      ['login'],
+      ['logout'],
+      ['config', 'reveal-location'],
+      ['config', 'use-remote-api-defs'],
+      ['select', 'workspace'],
+      ['select', 'server'],
+      ['health', 'get-health'],
+    ])
+
+  const possibleCommands = uniqBy(
+    commandPath.length === 0
+      ? commands
+      : commands.filter((cmd) =>
+          isEqual(cmd.slice(0, commandPath.length), commandPath),
+        ),
+    (v) => v[commandPath.length],
+  )
+
+  if (possibleCommands.length === 0) {
+    throw new Error('No possible commands')
+  }
+
+  if (
+    possibleCommands.length === 1 &&
+    possibleCommands[0]?.length === commandPath.length
+  ) {
+    return commandPath
+  }
+
+  // Add dynamic 'back' command for sub-commands to allow returning
+  // to previous level.
+  if (commandPath.length > 0) {
+    possibleCommands.push([...commandPath, '[Back]'])
+  }
+
+  const commandPathStr = commandPath.join('/').replace(/-/g, '_')
+
+  const res = await prompts({
+    name: 'Command',
+    type: 'autocomplete',
+    choices: [
+      ...possibleCommands.map((cmd) => ({
+        title:
+          cmd?.[commandPath.length] ?? `[Call /${commandPathStr} Directly]`,
+        value: cmd?.[commandPath.length] ?? '<none>',
+      })),
+    ].sort((a, b) => ergonomicSort(a.value, b.value)),
+    message: `Select a command: /${commandPathStr}`,
+  })
+
+  if (res?.Command === undefined) {
+    throw new Error('Bailed')
+  }
+
+  if (res?.Command === '<none>') {
+    return commandPath
+  }
+
+  const newCommandPath = [...commandPath, res.Command]
+
+  const fullCommand = possibleCommands.find((cmd) =>
+    isEqual(newCommandPath, cmd),
+  )
+
+  if (!fullCommand) {
+    return interactForCommandSelection(newCommandPath, helpers)
+  }
+
+  return fullCommand
+}

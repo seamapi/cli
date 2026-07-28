@@ -1,0 +1,37 @@
+---
+name: Setup
+description: Setup Node.js and install dependencies.
+
+inputs:
+  node_version:
+    description: The Node.js version.
+    required: false
+    default: '24'
+  registry_url:
+    description: The Node.js package registry URL.
+    required: false
+    default: https://registry.npmjs.org
+  install_dependencies:
+    description: Install dependencies.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v7
+      if: inputs.install_dependencies == 'true'
+      with:
+        node-version: ${{ inputs.node_version }}
+        registry-url: ${{ inputs.registry_url }}
+    - name: Setup Node.js without cache
+      uses: actions/setup-node@v7
+      if: inputs.install_dependencies == 'false'
+      with:
+        node-version: ${{ inputs.node_version }}
+        registry-url: ${{ inputs.registry_url }}
+    - name: Install dependencies
+      if: inputs.install_dependencies == 'true'
+      shell: bash
+      run: npm ci

@@ -1,20 +1,40 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig.json",
   "compilerOptions": {
-    "lib": ["ES2015"],
-    "module": "ESNext",
-    "target": "ES2015",
-    "moduleResolution": "bundler",
-    "moduleDetection": "force",
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
     "composite": true,
-    "strict": true,
-    "downlevelIteration": true,
+    "noEmit": true,
     "skipLibCheck": true,
+    "strict": true,
+    "module": "nodenext",
+    "moduleDetection": "force",
+    "target": "es2025",
     "jsx": "react-jsx",
-    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "newLine": "lf",
+    "verbatimModuleSyntax": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
     "forceConsistentCasingInFileNames": true,
-    "allowJs": true
+    "types": ["node"],
+    "paths": {
+      "@seamapi/cli": ["./src/index.ts"],
+      "lib/*": ["./src/lib/*"]
+    }
   },
-  "include": ["lib/**/*.ts", "cli.ts", "index.ts", "package.json"]
+  "files": ["src/index.ts", "src/bin/cli.ts"],
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "eslint.config.ts",
+    "prepack.ts",
+    "vitest.config.ts"
+  ]
 }

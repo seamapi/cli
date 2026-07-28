@@ -1,0 +1,46 @@
+---
+name: _publish
+
+on:
+  workflow_call:
+    inputs:
+      artifact_name:
+        description: The artifact name.
+        type: string
+        required: true
+      registry_url:
+        description: The package registry url.
+        type: string
+        required: true
+    secrets:
+      registry_token:
+        description: The package registry token.
+        required: false
+
+jobs:
+  publish:
+    name: Publish package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          install_dependencies: 'false'
+      - name: Download artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: .
+      - name: Get meta
+        id: meta
+        run: echo "tgz=$(ls *.tgz | head -n1)" >> $GITHUB_OUTPUT
+      - name: Publish
+        uses: JS-DevTools/npm-publish@v4
+        with:
+          access: public
+          token: ${{ secrets.registry_token }}
+          registry: ${{ inputs.registry_url }}
+          package: ${{ steps.meta.outputs.tgz }}

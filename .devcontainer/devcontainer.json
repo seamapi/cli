@@ -1,0 +1,17 @@
+{
+  "name": "TypeScript",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "VARIANT": "24"
+    }
+  },
+  "extensions": [
+    "ms-vsliveshare.vsliveshare",
+    "dbaeumer.vscode-eslint",
+    "EditorConfig.EditorConfig",
+    "esbenp.prettier-vscode"
+  ],
+  "postCreateCommand": "npm install",
+  "remoteUser": "node"
+}

@@ -1,0 +1,41 @@
+---
+name: Format
+
+on:
+  push:
+    branches-ignore:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  commit:
+    name: Format code
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GH_TOKEN }}
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_committer_name: ${{ secrets.GIT_USER_NAME }}
+          git_committer_email: ${{ secrets.GIT_USER_EMAIL }}
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Format
+        run: npm run format
+      - name: Commit
+        uses: stefanzweifel/git-auto-commit-action@v7
+        if: always()
+        with:
+          commit_message: 'ci: Format code'
+          commit_user_name: ${{ secrets.GIT_USER_NAME }}
+          commit_user_email: ${{ secrets.GIT_USER_EMAIL }}
+          commit_author: ${{ secrets.GIT_USER_NAME }} <${{ secrets.GIT_USER_EMAIL }}>

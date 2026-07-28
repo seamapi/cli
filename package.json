@@ -1,61 +1,118 @@
 {
-  "name": "seam-cli",
-  "module": "index.ts",
+  "name": "@seamapi/cli",
+  "version": "0.3.0",
+  "description": "A command line interface (CLI) for interacting with the Seam API.",
   "type": "module",
-  "version": "0.0.61",
-  "repository": "git@github.com:seamapi/seam-cli.git",
-  "scripts": {
-    "cli": "tsx ./cli.ts",
-    "build": "tsup",
-    "postbuild": "ncc build ./dist/cli.cjs -o ./bin && mv ./bin/index.cjs ./bin/seam.cjs",
-    "build:binaries": "pkg -t node18-macos-arm64,node18-win-x64,node18-linux-x64,node18-macos-x64 --out-path bin ./bin/seam.cjs",
-    "build:binaries:mac": "pkg --out-path bin -t node18-macos-arm64 ./bin/seam.cjs",
-    "format": "prettier --write --ignore-path .gitignore .",
-    "typecheck": "tsc --noEmit"
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./index.d.ts",
+        "default": "./index.js"
+      }
+    }
   },
+  "module": "index.js",
   "bin": {
-    "seam": "./dist/cli.cjs"
+    "seam": "./bin/cli.js"
   },
-  "tsup": {
-    "entry": [
-      "cli.ts"
-    ],
-    "format": [
-      "cjs"
-    ],
-    "noExternal": [
-      "@seamapi/http"
-    ],
-    "sourcemap": true
+  "sideEffects": [
+    "./bin/cli.js",
+    "./src/bin/cli.ts"
+  ],
+  "keywords": [
+    "cli",
+    "node",
+    "seam"
+  ],
+  "homepage": "https://github.com/seamapi/cli",
+  "bugs": "https://github.com/seamapi/cli/issues",
+  "repository": "seamapi/cli",
+  "license": "MIT",
+  "author": {
+    "name": "Seam Labs, Inc.",
+    "email": "devops@getseam.com"
   },
-  "devDependencies": {
-    "@swc/core": "^1.3.100",
-    "@types/command-line-usage": "^5.0.4",
-    "@types/configstore": "^6.0.2",
-    "@types/lodash": "^4.14.202",
-    "@types/minimist": "^1.2.5",
-    "@types/prompts": "^2.4.9",
-    "@vercel/ncc": "^0.38.1",
-    "axios": "^1.8.2",
-    "chalk": "^5.3.0",
-    "command-line-usage": "^7.0.1",
-    "configstore": "^6.0.0",
-    "lodash": "^4.17.21",
-    "minimist": "^1.2.8",
-    "pkg": "^5.8.1",
-    "prettier": "^3.1.1",
-    "prompts": "^2.4.2",
-    "tsup": "^8.0.1",
-    "tsx": "^4.6.2"
+  "files": [
+    "index.js",
+    "index.js.map",
+    "index.d.ts",
+    "bin",
+    "lib",
+    "src",
+    "!test",
+    "!**/*.test.ts"
+  ],
+  "scripts": {
+    "build": "npm run build:entrypoints",
+    "prebuild": "tsx src/index.ts",
+    "postbuild": "concurrently --raw --group 'node ./index.js' 'node ./bin/cli.js --version'",
+    "build:entrypoints": "npm run build:ts",
+    "build:ts": "tsc --project tsconfig.build.json",
+    "prebuild:ts": "del 'index.*' bin lib",
+    "postbuild:ts": "tsc-alias --project tsconfig.build.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage",
+    "pretest": "tsx src/index.ts",
+    "test:update": "vitest run --update",
+    "test:watch": "vitest",
+    "test:debug": "vitest --inspect-brk --no-file-parallelism",
+    "lint": "eslint .",
+    "postlint": "prettier --check --ignore-path .gitignore .",
+    "prepack": "tsx ./prepack.ts",
+    "postversion": "git push --follow-tags",
+    "seam": "tsx src/bin/cli.ts",
+    "inspect": "tsx --inspect src/bin/cli.ts",
+    "format": "prettier --write --ignore-path .gitignore .",
+    "preformat": "eslint --fix .",
+    "report": "vitest run --coverage"
   },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+  "engines": {
+    "node": ">=22.11.0",
+    "npm": ">=10.0.0"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^24.11.0 || ^22.11.0"
+    },
+    "packageManager": {
+      "name": "npm",
+      "version": "^11.0.0 || ^10.0.0"
+    }
   },
   "dependencies": {
     "@seamapi/blueprint": "^1.1.0",
-    "@seamapi/http": "^1.128.0",
-    "@seamapi/types": "1.983.0",
+    "@seamapi/http": "^2.2.0",
+    "@seamapi/types": "^1.983.0",
+    "chalk": "^6.0.0",
+    "command-line-usage": "^7.0.4",
+    "configstore": "^8.0.0",
+    "minimist": "^1.2.8",
     "nanospinner": "^1.2.2",
-    "open": "^10.0.3"
+    "open": "^11.0.0",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/command-line-usage": "^5.0.4",
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^24.10.9",
+    "@types/prompts": "^2.4.9",
+    "@vitest/coverage-v8": "^4.1.10",
+    "concurrently": "^10.0.4",
+    "del-cli": "^7.0.0",
+    "eslint": "^9.31.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "execa": "^10.0.0",
+    "jiti": "^2.4.2",
+    "neostandard": "^0.13.0",
+    "prettier": "^3.0.0",
+    "tsc-alias": "^1.8.2",
+    "tsx": "^4.6.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

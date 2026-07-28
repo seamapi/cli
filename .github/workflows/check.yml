@@ -1,0 +1,135 @@
+---
+name: Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    name: Test (Node.js v${{ matrix.node }} on ${{ matrix.os_name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        node:
+          - '22'
+          - '24'
+        include:
+          - os: ubuntu-latest
+            os_name: Linux
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          node_version: ${{ matrix.node }}
+      - name: Test
+        run: npm test
+  lint:
+    name: Lint (Node.js v${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - '22'
+          - '24'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          node_version: ${{ matrix.node }}
+      - name: Lint
+        run: npm run lint
+  build:
+    name: Build
+    uses: ./.github/workflows/_build.yml
+  install:
+    name: Install (Node.js v${{ matrix.node }} on ${{ matrix.os_name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        node:
+          - '22'
+          - '24'
+        include:
+          - os: ubuntu-latest
+            os_name: Linux
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Download artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: .
+      - name: Find packages
+        uses: tj-actions/glob@v22
+        id: packages
+        with:
+          files: '*.tgz'
+      - name: Create package.json
+        uses: DamianReeves/write-file-action@v1.3
+        with:
+          write-mode: overwrite
+          path: package.json
+          contents: |
+            {"type":"module"}
+      - name: Create index.js
+        uses: DamianReeves/write-file-action@v1.3
+        with:
+          write-mode: overwrite
+          path: index.js
+          contents: |
+            import '@seamapi/cli'
+      - name: Install
+        run: npm install --save ${{ steps.packages.outputs.paths }}
+      - name: Run
+        run: node index.js
+      - name: Run CLI
+        run: npx --yes --package ${{ steps.packages.outputs.paths }} seam --version
+      - name: Verify standalone binary checksums
+        working-directory: release
+        run: sha256sum --check checksums.txt
+      - name: Run standalone binary
+        run: |
+          chmod +x release/seam-v*-linux-x64
+          release/seam-v*-linux-x64 --version
+  typecheck:
+    name: Typecheck (Node.js v${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - '22'
+          - '24'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          node_version: ${{ matrix.node }}
+      - name: Typecheck
+        run: npm run typecheck
