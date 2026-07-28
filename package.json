@@ -61,8 +61,8 @@
     "lint": "eslint .",
     "postlint": "prettier --check --ignore-path .gitignore .",
     "postversion": "git push --follow-tags",
-    "start": "tsx src/cli.ts",
-    "start:inspect": "tsx --inspect src/cli.ts",
+    "seam": "tsx src/bin/cli.ts",
+    "inspect": "tsx --inspect src/bin/cli.ts",
     "format": "prettier --write --ignore-path .gitignore .",
     "preformat": "eslint --fix .",
     "report": "c8 report"

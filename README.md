@@ -77,6 +77,12 @@ $ npm install
 $ npm run test:watch
 ```
 
+Run the CLI from source with
+
+```
+$ npm run seam -- devices list
+```
+
 Primary development tasks are defined under `scripts` in `package.json`
 and available via `npm run`.
 View them with
