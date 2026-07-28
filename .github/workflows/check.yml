@@ -105,6 +105,8 @@ jobs:
         run: npm install --save ${{ steps.packages.outputs.paths }}
       - name: Run
         run: node index.js
+      - name: Run CLI
+        run: node bin/cli.js --help
   typecheck:
     name: Typecheck (Node.js v${{ matrix.node }})
     runs-on: ubuntu-latest
