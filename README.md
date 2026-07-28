@@ -34,30 +34,6 @@ $ seam --help
 
 [npm]: https://www.npmjs.com/
 
-## Distribution
-
-The package builds to plain ES modules with `tsc` and resolves its
-dependencies through npm: there is no bundling step.
-
-- **npm** is the primary channel, both for `npm install --global` and for
-  the `seam` package, which depends on this one and re-exposes the `seam`
-  bin.
-- **Homebrew and the AUR** package the npm tarball rather than a
-  self-contained binary: a formula using `depends_on "node"` with
-  `std_npm_args`, and a `PKGBUILD` with `depends=('nodejs')`. Both track npm
-  releases without a separate artifact to build or sign.
-
-Earlier versions of the CLI bundled with `tsup` and `@vercel/ncc` and built
-binaries with `pkg`. That pipeline is gone. `pkg` was archived in 2024 in
-favour of Node's single executable applications, and bundling measurably buys
-little here: a single-file build starts in roughly 290ms against roughly
-420ms unbundled, because most of the startup cost is parsing the Seam API
-definitions rather than resolving modules.
-
-If self-contained binaries are wanted later, `bun build --compile` and
-`deno compile` both cross-compile and both consume the ES modules this
-package already publishes, so nothing here needs to change first.
-
 ## Development and Testing
 
 ### Quickstart
