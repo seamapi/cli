@@ -105,6 +105,8 @@ jobs:
         run: npm install --save ${{ steps.packages.outputs.paths }}
       - name: Run
         run: node index.js
+      - name: Run CLI
+        run: npx --yes --package ${{ steps.packages.outputs.paths }} seam --version
   typecheck:
     name: Typecheck (Node.js v${{ matrix.node }})
     runs-on: ubuntu-latest

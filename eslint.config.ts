@@ -17,11 +17,12 @@ export default [
     },
   },
   {
-    // The CLI writes its output to the console: that is the product.
-    // Its identifiers mirror the snake_case parameter names of the Seam API.
-    files: ['src/cli.ts', 'src/lib/**/*.ts', 'scripts/**/*.ts'],
+    files: ['src/bin/**/*.ts', 'src/lib/**/*.ts', 'scripts/**/*.ts'],
     rules: {
+      // TODO: Rename the identifiers that mirror the snake_case parameter names
+      // of the Seam API so that everything here is camelCase.
       camelcase: 'off',
+      // TODO: Replace the console calls with a logger wrapper.
       'no-console': 'off',
     },
   },

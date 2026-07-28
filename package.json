@@ -1,6 +1,6 @@
 {
   "name": "@seamapi/cli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A command line interface (CLI) for interacting with the Seam API.",
   "type": "module",
   "main": "index.js",
@@ -15,11 +15,11 @@
   },
   "module": "index.js",
   "bin": {
-    "seam": "./cli.js"
+    "seam": "./bin/cli.js"
   },
   "sideEffects": [
-    "./cli.js",
-    "./src/cli.ts"
+    "./bin/cli.js",
+    "./src/bin/cli.ts"
   ],
   "keywords": [
     "cli",
@@ -35,13 +35,10 @@
     "email": "devops@getseam.com"
   },
   "files": [
-    "blueprint.json",
     "index.js",
     "index.js.map",
     "index.d.ts",
-    "cli.js",
-    "cli.js.map",
-    "cli.d.ts",
+    "bin",
     "lib",
     "src",
     "!test",
@@ -50,27 +47,28 @@
   "scripts": {
     "build": "npm run build:entrypoints",
     "prebuild": "npm run generate:blueprint && tsx src/index.ts",
-    "postbuild": "node ./index.js && node ./cli.js --version",
+    "postbuild": "concurrently --raw --group 'node ./index.js' 'node ./bin/cli.js --version'",
     "build:entrypoints": "npm run build:ts",
     "build:ts": "tsc --project tsconfig.build.json",
-    "prebuild:ts": "del 'index.*' 'cli.*' lib",
-    "postbuild:ts": "tsc-alias --project tsconfig.build.json && chmod +x cli.js",
+    "prebuild:ts": "del 'index.*' bin lib",
+    "postbuild:ts": "tsc-alias --project tsconfig.build.json",
     "typecheck": "tsc",
-    "test": "c8 ava",
+    "test": "vitest run --coverage",
     "pretest": "tsx src/index.ts",
-    "test:update": "ava --update-snapshots",
-    "test:watch": "ava --watch",
-    "test:debug": "ava debug --break",
+    "test:update": "vitest run --update",
+    "test:watch": "vitest",
+    "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "lint": "eslint .",
     "postlint": "prettier --check --ignore-path .gitignore .",
+    "prepack": "tsx ./prepack.ts",
     "postversion": "git push --follow-tags",
     "generate:blueprint": "tsx scripts/generate-blueprint.ts",
-    "start": "tsx src/cli.ts",
-    "prestart": "npm run generate:blueprint",
-    "start:inspect": "tsx --inspect src/cli.ts",
+    "preseam": "npm run generate:blueprint",
+    "seam": "tsx src/bin/cli.ts",
+    "inspect": "tsx --inspect src/bin/cli.ts",
     "format": "prettier --write --ignore-path .gitignore .",
     "preformat": "eslint --fix .",
-    "report": "c8 report"
+    "report": "vitest run --coverage"
   },
   "peerDependencies": {
     "@seamapi/types": "^1.983.0"
@@ -82,7 +80,7 @@
   },
   "engines": {
     "node": ">=22.11.0",
-    "npm": ">=10.9.4"
+    "npm": ">=10.0.0"
   },
   "devEngines": {
     "runtime": {
@@ -91,32 +89,12 @@
     },
     "packageManager": {
       "name": "npm",
-      "version": "^11.16.0 || ^10.9.4"
+      "version": "^11.0.0 || ^10.0.0"
     }
-  },
-  "devDependencies": {
-    "@seamapi/types": "^1.983.0",
-    "@types/command-line-usage": "^5.0.4",
-    "@types/minimist": "^1.2.5",
-    "@types/node": "^24.10.9",
-    "@types/prompts": "^2.4.9",
-    "ava": "^8.0.1",
-    "c8": "^12.0.0",
-    "del-cli": "^7.0.0",
-    "eslint": "^9.31.0",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-simple-import-sort": "^12.1.1",
-    "eslint-plugin-unused-imports": "^4.1.4",
-    "jiti": "^2.4.2",
-    "neostandard": "^0.13.0",
-    "prettier": "^3.0.0",
-    "tsc-alias": "^1.8.2",
-    "tsx": "^4.6.2",
-    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@seamapi/blueprint": "^1.1.0",
-    "@seamapi/http": "^2.0.0",
+    "@seamapi/http": "^2.2.0",
     "chalk": "^6.0.0",
     "command-line-usage": "^7.0.4",
     "configstore": "^8.0.0",
@@ -124,5 +102,27 @@
     "nanospinner": "^1.2.2",
     "open": "^11.0.0",
     "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@seamapi/types": "^1.983.0",
+    "@types/command-line-usage": "^5.0.4",
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^24.10.9",
+    "@types/prompts": "^2.4.9",
+    "@vitest/coverage-v8": "^4.1.10",
+    "concurrently": "^10.0.4",
+    "del-cli": "^7.0.0",
+    "eslint": "^9.31.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "execa": "^10.0.0",
+    "jiti": "^2.4.2",
+    "neostandard": "^0.13.0",
+    "prettier": "^3.0.0",
+    "tsc-alias": "^1.8.2",
+    "tsx": "^4.6.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -11,8 +11,8 @@ Every command is interactive: the CLI prompts for any missing required
 parameter with suggestions pulled from your workspace. Pass `-y` to take the
 first suggestion instead of being asked.
 
-The command list is derived at runtime from the [Seam API blueprint], so the
-CLI exposes every documented endpoint without needing a release of its own.
+The command list is derived from the [Seam API blueprint], so the CLI exposes
+every documented endpoint without needing a release of its own.
 
 [Seam API blueprint]: https://github.com/seamapi/blueprint
 
@@ -32,37 +32,7 @@ $ seam devices list
 $ seam --help
 ```
 
-The package also exports its building blocks as a library. Add it as a
-dependency to your project with
-
-```
-$ npm install @seamapi/cli
-```
-
 [npm]: https://www.npmjs.com/
-
-## Distribution
-
-The package builds to plain ES modules with `tsc` and resolves its
-dependencies through npm: there is no bundling step.
-
-- **npm** is the primary channel, both for `npm install --global` and for
-  the `seam` package, which depends on this one and re-exposes the `seam`
-  bin.
-- **Homebrew and the AUR** package the npm tarball rather than a
-  self-contained binary: a formula using `depends_on "node"` with
-  `std_npm_args`, and a `PKGBUILD` with `depends=('nodejs')`. Both track npm
-  releases without a separate artifact to build or sign.
-
-Earlier versions of the CLI bundled with `tsup` and `@vercel/ncc` and built
-binaries with `pkg`. That pipeline is gone. `pkg` was archived in 2024 in
-favour of Node's single executable applications, and bundling buys little
-here: the startup cost was never module resolution, it was building the
-blueprint, which the generated `blueprint.json` below removes.
-
-If self-contained binaries are wanted later, `bun build --compile` and
-`deno compile` both cross-compile and both consume the ES modules this
-package already publishes, so nothing here needs to change first.
 
 ## The generated blueprint
 
@@ -81,7 +51,7 @@ around 21MB, which matters for Homebrew and the AUR.
 
 Generation is idempotent. The file records the versions it was generated from,
 and the script rewrites it only when they change, so the `prebuild` and
-`prestart` hooks are cheap to re-run. `blueprint.json` is not committed, since
+`preseam` hooks are cheap to re-run. `blueprint.json` is not committed, since
 each revision would add a few MB to the repository forever.
 
 Two paths still build a blueprint and so still need `@seamapi/types`, which is
@@ -105,6 +75,12 @@ $ cd cli
 $ nvm install
 $ npm install
 $ npm run test:watch
+```
+
+Run the CLI from source with
+
+```
+$ npm run seam -- devices list
 ```
 
 Primary development tasks are defined under `scripts` in `package.json`

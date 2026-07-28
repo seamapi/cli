@@ -20,7 +20,7 @@ import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
 import type { ContextHelpers } from 'lib/types.js'
 import { RequestSeamApi } from 'lib/util/request-seam-api.js'
 import { validateToken } from 'lib/validate-token.js'
-import { version } from 'lib/version.js'
+import seamapiCliVersion from 'lib/version.js'
 
 const sections = [
   {
@@ -76,7 +76,7 @@ async function cli(args: ParsedArgs) {
   }
 
   if (args['version']) {
-    console.log(version)
+    console.log(seamapiCliVersion)
     process.exit(0)
   }
 
