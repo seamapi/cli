@@ -41,7 +41,10 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref_name, '-') }}
-          files: '*.tgz'
+          files: |
+            *.tgz
+            release/seam-*
+            release/checksums.txt
           body_path: ${{ github.workspace }}/${{ steps.changelog.outputs.outfile }}
   npm:
     name: npm
