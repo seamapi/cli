@@ -1,4 +1,4 @@
-import { ApiBlueprint } from "./get-api-blueprint"
+import type { ApiBlueprint } from './get-api-blueprint.js'
 
 export interface ContextHelpers {
   blueprint: ApiBlueprint

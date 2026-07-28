@@ -1,10 +1,10 @@
-import prompts from "prompts"
+import prompts from 'prompts'
 
 export const interactForArray = async (
   array: string[],
-  message: string
+  message: string,
 ): Promise<string[]> => {
-  let updatedArray = [...array]
+  const updatedArray = [...array]
 
   const displayList = () => {
     console.log(`${message} Current list:`)
@@ -13,7 +13,7 @@ export const interactForArray = async (
         console.log(`${index + 1}: ${item}`)
       })
     } else {
-      console.log("The list is currently empty.")
+      console.log('The list is currently empty.')
     }
   }
 
@@ -22,40 +22,40 @@ export const interactForArray = async (
     displayList()
 
     const response = await prompts({
-      type: "select",
-      name: "action",
-      message: "Choose an action:",
+      type: 'select',
+      name: 'action',
+      message: 'Choose an action:',
       choices: [
-        { title: "Add an item", value: "add" },
-        { title: "Remove an item", value: "remove" },
-        { title: "Finish editing", value: "done" },
+        { title: 'Add an item', value: 'add' },
+        { title: 'Remove an item', value: 'remove' },
+        { title: 'Finish editing', value: 'done' },
       ],
     })
 
     action = response.action
 
-    if (action === "add") {
+    if (action === 'add') {
       const { newItem } = await prompts({
-        type: "text",
-        name: "newItem",
-        message: "Enter the new item:",
+        type: 'text',
+        name: 'newItem',
+        message: 'Enter the new item:',
       })
       if (newItem) {
         updatedArray.push(newItem)
       }
-    } else if (action === "remove") {
+    } else if (action === 'remove') {
       const { index } = await prompts({
-        type: "number",
-        name: "index",
-        message: "Enter the index of the item to remove:",
+        type: 'number',
+        name: 'index',
+        message: 'Enter the index of the item to remove:',
         validate: (value) =>
-          value > 0 && value <= updatedArray.length ? true : "Invalid index",
+          value > 0 && value <= updatedArray.length ? true : 'Invalid index',
       })
       if (index) {
         updatedArray.splice(index - 1, 1)
       }
     }
-  } while (action !== "done")
+  } while (action !== 'done')
 
   return updatedArray
 }

@@ -1,5 +1,5 @@
-export { getApiBlueprint } from './get-api-blueprint.js'
 export type { ApiBlueprint } from './get-api-blueprint.js'
+export { getApiBlueprint } from './get-api-blueprint.js'
 export { getCommandBlueprintDef } from './get-command-blueprint-def.js'
 export { getConfigStore } from './get-config-store.js'
 export { getCurrentWorkspaceId } from './get-current-workspace-id.js'

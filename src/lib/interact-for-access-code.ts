@@ -1,6 +1,6 @@
-import { getSeam } from "./get-seam"
-import { interactForDevice } from "./interact-for-device"
-import { interactForResource } from "./interact-for-resource"
+import { getSeam } from './get-seam.js'
+import { interactForDevice } from './interact-for-device.js'
+import { interactForResource } from './interact-for-resource.js'
 
 export const interactForAccessCode = async ({
   device_id,
@@ -14,10 +14,10 @@ export const interactForAccessCode = async ({
   }
 
   return interactForResource({
-    resourceName: "access_code",
+    resourceName: 'access_code',
     fetchResources: () => seam.accessCodes.list({ device_id }),
     toChoice: (accessCode) => ({
-      title: accessCode.name ?? "<No Name>",
+      title: accessCode.name ?? '<No Name>',
       value: accessCode.access_code_id,
       description: `${accessCode.type} ${accessCode.access_code_id}`,
     }),

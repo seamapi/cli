@@ -3,8 +3,9 @@ import {
   isPersonalAccessToken,
   SeamHttp,
   SeamHttpWithoutWorkspace,
-} from "@seamapi/http/connect"
-import { getServer } from "./get-server"
+} from '@seamapi/http/connect'
+
+import { getServer } from './get-server.js'
 
 export const validateToken = async (token: string, workspaceId?: string) => {
   const options = { endpoint: getServer() }
@@ -23,5 +24,5 @@ export const validateToken = async (token: string, workspaceId?: string) => {
     return
   }
 
-  throw new Error("Invalid token: expected a Personal Access Token or API Key")
+  throw new Error('Invalid token: expected a Personal Access Token or API Key')
 }

@@ -1,5 +1,5 @@
-import Configstore from "configstore"
+import Configstore from 'configstore'
 
 export const getConfigStore = () => {
-  return new Configstore("seam-cli", {})
+  return new Configstore('seam-cli', {})
 }

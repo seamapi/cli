@@ -1,7 +1,9 @@
-import { getConfigStore } from "./get-config-store"
+import { getConfigStore } from './get-config-store.js'
 
-export const getServer = () => {
+export const getServer = (): string => {
   const config = getConfigStore()
 
-  return config.get("server") ?? "https://connect.getseam.com"
+  const server = config.get('server')
+
+  return typeof server === 'string' ? server : 'https://connect.getseam.com'
 }

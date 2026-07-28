@@ -1,9 +1,20 @@
-import prompts from "prompts"
-import uniqBy from "lodash/uniqBy"
-import isEqual from "lodash/isEqual"
-import { ContextHelpers } from "./types"
+import { isDeepStrictEqual as isEqual } from 'node:util'
 
-const ergonomicOrder = ["create", "list", "get", "update", "unlock_door"]
+import prompts from 'prompts'
+
+import type { ContextHelpers } from './types.js'
+
+const uniqBy = <T>(items: T[], keyOf: (item: T) => unknown): T[] => {
+  const seen = new Set<unknown>()
+  return items.filter((item) => {
+    const key = keyOf(item)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const ergonomicOrder = ['create', 'list', 'get', 'update', 'unlock_door']
 
 function ergonomicSort(aStr: string, bStr: string) {
   let a = ergonomicOrder.indexOf(aStr)
@@ -16,39 +27,39 @@ function ergonomicSort(aStr: string, bStr: string) {
 
 export async function interactForCommandSelection(
   commandPath: string[],
-  helpers: ContextHelpers
+  helpers: ContextHelpers,
 ) {
   const commands = helpers.blueprint.routes
     .flatMap((route) => route.endpoints)
     .map((endpoint) =>
-      endpoint.path.replace(/_/g, "-").replace(/^\//, "").split("/")
+      endpoint.path.replace(/_/g, '-').replace(/^\//, '').split('/'),
     )
     .concat([
-      ["login"],
-      ["logout"],
-      ["config", "reveal-location"],
-      ["config", "use-remote-api-defs"],
-      ["select", "workspace"],
-      ["select", "server"],
-      ["health", "get-health"],
+      ['login'],
+      ['logout'],
+      ['config', 'reveal-location'],
+      ['config', 'use-remote-api-defs'],
+      ['select', 'workspace'],
+      ['select', 'server'],
+      ['health', 'get-health'],
     ])
 
   const possibleCommands = uniqBy(
     commandPath.length === 0
       ? commands
       : commands.filter((cmd) =>
-          isEqual(cmd.slice(0, commandPath.length), commandPath)
+          isEqual(cmd.slice(0, commandPath.length), commandPath),
         ),
-    (v) => v[commandPath.length]
+    (v) => v[commandPath.length],
   )
 
   if (possibleCommands.length === 0) {
-    throw new Error("No possible commands")
+    throw new Error('No possible commands')
   }
 
   if (
     possibleCommands.length === 1 &&
-    possibleCommands[0].length === commandPath.length
+    possibleCommands[0]?.length === commandPath.length
   ) {
     return commandPath
   }
@@ -56,36 +67,36 @@ export async function interactForCommandSelection(
   // Add dynamic 'back' command for sub-commands to allow returning
   // to previous level.
   if (commandPath.length > 0) {
-    possibleCommands.push([...commandPath, "[Back]"])
+    possibleCommands.push([...commandPath, '[Back]'])
   }
 
-  const commandPathStr = commandPath.join("/").replace(/-/g, "_")
+  const commandPathStr = commandPath.join('/').replace(/-/g, '_')
 
   const res = await prompts({
-    name: "Command",
-    type: "autocomplete",
+    name: 'Command',
+    type: 'autocomplete',
     choices: [
       ...possibleCommands.map((cmd) => ({
         title:
           cmd?.[commandPath.length] ?? `[Call /${commandPathStr} Directly]`,
-        value: cmd?.[commandPath.length] ?? "<none>",
+        value: cmd?.[commandPath.length] ?? '<none>',
       })),
     ].sort((a, b) => ergonomicSort(a.value, b.value)),
     message: `Select a command: /${commandPathStr}`,
   })
 
   if (res?.Command === undefined) {
-    throw new Error("Bailed")
+    throw new Error('Bailed')
   }
 
-  if (res?.Command === "<none>") {
+  if (res?.Command === '<none>') {
     return commandPath
   }
 
   const newCommandPath = [...commandPath, res.Command]
 
   const fullCommand = possibleCommands.find((cmd) =>
-    isEqual(newCommandPath, cmd)
+    isEqual(newCommandPath, cmd),
   )
 
   if (!fullCommand) {

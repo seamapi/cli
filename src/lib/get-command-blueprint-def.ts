@@ -1,9 +1,9 @@
-import { ContextHelpers } from "./types"
+import type { ContextHelpers } from './types.js'
 export const getCommandBlueprintDef = (
   cmd: string[],
-  helpers: ContextHelpers
+  helpers: ContextHelpers,
 ) => {
-  const path = `/${cmd.join("/").replace(/-/g, "_")}`
+  const path = `/${cmd.join('/').replace(/-/g, '_')}`
   const def = helpers.blueprint.routes
     .flatMap((route) => route.endpoints)
     .find((endpoint) => endpoint.path === path)

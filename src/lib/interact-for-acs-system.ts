@@ -1,11 +1,11 @@
-import { getSeam } from "./get-seam"
-import { interactForResource } from "./interact-for-resource"
+import { getSeam } from './get-seam.js'
+import { interactForResource } from './interact-for-resource.js'
 
 export const interactForAcsSystem = async (message?: string) => {
   const seam = await getSeam()
 
   return interactForResource({
-    resourceName: "ACS system",
+    resourceName: 'ACS system',
     fetchResources: () => seam.acs.systems.list(),
     message,
     toChoice: (system) => ({

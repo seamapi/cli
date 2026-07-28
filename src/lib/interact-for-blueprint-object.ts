@@ -1,28 +1,28 @@
-import prompts from "prompts"
-import type { Parameter } from "@seamapi/blueprint"
-import { interactForDevice } from "./interact-for-device"
-import { interactForAccessCode } from "./interact-for-access-code"
-import { interactForConnectedAccount } from "./interact-for-connected-account"
-import { interactForTimestamp } from "./interact-for-timestamp"
-import { interactForUserIdentity } from "./interact-for-user-identity"
-import { interactForAcsSystem } from "./interact-for-acs-system"
-import { interactForAcsUser } from "./interact-for-acs-user"
-import { interactForCredentialPool } from "./interact-for-credential-pool"
-import { ContextHelpers } from "./types"
-import { interactForAcsEntrance } from "./interact-for-acs-entrance"
-import { ellipsis } from "./util/ellipsis"
-import { interactForArray } from "./interact-for-array"
-import { interactForCustomMetadata } from "./interact-for-custom-metadata"
+import type { Parameter } from '@seamapi/blueprint'
+import prompts from 'prompts'
+
+import { interactForAccessCode } from './interact-for-access-code.js'
+import { interactForAcsEntrance } from './interact-for-acs-entrance.js'
+import { interactForAcsSystem } from './interact-for-acs-system.js'
+import { interactForAcsUser } from './interact-for-acs-user.js'
+import { interactForArray } from './interact-for-array.js'
+import { interactForConnectedAccount } from './interact-for-connected-account.js'
+import { interactForCustomMetadata } from './interact-for-custom-metadata.js'
+import { interactForDevice } from './interact-for-device.js'
+import { interactForTimestamp } from './interact-for-timestamp.js'
+import { interactForUserIdentity } from './interact-for-user-identity.js'
+import type { ContextHelpers } from './types.js'
+import { ellipsis } from './util/ellipsis.js'
 
 const ergonomicPropOrder = [
-  "name",
-  "connected_account_id",
-  "device_id",
-  "access_code_id",
-  "user_identity_id",
-  "code",
-  "starts_at",
-  "ends_at",
+  'name',
+  'connected_account_id',
+  'device_id',
+  'access_code_id',
+  'user_identity_id',
+  'code',
+  'starts_at',
+  'ends_at',
 ]
 
 export const interactForBlueprintObject = async (
@@ -33,13 +33,13 @@ export const interactForBlueprintObject = async (
     isSubProperty?: boolean
     subPropertyPath?: string
   },
-  ctx: ContextHelpers
+  ctx: ContextHelpers,
 ): Promise<any> => {
   // Clone args and args params so that we can mutate it
   args = { ...args, params: { ...args.params } }
 
   const properties = Object.fromEntries(
-    args.parameters.map((parameter) => [parameter.name, parameter])
+    args.parameters.map((parameter) => [parameter.name, parameter]),
   )
   const required = args.parameters
     .filter((parameter) => parameter.isRequired)
@@ -55,26 +55,27 @@ export const interactForBlueprintObject = async (
 
   const propSortScore = (prop: string) => {
     if (required.includes(prop)) return 100 - ergonomicPropOrder.indexOf(prop)
-    if (args.params[prop] !== undefined)
+    if (args.params[prop] !== undefined) {
       return 50 - Object.keys(args.params).indexOf(prop)
+    }
     return ergonomicPropOrder.indexOf(prop)
   }
 
-  const cmdPath = `/${args.command.join("/").replace(/-/g, "_")}`
+  const cmdPath = `/${args.command.join('/').replace(/-/g, '_')}`
   const parameterSelectionMessage = args.isSubProperty
     ? `Editing "${args.subPropertyPath}"`
     : `[${cmdPath}] Parameters`
 
-  console.log("")
+  console.log('')
   const { paramToEdit } = await prompts({
-    name: "paramToEdit",
+    name: 'paramToEdit',
     message: parameterSelectionMessage,
-    type: "autocomplete",
+    type: 'autocomplete',
     choices: [
       ...(haveAllRequiredParams && !args.isSubProperty
         ? [
             {
-              value: "done",
+              value: 'done',
               title: `[Make API Call] ${cmdPath}`,
             },
           ]
@@ -83,18 +84,18 @@ export const interactForBlueprintObject = async (
         ? [
             {
               title: `[Save]`,
-              value: "done",
+              value: 'done',
             },
           ]
         : []),
       ...Object.keys(properties)
         .map((k) => {
           return {
-            title: k + (required.includes(k) ? "*" : ""),
+            title: k + (required.includes(k) ? '*' : ''),
             value: k,
             description:
               args.params[k] !== undefined
-                ? typeof args.params[k] === "object"
+                ? typeof args.params[k] === 'object'
                   ? ellipsis(JSON.stringify(args.params[k]), 60)
                   : `[${args.params[k]}]`
                 : undefined,
@@ -105,105 +106,102 @@ export const interactForBlueprintObject = async (
         ? [
             {
               title: `[Leave Empty]`,
-              value: "empty",
+              value: 'empty',
             },
           ]
         : []),
       {
         title: `[Back]`,
-        value: "back",
+        value: 'back',
       },
     ],
   })
 
-  if (paramToEdit === "empty") {
+  if (paramToEdit === 'empty') {
     return undefined
   }
 
-  if (paramToEdit === "done") {
+  if (paramToEdit === 'done') {
     // TODO check for required
     return args.params
   }
 
-  if (paramToEdit === "back") {
+  if (paramToEdit === 'back') {
     if (args.subPropertyPath) {
       return args.params
     }
 
-    return "[Back]"
+    return '[Back]'
   }
 
   const prop = properties[paramToEdit]
 
-  if (paramToEdit === "device_id") {
+  if (paramToEdit === 'device_id') {
     args.params[paramToEdit] = await interactForDevice()
     return interactForBlueprintObject(args, ctx)
-  } else if (paramToEdit === "access_code_id") {
+  } else if (paramToEdit === 'access_code_id') {
     args.params[paramToEdit] = await interactForAccessCode(args.params as any)
     return interactForBlueprintObject(args, ctx)
-  } else if (paramToEdit === "connected_account_id") {
+  } else if (paramToEdit === 'connected_account_id') {
     const connected_account_id = await interactForConnectedAccount()
     args.params[paramToEdit] = connected_account_id
     return interactForBlueprintObject(args, ctx)
   } else if (
-    paramToEdit === "user_identity_id" ||
-    paramToEdit === "user_identity_ids"
+    paramToEdit === 'user_identity_id' ||
+    paramToEdit === 'user_identity_ids'
   ) {
     const user_identity_id = await interactForUserIdentity()
     args.params[paramToEdit] =
-      paramToEdit === "user_identity_ids"
+      paramToEdit === 'user_identity_ids'
         ? [user_identity_id]
         : user_identity_id
     return interactForBlueprintObject(args, ctx)
-  } else if (paramToEdit.endsWith("acs_system_id")) {
+  } else if (paramToEdit.endsWith('acs_system_id')) {
     args.params[paramToEdit] = await interactForAcsSystem()
     return interactForBlueprintObject(args, ctx)
-  } else if (paramToEdit.endsWith("credential_pool_id")) {
-    args.params[paramToEdit] = await interactForCredentialPool()
-    return interactForBlueprintObject(args, ctx)
-  } else if (paramToEdit.endsWith("acs_user_id")) {
+  } else if (paramToEdit.endsWith('acs_user_id')) {
     args.params[paramToEdit] = await interactForAcsUser()
     return interactForBlueprintObject(args, ctx)
-  } else if (paramToEdit.endsWith("acs_entrance_id")) {
-    args.params.acs_entrance_id = await interactForAcsEntrance()
+  } else if (paramToEdit.endsWith('acs_entrance_id')) {
+    args.params['acs_entrance_id'] = await interactForAcsEntrance()
     return interactForBlueprintObject(args, ctx)
   } else if (
-    paramToEdit.endsWith("_at") ||
-    paramToEdit === "since" ||
-    paramToEdit.endsWith("_before") ||
-    paramToEdit.endsWith("_after")
+    paramToEdit.endsWith('_at') ||
+    paramToEdit === 'since' ||
+    paramToEdit.endsWith('_before') ||
+    paramToEdit.endsWith('_after')
   ) {
     args.params[paramToEdit] = await interactForTimestamp()
     return interactForBlueprintObject(args, ctx)
-  } else if (paramToEdit === "custom_metadata") {
+  } else if (paramToEdit === 'custom_metadata') {
     args.params[paramToEdit] = await interactForCustomMetadata(
-      args.params[paramToEdit] || {}
+      args.params[paramToEdit] || {},
     )
     return interactForBlueprintObject(args, ctx)
   }
 
   if (prop) {
-    if (["string", "id", "datetime"].includes(prop.format)) {
+    if (['string', 'id', 'datetime'].includes(prop.format)) {
       let value
-      if (prop.format === "datetime") {
+      if (prop.format === 'datetime') {
         value = await interactForTimestamp()
       } else {
         value = (
           await prompts({
-            name: "value",
+            name: 'value',
             message: `${paramToEdit}:`,
-            type: "text",
+            type: 'text',
           })
         ).value
       }
       args.params[paramToEdit] = value
       return interactForBlueprintObject(args, ctx)
-    } else if (prop.format === "enum") {
+    } else if (prop.format === 'enum') {
       const value = (
         await prompts({
-          name: "value",
+          name: 'value',
           message: `${paramToEdit}:`,
-          type: "select",
+          type: 'select',
           choices: prop.values.map((v) => ({
             title: v.name,
             value: v.name,
@@ -212,25 +210,25 @@ export const interactForBlueprintObject = async (
       ).value
       args.params[paramToEdit] = value
       return interactForBlueprintObject(args, ctx)
-    } else if (prop.format === "boolean") {
+    } else if (prop.format === 'boolean') {
       const { value } = await prompts({
-        name: "value",
+        name: 'value',
         message: `${paramToEdit}:`,
-        type: "toggle",
+        type: 'toggle',
         initial: true,
-        active: "true",
-        inactive: "false",
+        active: 'true',
+        inactive: 'false',
       })
 
       args.params[paramToEdit] = value
 
       return interactForBlueprintObject(args, ctx)
-    } else if (prop.format === "list" && prop.itemFormat === "enum") {
+    } else if (prop.format === 'list' && prop.itemFormat === 'enum') {
       const value = (
         await prompts({
-          name: "value",
+          name: 'value',
           message: `${paramToEdit}:`,
-          type: "autocompleteMultiselect",
+          type: 'autocompleteMultiselect',
           choices: prop.itemEnumValues.map((v) => ({
             title: v.name,
             value: v.name,
@@ -239,13 +237,13 @@ export const interactForBlueprintObject = async (
       ).value
       args.params[paramToEdit] = value
       return interactForBlueprintObject(args, ctx)
-    } else if (prop.format === "list") {
+    } else if (prop.format === 'list') {
       args.params[paramToEdit] = await interactForArray(
         args.params[paramToEdit] || [],
-        `Edit the list for ${paramToEdit}`
+        `Edit the list for ${paramToEdit}`,
       )
       return interactForBlueprintObject(args, ctx)
-    } else if (prop.format === "object") {
+    } else if (prop.format === 'object') {
       args.params[paramToEdit] = await interactForBlueprintObject(
         {
           command: args.command,
@@ -254,14 +252,14 @@ export const interactForBlueprintObject = async (
           isSubProperty: true,
           subPropertyPath: paramToEdit,
         },
-        ctx
+        ctx,
       )
       return interactForBlueprintObject(args, ctx)
-    } else if (prop.format === "number") {
+    } else if (prop.format === 'number') {
       const { value } = await prompts({
-        name: "value",
+        name: 'value',
         message: `${paramToEdit}:`,
-        type: "number",
+        type: 'number',
       })
 
       args.params[paramToEdit] = value
@@ -271,6 +269,6 @@ export const interactForBlueprintObject = async (
   }
 
   throw new Error(
-    `Didn't know how to handle Blueprint parameter for property: "${paramToEdit}"`
+    `Didn't know how to handle Blueprint parameter for property: "${paramToEdit}"`,
   )
 }

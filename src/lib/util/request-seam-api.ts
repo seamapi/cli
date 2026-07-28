@@ -1,7 +1,8 @@
-import type { AxiosResponse } from "axios"
-import chalk from "chalk"
-import { getSeam } from "../get-seam"
-import { withLoading } from "./with-loading"
+import chalk from 'chalk'
+
+import { getSeam } from 'lib/get-seam.js'
+
+import { withLoading } from './with-loading.js'
 
 export const RequestSeamApi = async ({
   path,
@@ -14,10 +15,10 @@ export const RequestSeamApi = async ({
 
   logRequest(path, params)
 
-  const response = await withLoading("Making request...", () =>
+  const response = await withLoading('Making request...', () =>
     seam.client.post(path, params, {
       validateStatus: () => true,
-    })
+    }),
   )
 
   logResponse(response)
@@ -25,14 +26,14 @@ export const RequestSeamApi = async ({
   return response
 }
 
-const logResponse = (response: AxiosResponse) => {
+const logResponse = (response: { status: number; data: unknown }) => {
   if (response.status >= 400) {
     console.log(chalk.red(`\n\n[${response.status}]\n`))
   } else {
     console.log(chalk.green(`\n\n[${response.status}]`))
   }
   console.dir(response.data, { depth: null })
-  console.log("\n")
+  console.log('\n')
 }
 
 const logRequest = (apiPath: string, params: Record<string, any>) => {

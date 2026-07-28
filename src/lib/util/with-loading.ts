@@ -1,8 +1,8 @@
-import { createSpinner } from "nanospinner"
+import { createSpinner } from 'nanospinner'
 
 export const withLoading = async <T>(
   message: string,
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
 ): Promise<T> => {
   const spinner = createSpinner(message).start()
   try {

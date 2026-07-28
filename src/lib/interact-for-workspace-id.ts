@@ -1,9 +1,10 @@
-import { getConfigStore } from "./get-config-store"
-import prompts from "prompts"
-import { SeamHttpWithoutWorkspace } from "@seamapi/http/connect"
-import { getSeamMultiWorkspace } from "./get-seam"
-import { getServer } from "./get-server"
-import { withLoading } from "./util/with-loading"
+import { SeamHttpWithoutWorkspace } from '@seamapi/http/connect'
+import prompts from 'prompts'
+
+import { getConfigStore } from './get-config-store.js'
+import { getSeamMultiWorkspace } from './get-seam.js'
+import { getServer } from './get-server.js'
+import { withLoading } from './util/with-loading.js'
 
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const config = getConfigStore()
@@ -13,13 +14,13 @@ export const interactForWorkspaceId = async (personalAccessToken?: string) => {
       })
     : await getSeamMultiWorkspace()
 
-  const workspaces = await withLoading("Fetching workspaces...", () =>
-    seam.workspaces.list()
+  const workspaces = await withLoading('Fetching workspaces...', () =>
+    seam.workspaces.list(),
   )
   const { workspaceId } = await prompts({
-    name: "workspaceId",
-    type: "select",
-    message: "Select a workspace:",
+    name: 'workspaceId',
+    type: 'select',
+    message: 'Select a workspace:',
     choices: workspaces.map((workspace: any) => ({
       title: workspace.name,
       value: workspace.workspace_id,
@@ -28,9 +29,9 @@ export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   })
 
   if (workspaceId) {
-    config.set("current_workspace_id", workspaceId)
+    config.set('current_workspace_id', workspaceId)
     return workspaceId
   }
 
-  throw new Error("Bailed")
+  throw new Error('Bailed')
 }

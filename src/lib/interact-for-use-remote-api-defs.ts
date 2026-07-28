@@ -1,19 +1,20 @@
-import prompts from "prompts"
-import { getConfigStore } from "./get-config-store"
+import prompts from 'prompts'
+
+import { getConfigStore } from './get-config-store.js'
 
 export async function interactForUseRemoteApiDefs() {
   const { use_remote_api_defs } = await prompts([
     {
-      type: "select",
-      name: "use_remote_api_defs",
-      message: "Always use remote API Definitions?",
+      type: 'select',
+      name: 'use_remote_api_defs',
+      message: 'Always use remote API Definitions?',
       choices: [
         {
-          title: "Yes",
+          title: 'Yes',
           value: true,
         },
         {
-          title: "No",
+          title: 'No',
           value: false,
         },
       ],
@@ -21,6 +22,6 @@ export async function interactForUseRemoteApiDefs() {
   ])
 
   const config = getConfigStore()
-  config.set("use_remote_api_defs", use_remote_api_defs)
+  config.set('use_remote_api_defs', use_remote_api_defs)
   console.log(`Use remote API Definitions: ${use_remote_api_defs}`)
 }
