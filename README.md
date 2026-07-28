@@ -13,11 +13,6 @@ Every command is interactive: the CLI prompts for any missing required
 parameter with suggestions pulled from your workspace. Pass `-y` to take the
 first suggestion instead of being asked.
 
-The command list is derived at runtime from the [Seam API blueprint], so the
-CLI exposes every documented endpoint without needing a release of its own.
-
-[Seam API blueprint]: https://github.com/seamapi/blueprint
-
 ## Installation
 
 Install the CLI globally using [npm] with
@@ -65,7 +60,7 @@ seam locks unlock-door --device-id $MY_DOOR
 # Create an access code
 seam access-codes create --code "1234" --name "My Code"
 
-# List you access codes
+# List your access codes
 seam access-codes list --device-id $MY_DOOR
 ```
 

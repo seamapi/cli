@@ -1,7 +1,6 @@
-import { type Blueprint, createBlueprint } from '@seamapi/blueprint'
-import { getOpenapiSchema } from '@seamapi/http/connect'
-import * as seamTypes from '@seamapi/types/connect'
+import type { Blueprint } from '@seamapi/blueprint'
 
+import getBlueprint from './blueprint.js'
 import { getServer } from './get-server.js'
 
 export type ApiBlueprint = Blueprint
@@ -9,9 +8,20 @@ export type ApiBlueprint = Blueprint
 export const getApiBlueprint = async (
   useRemoteDefinitions: boolean,
 ): Promise<ApiBlueprint> => {
-  const typesModule = useRemoteDefinitions
-    ? { ...seamTypes, openapi: await getOpenapiSchema(getServer()) }
-    : seamTypes
+  // Remote definitions describe whatever the server is currently running, so
+  // build them directly from the server's OpenAPI document. This runtime path
+  // does not load @seamapi/types.
+  if (useRemoteDefinitions) return await createRemoteBlueprint()
 
-  return createBlueprint(typesModule, { omitUndocumented: true })
+  return await getBlueprint()
+}
+
+const createRemoteBlueprint = async (): Promise<Blueprint> => {
+  const [{ createBlueprint }, { getOpenapiSchema }] = await Promise.all([
+    import('@seamapi/blueprint'),
+    import('@seamapi/http/connect'),
+  ])
+  const openapi = await getOpenapiSchema(getServer())
+
+  return await createBlueprint({ openapi }, { omitUndocumented: true })
 }
