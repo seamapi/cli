@@ -1,0 +1,22 @@
+---
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: feat
+      include: scope
+    allow:
+      - dependency-type: production
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - 'version-update:semver-major'
+    groups:
+      seam:
+        dependency-type: production
+        update-types:
+          - patch
+          - minor
