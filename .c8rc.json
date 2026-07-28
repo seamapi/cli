@@ -1,7 +1,7 @@
 {
   "exclude": [
     "**/index.ts",
-    "src/cli.ts",
+    "src/bin/cli.ts",
     "package/**/*.ts",
     "**/*.test.ts",
     "ava.config.js"

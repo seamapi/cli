@@ -9,7 +9,7 @@
     "rootDir": "./src",
     "outDir": "./"
   },
-  "files": ["src/index.ts", "src/cli.ts"],
+  "files": ["src/index.ts", "src/bin/cli.ts"],
   "include": ["src/**/*"],
   "exclude": ["**/*.test.ts"]
 }

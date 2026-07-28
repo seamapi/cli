@@ -29,6 +29,6 @@
       "lib/*": ["./src/lib/*"]
     }
   },
-  "files": ["src/index.ts", "src/cli.ts"],
+  "files": ["src/index.ts", "src/bin/cli.ts"],
   "include": ["src/**/*", "test/**/*", "eslint.config.ts"]
 }

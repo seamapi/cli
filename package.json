@@ -15,11 +15,11 @@
   },
   "module": "index.js",
   "bin": {
-    "seam": "./cli.js"
+    "seam": "./bin/cli.js"
   },
   "sideEffects": [
-    "./cli.js",
-    "./src/cli.ts"
+    "./bin/cli.js",
+    "./src/bin/cli.ts"
   ],
   "keywords": [
     "cli",
@@ -38,9 +38,7 @@
     "index.js",
     "index.js.map",
     "index.d.ts",
-    "cli.js",
-    "cli.js.map",
-    "cli.d.ts",
+    "bin",
     "lib",
     "src",
     "!test",
@@ -49,11 +47,11 @@
   "scripts": {
     "build": "npm run build:entrypoints",
     "prebuild": "tsx src/index.ts",
-    "postbuild": "node ./index.js && node ./cli.js --version",
+    "postbuild": "node ./index.js && node ./bin/cli.js --version",
     "build:entrypoints": "npm run build:ts",
     "build:ts": "tsc --project tsconfig.build.json",
-    "prebuild:ts": "del 'index.*' 'cli.*' lib",
-    "postbuild:ts": "tsc-alias --project tsconfig.build.json && chmod +x cli.js",
+    "prebuild:ts": "del 'index.*' bin lib",
+    "postbuild:ts": "tsc-alias --project tsconfig.build.json && chmod +x bin/cli.js",
     "typecheck": "tsc",
     "test": "c8 ava",
     "pretest": "tsx src/index.ts",
