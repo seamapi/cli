@@ -10,7 +10,6 @@
 *.js
 *.js.map
 !src/**/*.d.ts
-!ava.config.js
 
 # Build directories
 package

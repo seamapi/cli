@@ -30,5 +30,11 @@
     }
   },
   "files": ["src/index.ts", "src/bin/cli.ts"],
-  "include": ["src/**/*", "test/**/*", "eslint.config.ts", "prepack.ts"]
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "eslint.config.ts",
+    "prepack.ts",
+    "vitest.config.ts"
+  ]
 }
