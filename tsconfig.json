@@ -33,7 +33,6 @@
   "include": [
     "src/**/*",
     "test/**/*",
-    "scripts/**/*",
     "eslint.config.ts",
     "prepack.ts",
     "vitest.config.ts"

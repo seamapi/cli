@@ -1,9 +1,7 @@
-import { readFile } from 'node:fs/promises'
-
 import type { Blueprint } from '@seamapi/blueprint'
 import type * as SeamTypes from '@seamapi/types/connect'
 
-import seamapiBlueprint from './blueprint.js'
+import getBlueprint from './blueprint.js'
 import { getServer } from './get-server.js'
 
 export type ApiBlueprint = Blueprint
@@ -15,30 +13,7 @@ export const getApiBlueprint = async (
   // they are always built from the live schema.
   if (useRemoteDefinitions) return await createRemoteBlueprint()
 
-  if (seamapiBlueprint != null) return seamapiBlueprint
-
-  return await readDevelopmentBlueprint()
-}
-
-const readDevelopmentBlueprint = async (): Promise<Blueprint> => {
-  // This module runs from src/lib under tsx and from lib after a development
-  // build. The packed module never takes this path because its blueprint is
-  // injected by prepack.ts.
-  const candidates = ['../../tmp/blueprint.json', '../tmp/blueprint.json']
-
-  for (const candidate of candidates) {
-    try {
-      return JSON.parse(
-        await readFile(new URL(candidate, import.meta.url), 'utf8'),
-      ) as Blueprint
-    } catch {
-      // Try the path for the other execution mode.
-    }
-  }
-
-  throw new Error(
-    'Missing tmp/blueprint.json. Run `npm run generate:blueprint` to generate it.',
-  )
+  return await getBlueprint()
 }
 
 const createRemoteBlueprint = async (): Promise<Blueprint> => {

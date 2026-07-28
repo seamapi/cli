@@ -40,13 +40,14 @@ The command list is derived from the Seam API definitions. Doing that at
 startup costs around 700ms, almost all of it evaluating `@seamapi/types` and
 running `createBlueprint`, so the blueprint is generated ahead of time.
 
-During development, `scripts/generate-blueprint.ts` writes
-`tmp/blueprint.json`. The `prebuild` and `preseam` hooks regenerate it before it
-is used. When the package is packed, `prepack.ts` injects that generated value
-into `src/lib/blueprint.ts` and rebuilds the module, just as it injects the
-package version into `src/lib/version.ts`. The published CLI therefore loads
-the blueprint directly from JavaScript without shipping or reading a separate
-JSON file.
+`src/lib/blueprint.ts` contains the packaged blueprint. In a development
+checkout its placeholder is empty, so it dynamically imports the API types,
+builds the blueprint, and stores it in `tmp/blueprint.json` for subsequent
+runs. When the package is packed, `prepack.ts` forces a fresh blueprint,
+injects it into that placeholder, and rebuilds the module, just as it injects
+the package version into `src/lib/version.ts`. The published CLI therefore
+loads the blueprint directly from JavaScript without importing
+`@seamapi/types` or reading a separate JSON file.
 
 Because the default runtime path does not build a blueprint, `@seamapi/types`
 is a development dependency rather than a runtime one. That is most of the

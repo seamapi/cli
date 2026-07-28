@@ -3,9 +3,10 @@ import { fileURLToPath } from 'node:url'
 
 import { $ } from 'execa'
 
+import getBlueprint from './src/lib/blueprint.js'
+
 const versionFile = './src/lib/version.ts'
 const blueprintFile = './src/lib/blueprint.ts'
-const generatedBlueprintFile = './tmp/blueprint.json'
 
 const main = async (): Promise<void> => {
   const version = await injectVersion(resolveFile(versionFile))
@@ -14,7 +15,7 @@ const main = async (): Promise<void> => {
 
   await injectBlueprint(
     resolveFile(blueprintFile),
-    resolveFile(generatedBlueprintFile),
+    await getBlueprint({ regenerate: true }),
   )
   // eslint-disable-next-line no-console
   console.log(`✓ Blueprint injected into ${blueprintFile}`)
@@ -42,10 +43,8 @@ const injectVersion = async (path: string): Promise<string> => {
 
 const injectBlueprint = async (
   path: string,
-  generatedPath: string,
+  blueprint: unknown,
 ): Promise<void> => {
-  const blueprint = JSON.parse(await readFile(generatedPath, 'utf8')) as unknown
-
   await replaceInFile(
     path,
     'const seamapiBlueprint: Blueprint | null = null',
