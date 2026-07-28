@@ -7,17 +7,63 @@ A command line interface (CLI) for interacting with the Seam API.
 
 ## Description
 
-TODO
+Every command is interactive: the CLI prompts for any missing required
+parameter with suggestions pulled from your workspace. Pass `-y` to take the
+first suggestion instead of being asked.
+
+The command list is derived at runtime from the [Seam API blueprint], so the
+CLI exposes every documented endpoint without needing a release of its own.
+
+[Seam API blueprint]: https://github.com/seamapi/blueprint
 
 ## Installation
 
-Add this as a dependency to your project using [npm] with
+Install the CLI globally using [npm] with
+
+```
+$ npm install --global @seamapi/cli
+```
+
+Then log in and run a command
+
+```
+$ seam login
+$ seam devices list
+$ seam --help
+```
+
+The package also exports its building blocks as a library. Add it as a
+dependency to your project with
 
 ```
 $ npm install @seamapi/cli
 ```
 
 [npm]: https://www.npmjs.com/
+
+## Distribution
+
+The package builds to plain ES modules with `tsc` and resolves its
+dependencies through npm: there is no bundling step.
+
+- **npm** is the primary channel, both for `npm install --global` and for
+  the `seam` package, which depends on this one and re-exposes the `seam`
+  bin.
+- **Homebrew and the AUR** package the npm tarball rather than a
+  self-contained binary: a formula using `depends_on "node"` with
+  `std_npm_args`, and a `PKGBUILD` with `depends=('nodejs')`. Both track npm
+  releases without a separate artifact to build or sign.
+
+Earlier versions of the CLI bundled with `tsup` and `@vercel/ncc` and built
+binaries with `pkg`. That pipeline is gone. `pkg` was archived in 2024 in
+favour of Node's single executable applications, and bundling measurably buys
+little here: a single-file build starts in roughly 290ms against roughly
+420ms unbundled, because most of the startup cost is parsing the Seam API
+definitions rather than resolving modules.
+
+If self-contained binaries are wanted later, `bun build --compile` and
+`deno compile` both cross-compile and both consume the ES modules this
+package already publishes, so nothing here needs to change first.
 
 ## Development and Testing
 
