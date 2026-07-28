@@ -9,10 +9,8 @@
 *.d.ts
 *.js
 *.js.map
+blueprint.json
 !src/**/*.d.ts
-
-# Generated at build time from @seamapi/types
-/blueprint.json
 
 # Build directories
 package
@@ -209,8 +207,7 @@ $RECYCLE.BIN/
 .LSOverride
 
 # Icon must end with two \r
-Icon
-
+Icon
 
 # Thumbnails
 ._*
