@@ -106,7 +106,7 @@ jobs:
       - name: Run
         run: node index.js
       - name: Run CLI
-        run: npx seam --help
+        run: ./node_modules/.bin/seam --help
   typecheck:
     name: Typecheck (Node.js v${{ matrix.node }})
     runs-on: ubuntu-latest
