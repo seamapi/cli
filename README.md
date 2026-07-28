@@ -13,11 +13,6 @@ Every command is interactive: the CLI prompts for any missing required
 parameter with suggestions pulled from your workspace. Pass `-y` to take the
 first suggestion instead of being asked.
 
-The command list is derived from the [Seam API blueprint], so the CLI exposes
-every documented endpoint without needing a release of its own.
-
-[Seam API blueprint]: https://github.com/seamapi/blueprint
-
 ## Installation
 
 Install the CLI globally using [npm] with
@@ -68,34 +63,6 @@ seam access-codes create --code "1234" --name "My Code"
 # List your access codes
 seam access-codes list --device-id $MY_DOOR
 ```
-
-## The generated blueprint
-
-The command list is derived from the Seam API definitions. Doing that at
-startup costs around 700ms, almost all of it evaluating `@seamapi/types` and
-running `createBlueprint`, so the blueprint is generated ahead of time.
-
-`src/lib/blueprint.ts` contains the packaged blueprint. In a development
-checkout its placeholder is empty, so it dynamically imports the API types,
-builds the blueprint, and stores it in `tmp/blueprint.json` for subsequent
-runs. When the package is packed, `prepack.ts` forces a fresh blueprint,
-injects it into that placeholder, and rebuilds the module, just as it injects
-the package version into `src/lib/version.ts`. The published CLI therefore
-loads the blueprint directly from JavaScript without importing
-`@seamapi/types` or reading a separate JSON file.
-
-Because the default runtime path does not build a blueprint, `@seamapi/types`
-is a development dependency rather than a runtime one. That is most of the
-install: it unpacks to 63MB, because it ships ESM, CJS, TypeScript sources and
-both flavours of declarations, and the generated route types and OpenAPI
-document are several MB in each. Dropping it takes an install from around 81MB
-to around 21MB, which matters for Homebrew and the AUR.
-
-Remote definitions, selected with `seam config use-remote-api-defs`, still
-need `@seamapi/types` because they describe whatever the server is currently
-running and cannot be generated ahead of time. It is declared as an optional
-peer dependency, and the CLI reports what to install if that mode is selected
-without it.
 
 ## Development and Testing
 
