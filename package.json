@@ -70,7 +70,7 @@
   },
   "engines": {
     "node": ">=22.11.0",
-    "npm": ">=10.9.4"
+    "npm": ">=10.0.0"
   },
   "devEngines": {
     "runtime": {
@@ -79,7 +79,7 @@
     },
     "packageManager": {
       "name": "npm",
-      "version": "^11.16.0 || ^10.9.4"
+      "version": "^11.0.0 || ^10.0.0"
     }
   },
   "dependencies": {
@@ -93,7 +93,7 @@
     "nanospinner": "^1.2.2",
     "open": "^11.0.0",
     "prompts": "^2.4.2"
-  }
+  },
   "devDependencies": {
     "@types/command-line-usage": "^5.0.4",
     "@types/minimist": "^1.2.5",
