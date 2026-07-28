@@ -9,7 +9,6 @@
 *.d.ts
 *.js
 *.js.map
-blueprint.json
 !src/**/*.d.ts
 
 # Build directories

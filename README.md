@@ -38,32 +38,28 @@ $ seam --help
 
 The command list is derived from the Seam API definitions. Doing that at
 startup costs around 700ms, almost all of it evaluating `@seamapi/types` and
-running `createBlueprint`, so it is done once at build time instead:
-`scripts/generate-blueprint.ts` writes a `blueprint.json` that ships with the
-package and is read in around 20ms.
+running `createBlueprint`, so the blueprint is generated ahead of time.
 
-Because nothing builds a blueprint at runtime, `@seamapi/types` is a
-development dependency rather than a runtime one. That is most of the install:
-it unpacks to 63MB, because it ships ESM, CJS, TypeScript sources and both
-flavours of declarations, and the generated route types and OpenAPI document
-are several MB in each. Dropping it takes an install from around 81MB to
-around 21MB, which matters for Homebrew and the AUR.
+During development, `scripts/generate-blueprint.ts` writes
+`tmp/blueprint.json`. The `prebuild` and `preseam` hooks regenerate it before it
+is used. When the package is packed, `prepack.ts` injects that generated value
+into `src/lib/blueprint.ts` and rebuilds the module, just as it injects the
+package version into `src/lib/version.ts`. The published CLI therefore loads
+the blueprint directly from JavaScript without shipping or reading a separate
+JSON file.
 
-Generation is idempotent. The file records the versions it was generated from,
-and the script rewrites it only when they change, so the `prebuild` and
-`preseam` hooks are cheap to re-run. `blueprint.json` is not committed, since
-each revision would add a few MB to the repository forever.
+Because the default runtime path does not build a blueprint, `@seamapi/types`
+is a development dependency rather than a runtime one. That is most of the
+install: it unpacks to 63MB, because it ships ESM, CJS, TypeScript sources and
+both flavours of declarations, and the generated route types and OpenAPI
+document are several MB in each. Dropping it takes an install from around 81MB
+to around 21MB, which matters for Homebrew and the AUR.
 
-Two paths still build a blueprint and so still need `@seamapi/types`, which is
-declared as an optional peer dependency:
-
-- Remote definitions, selected with `seam config use-remote-api-defs`, which
-  describe whatever the server is currently running and therefore cannot be
-  generated ahead of time.
-- A working copy where `blueprint.json` has not been generated yet.
-
-Neither happens in a published install. If one is reached without the package
-present, the CLI says so and names what to install.
+Remote definitions, selected with `seam config use-remote-api-defs`, still
+need `@seamapi/types` because they describe whatever the server is currently
+running and cannot be generated ahead of time. It is declared as an optional
+peer dependency, and the CLI reports what to install if that mode is selected
+without it.
 
 ## Development and Testing
 

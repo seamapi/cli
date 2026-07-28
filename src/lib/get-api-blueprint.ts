@@ -1,7 +1,9 @@
+import { readFile } from 'node:fs/promises'
+
 import type { Blueprint } from '@seamapi/blueprint'
 import type * as SeamTypes from '@seamapi/types/connect'
 
-import { blueprintFileName, readBlueprintFile } from './blueprint-file.js'
+import seamapiBlueprint from './blueprint.js'
 import { getServer } from './get-server.js'
 
 export type ApiBlueprint = Blueprint
@@ -13,23 +15,30 @@ export const getApiBlueprint = async (
   // they are always built from the live schema.
   if (useRemoteDefinitions) return await createRemoteBlueprint()
 
-  const file = await readBlueprintFile()
-  if (file != null) return file.blueprint
+  if (seamapiBlueprint != null) return seamapiBlueprint
 
-  return await createLocalBlueprint()
+  return await readDevelopmentBlueprint()
 }
 
-// The published package ships a generated blueprint.json, so @seamapi/types is
-// not a runtime dependency: evaluating its API definitions and building the
-// blueprint is what made startup slow. This path only runs in a working copy
-// where blueprint.json has not been generated yet.
-const createLocalBlueprint = async (): Promise<Blueprint> => {
-  const [seamTypes, { createBlueprint }] = await Promise.all([
-    importSeamTypes(),
-    import('@seamapi/blueprint'),
-  ])
+const readDevelopmentBlueprint = async (): Promise<Blueprint> => {
+  // This module runs from src/lib under tsx and from lib after a development
+  // build. The packed module never takes this path because its blueprint is
+  // injected by prepack.ts.
+  const candidates = ['../../tmp/blueprint.json', '../tmp/blueprint.json']
 
-  return await createBlueprint(seamTypes, { omitUndocumented: true })
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(
+        await readFile(new URL(candidate, import.meta.url), 'utf8'),
+      ) as Blueprint
+    } catch {
+      // Try the path for the other execution mode.
+    }
+  }
+
+  throw new Error(
+    'Missing tmp/blueprint.json. Run `npm run generate:blueprint` to generate it.',
+  )
 }
 
 const createRemoteBlueprint = async (): Promise<Blueprint> => {
@@ -48,14 +57,14 @@ const createRemoteBlueprint = async (): Promise<Blueprint> => {
   )
 }
 
-// @seamapi/types is an optional peer dependency: it is only needed to build a
-// blueprint, which the published package does not do for the default path.
+// @seamapi/types is an optional peer dependency: it is only needed when remote
+// definitions are enabled. The default blueprint is embedded in the package.
 const importSeamTypes = async (): Promise<typeof SeamTypes> => {
   try {
     return await import('@seamapi/types/connect')
   } catch {
     throw new Error(
-      `Building an API blueprint requires @seamapi/types, which is not installed. Install it alongside the CLI, or use the ${blueprintFileName} generated at build time.`,
+      'Remote API definitions require @seamapi/types, which is not installed. Install it alongside the CLI or disable remote API definitions.',
     )
   }
 }
