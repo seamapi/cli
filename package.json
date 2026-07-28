@@ -82,6 +82,18 @@
       "version": "^11.16.0 || ^10.9.4"
     }
   },
+  "dependencies": {
+    "@seamapi/blueprint": "^1.1.0",
+    "@seamapi/http": "^2.0.0",
+    "@seamapi/types": "^1.983.0",
+    "chalk": "^6.0.0",
+    "command-line-usage": "^7.0.4",
+    "configstore": "^8.0.0",
+    "minimist": "^1.2.8",
+    "nanospinner": "^1.2.2",
+    "open": "^11.0.0",
+    "prompts": "^2.4.2"
+  }
   "devDependencies": {
     "@types/command-line-usage": "^5.0.4",
     "@types/minimist": "^1.2.5",
@@ -102,17 +114,5 @@
     "tsc-alias": "^1.8.2",
     "tsx": "^4.6.2",
     "typescript": "^6.0.3"
-  },
-  "dependencies": {
-    "@seamapi/blueprint": "^1.1.0",
-    "@seamapi/http": "^2.0.0",
-    "@seamapi/types": "^1.983.0",
-    "chalk": "^6.0.0",
-    "command-line-usage": "^7.0.4",
-    "configstore": "^8.0.0",
-    "minimist": "^1.2.8",
-    "nanospinner": "^1.2.2",
-    "open": "^11.0.0",
-    "prompts": "^2.4.2"
   }
 }
