@@ -100,7 +100,7 @@
     "prompts": "^2.4.2"
   },
   "devDependencies": {
-    "@seamapi/types": "1.983.0",
+    "@seamapi/types": "1.985.0",
     "@types/command-line-usage": "^5.0.4",
     "@types/minimist": "^1.2.5",
     "@types/node": "^24.10.9",
