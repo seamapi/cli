@@ -64,6 +64,42 @@ seam access-codes create --code "1234" --name "My Code"
 seam access-codes list --device-id $MY_DOOR
 ```
 
+## Shell completion
+
+The CLI can print a completion script for bash, fish, and zsh that completes
+commands, flags, and flag values such as device types.
+
+Load completions into the current shell with
+
+```bash
+# bash
+source <(seam completion bash)
+
+# zsh
+source <(seam completion zsh)
+```
+
+Install them for every shell with
+
+```bash
+# bash
+seam completion bash > /usr/share/bash-completion/completions/seam
+
+# fish
+seam completion fish > ~/.config/fish/completions/seam.fish
+
+# zsh
+seam completion zsh > "${fpath[1]}/_seam"
+```
+
+The same scripts are packaged under `completions/` in the published package,
+so a system package may install them without running the CLI.
+
+Completions are generated from the API definitions bundled with the CLI. They
+do not reflect definitions served by a Seam API server, so they may be out of
+date when `seam config use-remote-api-defs` is enabled, and when running the
+CLI from a source checkout with `npm run seam`.
+
 ## Development and Testing
 
 ### Quickstart

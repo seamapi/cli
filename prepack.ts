@@ -1,28 +1,56 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import type { Blueprint } from '@seamapi/blueprint'
 import { $ } from 'execa'
 
 import getBlueprint from './src/lib/blueprint.js'
+import {
+  completionFileNames,
+  completionShells,
+  renderCompletion,
+} from './src/lib/completion/index.js'
 
 const versionFile = './src/lib/version.ts'
 const blueprintFile = './src/lib/blueprint.ts'
+const completionsDirectory = './completions'
 
 const main = async (): Promise<void> => {
   const version = await injectVersion(resolveFile(versionFile))
   // eslint-disable-next-line no-console
   console.log(`✓ Version ${version} injected into ${versionFile}`)
 
-  await injectBlueprint(
-    resolveFile(blueprintFile),
-    await getBlueprint({ regenerate: true }),
-  )
+  const blueprint = await getBlueprint({ regenerate: true })
+
+  await injectBlueprint(resolveFile(blueprintFile), blueprint)
   // eslint-disable-next-line no-console
   console.log(`✓ Blueprint injected into ${blueprintFile}`)
+
+  await writeCompletions(resolveFile(completionsDirectory), blueprint)
+  // eslint-disable-next-line no-console
+  console.log(`✓ Shell completions written to ${completionsDirectory}`)
 
   const { command } = await $`tsc --project tsconfig.prepack.json`
   // eslint-disable-next-line no-console
   console.log(`✓ Rebuilt with '${command}'`)
+}
+
+const writeCompletions = async (
+  path: string,
+  blueprint: Blueprint,
+): Promise<void> => {
+  await mkdir(path, { recursive: true })
+
+  await Promise.all(
+    completionShells.map(async (shell) => {
+      await writeFile(
+        join(path, completionFileNames[shell]),
+        renderCompletion(shell, blueprint),
+        'utf8',
+      )
+    }),
+  )
 }
 
 const injectVersion = async (path: string): Promise<string> => {

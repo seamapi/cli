@@ -7,6 +7,11 @@ import commandLineUsage from 'command-line-usage'
 import parseArgs, { type ParsedArgs } from 'minimist'
 import prompts from 'prompts'
 
+import {
+  completionShells,
+  isCompletionShell,
+  renderCompletion,
+} from 'lib/completion/index.js'
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
 import { getConfigStore } from 'lib/get-config-store.js'
 import { getServer } from 'lib/get-server.js'
@@ -62,6 +67,10 @@ const sections = [
         name: 'seam access-codes list {bold --device-id} $MY_DOOR',
         summary: 'List you access codes.',
       },
+      {
+        name: 'seam completion bash',
+        summary: 'Print a shell completion script for bash, fish, or zsh.',
+      },
     ],
   },
 ]
@@ -78,6 +87,21 @@ async function cli(args: ParsedArgs) {
   if (args['version']) {
     console.log(seamapiCliVersion)
     process.exit(0)
+  }
+
+  if (args._[0] === 'completion') {
+    const shell = args._[1]
+
+    if (!isCompletionShell(shell)) {
+      console.log(`Usage: seam completion <${completionShells.join('|')}>`)
+      process.exit(1)
+    }
+
+    // Completions always come from the bundled API definitions so that they
+    // can be generated offline and without logging in. They may lag the
+    // definitions served by Seam when config use-remote-api-defs is enabled.
+    console.log(renderCompletion(shell, await getApiBlueprint(false)))
+    return
   }
 
   if (
