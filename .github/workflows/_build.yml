@@ -44,7 +44,7 @@ jobs:
             if [[ "$platform" == windows-* ]]; then
               binary="${binary}.exe"
             fi
-            bun build src/bin/cli.ts --compile --minify --target="bun-${platform}" --outfile="$binary"
+            bun build src/bin/cli.ts --compile --minify --external=react-devtools-core --target="bun-${platform}" --outfile="$binary"
           done
       - name: Generate standalone binary checksums
         working-directory: release
