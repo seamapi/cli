@@ -33,12 +33,22 @@ $ paru -S seam-bin
 [aur]: https://aur.archlinux.org/packages/seam-bin
 [latest GitHub release]: https://github.com/seamapi/cli/releases/latest
 [npm]: https://www.npmjs.com/
+[Seam Wizard]: https://github.com/seamapi/wizard
 
 ## Usage
 
 Every `seam` command is interactive and will prompt you for any missing
 required properties with helpful suggestions. To avoid automatic behavior,
-pass `-y`
+pass `-y`.
+
+To take a project from zero to a working Seam integration, run the
+[Seam Wizard] from the project's root:
+
+```bash
+seam wizard
+```
+
+For API commands:
 
 ```bash
 # Login to Seam

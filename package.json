@@ -91,6 +91,7 @@
   "dependencies": {
     "@seamapi/blueprint": "^1.1.0",
     "@seamapi/http": "2.2.0",
+    "@seamapi/wizard": "0.5.2",
     "chalk": "^6.0.0",
     "command-line-usage": "^7.0.4",
     "configstore": "^8.0.0",
@@ -116,6 +117,7 @@
     "jiti": "^2.4.2",
     "neostandard": "^0.13.0",
     "prettier": "^3.0.0",
+    "react-devtools-core": "^7.0.1",
     "tsc-alias": "^1.8.2",
     "tsx": "^4.6.2",
     "typescript": "^6.0.3",
