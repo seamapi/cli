@@ -21,6 +21,9 @@ Install the CLI globally using [npm] with
 $ npm install --global @seamapi/cli
 ```
 
+Alternatively, download a standalone binary for your platform from the
+[latest GitHub release].
+
 On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
 
 ```
@@ -28,6 +31,7 @@ $ paru -S seam-bin
 ```
 
 [aur]: https://aur.archlinux.org/packages/seam-bin
+[latest GitHub release]: https://github.com/seamapi/cli/releases/latest
 [npm]: https://www.npmjs.com/
 
 ## Usage
