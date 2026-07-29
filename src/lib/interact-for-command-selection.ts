@@ -65,7 +65,7 @@ export async function interactForCommandSelection(
     return commandPath
   }
 
-  if (!helpers.is_interactive) {
+  if (helpers.interactivity === 'non-interactive') {
     // The command path is itself a command, so call it directly rather than
     // prompting to select one of its sub-commands.
     if (possibleCommands.some((cmd) => cmd.length === commandPath.length)) {

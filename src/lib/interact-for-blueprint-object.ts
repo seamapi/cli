@@ -50,12 +50,15 @@ export const interactForBlueprintObject = async (
 
   const cmdPath = `/${args.command.join('/').replace(/-/g, '_')}`
 
-  if (!ctx.is_interactive) {
-    const should_auto_submit = haveAllRequiredParams && !args.isSubProperty
-    if (should_auto_submit) {
-      return args.params
-    }
+  const should_auto_submit =
+    ctx.interactivity !== 'interactive' &&
+    haveAllRequiredParams &&
+    !args.isSubProperty
+  if (should_auto_submit) {
+    return args.params
+  }
 
+  if (ctx.interactivity === 'non-interactive') {
     const missing = required.filter((k) => !args.params[k])
     const target = args.isSubProperty ? `"${args.subPropertyPath}"` : cmdPath
     throw new NonInteractiveError(

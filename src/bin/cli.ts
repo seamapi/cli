@@ -19,9 +19,10 @@ import { interactForUseRemoteApiDefs } from 'lib/interact-for-use-remote-api-def
 import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
 import type { ContextHelpers } from 'lib/types.js'
 import {
-  isInteractive,
+  getInteractivity,
+  type Interactivity,
+  interactivityFlags,
   NonInteractiveError,
-  nonInteractiveFlags,
   parseCliArgs,
 } from 'lib/util/cli-args.js'
 import { RequestSeamApi } from 'lib/util/request-seam-api.js'
@@ -32,7 +33,7 @@ const sections = [
   {
     header: 'Seam CLI',
     content:
-      'Every seam command is interactive and will prompt you for any missing required properties with helpful suggestions. To never be prompted, pass -y ',
+      'Every seam command runs as soon as every required property is given, and otherwise prompts you for what is missing with helpful suggestions. Pass -i to always review properties first, or -y to never be prompted. ',
   },
   {
     header: 'Options',
@@ -41,6 +42,13 @@ const sections = [
         name: 'help',
         description: 'Display this help guide.',
         alias: 'h',
+        type: Boolean,
+      },
+      {
+        name: 'interactive',
+        description:
+          'Always prompt to review and edit properties, prefilled with the given arguments.',
+        alias: 'i',
         type: Boolean,
       },
       {
@@ -63,6 +71,10 @@ const sections = [
         summary: 'Create a connect webview to connect devices.',
       },
       { name: 'seam devices list', summary: 'List devices in your workspace.' },
+      {
+        name: 'seam devices list {bold --interactive}',
+        summary: 'Review and edit filters before listing devices.',
+      },
       {
         name: 'seam devices list {bold --non-interactive}',
         summary: 'List devices, failing instead of prompting.',
@@ -136,8 +148,10 @@ async function cli(args: ParsedArgs) {
 
   const ctx: ContextHelpers = {
     blueprint,
-    is_interactive: isInteractive(args),
+    interactivity: getInteractivity(args),
   }
+
+  const isNonInteractive = ctx.interactivity === 'non-interactive'
 
   for (const k in args) {
     if (k === '_') continue
@@ -145,7 +159,7 @@ async function cli(args: ParsedArgs) {
     delete args[k]
     const key = k.replace(/-/g, '_')
     args[key] = v
-    if (nonInteractiveFlags.includes(key)) continue
+    if (interactivityFlags.includes(key)) continue
     commandParams[key] = v
   }
 
@@ -167,6 +181,11 @@ async function cli(args: ParsedArgs) {
     if (args['token'] || args['workspace_id'] || args['server']) {
       return
     }
+    if (isNonInteractive) {
+      throw new NonInteractiveError(
+        'Missing required parameter for login: --token',
+      )
+    }
     await interactForLogin()
     return
   } else if (isEqual(selectedCommand, ['logout'])) {
@@ -177,9 +196,19 @@ async function cli(args: ParsedArgs) {
     console.log(config.path)
     return
   } else if (isEqual(selectedCommand, ['config', 'use-remote-api-defs'])) {
+    if (isNonInteractive) {
+      throw new NonInteractiveError(
+        'Cannot select whether to use remote API definitions in non-interactive mode',
+      )
+    }
     await interactForUseRemoteApiDefs()
     return
   } else if (isEqual(selectedCommand, ['select', 'workspace'])) {
+    if (isNonInteractive) {
+      throw new NonInteractiveError(
+        'Cannot select a workspace in non-interactive mode: pass --workspace-id to "seam login"',
+      )
+    }
     await interactForWorkspaceId()
     return
   } else if (isEqual(selectedCommand, ['events', 'list'])) {
@@ -193,6 +222,11 @@ async function cli(args: ParsedArgs) {
       config.set('server', args['server'])
       config.delete('current_workspace_id')
       return
+    }
+    if (isNonInteractive) {
+      throw new NonInteractiveError(
+        'Missing required parameter for select server: --server',
+      )
     }
     await interactForServerSelection()
     return
@@ -248,22 +282,25 @@ async function cli(args: ParsedArgs) {
   if (response.data?.connect_webview) {
     await handleConnectWebviewResponse(
       response.data.connect_webview,
-      ctx.is_interactive,
+      ctx.interactivity,
     )
   }
 
-  if (response.data?.action_attempt && ctx.is_interactive) {
+  if (response.data?.action_attempt && !isNonInteractive) {
     interactForActionAttemptPoll(response.data.action_attempt)
   }
 }
 
 const handleConnectWebviewResponse = async (
   connect_webview: any,
-  is_interactive: boolean,
+  interactivity: Interactivity,
 ) => {
   const url = connect_webview.url
 
-  if (is_interactive && process.env['INSIDE_WEB_BROWSER'] !== '1') {
+  if (
+    interactivity !== 'non-interactive' &&
+    process.env['INSIDE_WEB_BROWSER'] !== '1'
+  ) {
     const { action } = await prompts({
       type: 'confirm',
       name: 'action',

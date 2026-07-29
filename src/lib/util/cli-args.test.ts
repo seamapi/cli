@@ -1,7 +1,7 @@
 import type { ParsedArgs } from 'minimist'
 import { expect, test } from 'vitest'
 
-import { isInteractive, parseCliArgs, toArgName } from './cli-args.js'
+import { getInteractivity, parseCliArgs, toArgName } from './cli-args.js'
 
 // The CLI normalizes argument keys before checking them.
 const parse = (argv: string[]): ParsedArgs => {
@@ -13,23 +13,38 @@ const parse = (argv: string[]): ParsedArgs => {
   return args
 }
 
-test('isInteractive: interactive by default', () => {
-  expect(isInteractive(parse(['devices', 'list']))).toBe(true)
+test('getInteractivity: prompts only for what is missing by default', () => {
+  expect(getInteractivity(parse(['devices', 'list']))).toBe('auto')
 })
 
-test('isInteractive: --non-interactive and -y never prompt', () => {
-  expect(isInteractive(parse(['devices', 'list', '--non-interactive']))).toBe(
-    false,
+test('getInteractivity: --interactive and -i always prompt', () => {
+  expect(getInteractivity(parse(['devices', 'list', '--interactive']))).toBe(
+    'interactive',
   )
-  expect(isInteractive(parse(['devices', 'list', '-y']))).toBe(false)
+  expect(getInteractivity(parse(['devices', 'list', '-i']))).toBe('interactive')
 })
 
-test('isInteractive: -n is reserved and does not affect interactivity', () => {
-  expect(isInteractive(parse(['devices', 'list', '-n']))).toBe(true)
+test('getInteractivity: --non-interactive and -y never prompt', () => {
+  expect(
+    getInteractivity(parse(['devices', 'list', '--non-interactive'])),
+  ).toBe('non-interactive')
+  expect(getInteractivity(parse(['devices', 'list', '-y']))).toBe(
+    'non-interactive',
+  )
 })
 
-test('parseCliArgs: --non-interactive does not consume the next argument', () => {
-  const args = parse(['devices', 'get', '-y', '--device-id', 'foo'])
+test('getInteractivity: --non-interactive wins over --interactive', () => {
+  expect(getInteractivity(parse(['devices', 'list', '-i', '-y']))).toBe(
+    'non-interactive',
+  )
+})
+
+test('getInteractivity: -n is reserved and does not affect interactivity', () => {
+  expect(getInteractivity(parse(['devices', 'list', '-n']))).toBe('auto')
+})
+
+test('parseCliArgs: interactivity flags do not consume the next argument', () => {
+  const args = parse(['devices', 'get', '-y', '-i', '--device-id', 'foo'])
   expect(args['device_id']).toBe('foo')
   expect(args._).toEqual(['devices', 'get'])
 })

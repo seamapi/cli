@@ -4,7 +4,7 @@ import { interactForCommandSelection } from './interact-for-command-selection.js
 import type { ContextHelpers } from './types.js'
 
 const ctx = {
-  is_interactive: false,
+  interactivity: 'non-interactive',
   blueprint: {
     routes: [
       {
