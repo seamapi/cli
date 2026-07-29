@@ -106,7 +106,9 @@ jobs:
       - name: Run
         run: node index.js
       - name: Run CLI
-        run: npx --yes --package ${{ steps.packages.outputs.paths }} seam --version
+        run: |
+          npx --yes --package ${{ steps.packages.outputs.paths }} seam --version
+          npx --yes --package ${{ steps.packages.outputs.paths }} seam wizard --help
       - name: Verify standalone binary checksums
         working-directory: release
         run: sha256sum --check checksums.txt
