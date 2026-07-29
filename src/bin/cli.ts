@@ -44,6 +44,10 @@ const sections = [
     content: [
       { name: 'seam', summary: 'Interactively select commands to execute.' },
       { name: 'seam login', summary: 'Login to Seam.' },
+      {
+        name: 'seam wizard',
+        summary: 'Set up Seam in the current project.',
+      },
       { name: 'seam select workspace', summary: 'Select your workspace.' },
       {
         name: 'seam connect-webviews create',
@@ -257,7 +261,20 @@ const handleConnectWebviewResponse = async (connect_webview: any) => {
   }
 }
 
-cli(parseArgs(process.argv.slice(2), { string: ['code'] })).catch((e) => {
+const run = async (argv: string[]) => {
+  if (argv[0] === 'wizard') {
+    const { default: wizard } = await import('@seamapi/wizard')
+    await wizard({
+      argv: argv.slice(1),
+      commandName: 'seam wizard',
+    })
+    return
+  }
+
+  await cli(parseArgs(argv, { string: ['code'] }))
+}
+
+run(process.argv.slice(2)).catch((e) => {
   console.log(chalk.red(`CLI Error: ${e.toString()}\n${e.stack}`))
   if (e.toString().includes('object Object')) {
     console.log(e)
