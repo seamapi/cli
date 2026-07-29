@@ -1,22 +1,10 @@
 import parseArgs, { type ParsedArgs } from 'minimist'
 
 /**
- * How the CLI should behave when it needs input that was not given as an
- * argument.
- *
- * - `interactive`: prompt for it. This is the default.
- * - `auto-submit`: skip the parameter prompt when everything required
- *   was already given, otherwise prompt. Selected with `--yes` or `-y`.
- * - `non-interactive`: never prompt: missing input is an error.
- *   Selected with `--non-interactive` or `-n`.
- */
-export type Interactivity = 'interactive' | 'auto-submit' | 'non-interactive'
-
-/**
- * Argument keys that affect interactivity
+ * Argument keys that disable interactive prompts
  * and are therefore not command parameters.
  */
-export const interactivityFlags = ['non_interactive', 'n', 'yes', 'y']
+export const nonInteractiveFlags = ['non_interactive', 'y']
 
 /**
  * Thrown when the CLI needs input it cannot prompt for.
@@ -28,17 +16,20 @@ export class NonInteractiveError extends Error {
 export const parseCliArgs = (argv: string[]): ParsedArgs =>
   parseArgs(argv, {
     string: ['code'],
-    boolean: ['non-interactive', 'yes'],
-    alias: { 'non-interactive': 'n', yes: 'y' },
+    boolean: ['non-interactive'],
+    // Deliberately not aliased to -n, which is reserved for a future
+    // --dry-run flag.
+    alias: { 'non-interactive': 'y' },
   })
 
-export const getInteractivity = (args: ParsedArgs): Interactivity => {
-  if (args['non_interactive'] === true || args['n'] === true) {
-    return 'non-interactive'
-  }
-  if (args['yes'] === true || args['y'] === true) return 'auto-submit'
-  return 'interactive'
-}
+/**
+ * Whether or not the CLI may prompt for input.
+ *
+ * When false, the command must be given in full:
+ * anything missing is an error instead of a prompt.
+ */
+export const isInteractive = (args: ParsedArgs): boolean =>
+  !nonInteractiveFlags.some((flag) => args[flag] === true)
 
 /**
  * Render a parameter name as the argument used to set it,

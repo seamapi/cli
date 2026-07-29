@@ -11,7 +11,7 @@ A command line interface (CLI) for interacting with the Seam API.
 
 Every command is interactive: the CLI prompts for any missing required
 parameter with suggestions pulled from your workspace. Pass `--non-interactive`
-(or `-n`) to never be prompted: the command fails instead.
+(or `-y`) to never be prompted: the command fails instead.
 
 ## Installation
 
@@ -35,14 +35,10 @@ $ paru -S seam-bin
 Every `seam` command is interactive and will prompt you for any missing
 required properties with helpful suggestions.
 
-For scripts and CI, pass `--non-interactive` (or `-n`) to never be prompted.
+For scripts and CI, pass `--non-interactive` (or `-y`) to never be prompted.
 The command must then be complete: if the command itself is ambiguous, or any
 required property is missing, the CLI exits with an error naming what is
 missing instead of asking for it.
-
-Pass `--yes` (or `-y`) to only skip the prompt to review properties before the
-API call is made. Unlike `--non-interactive`, anything still missing is
-prompted for.
 
 ```bash
 # Login to Seam

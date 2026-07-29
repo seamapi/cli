@@ -9,8 +9,10 @@ const parameters = [
   { name: 'name', isRequired: false, format: 'string' },
 ] as unknown as Parameter[]
 
-const ctx = (interactivity: ContextHelpers['interactivity']): ContextHelpers =>
-  ({ interactivity, blueprint: {} }) as unknown as ContextHelpers
+const nonInteractiveCtx = {
+  is_interactive: false,
+  blueprint: {},
+} as unknown as ContextHelpers
 
 const args = (params: Record<string, any>) => ({
   command: ['devices', 'get'],
@@ -22,26 +24,14 @@ test('interactForBlueprintObject: submits given parameters when non-interactive'
   await expect(
     interactForBlueprintObject(
       args({ device_id: 'device1' }),
-      ctx('non-interactive'),
-    ),
-  ).resolves.toEqual({ device_id: 'device1' })
-})
-
-test('interactForBlueprintObject: submits given parameters with -y', async () => {
-  await expect(
-    interactForBlueprintObject(
-      args({ device_id: 'device1' }),
-      ctx('auto-submit'),
+      nonInteractiveCtx,
     ),
   ).resolves.toEqual({ device_id: 'device1' })
 })
 
 test('interactForBlueprintObject: rejects missing required parameters when non-interactive', async () => {
   await expect(
-    interactForBlueprintObject(
-      args({ name: 'Front Door' }),
-      ctx('non-interactive'),
-    ),
+    interactForBlueprintObject(args({ name: 'Front Door' }), nonInteractiveCtx),
   ).rejects.toThrowError(
     'Missing required parameter for /devices/get: --device-id',
   )
