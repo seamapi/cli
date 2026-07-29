@@ -19,8 +19,10 @@ import { interactForUseRemoteApiDefs } from 'lib/interact-for-use-remote-api-def
 import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
 import type { ContextHelpers } from 'lib/types.js'
 import {
-  isInteractive,
-  nonInteractiveFlags,
+  getInteractivity,
+  type Interactivity,
+  interactivityFlags,
+  NonInteractiveError,
   parseCliArgs,
 } from 'lib/util/cli-args.js'
 import { RequestSeamApi } from 'lib/util/request-seam-api.js'
@@ -31,7 +33,7 @@ const sections = [
   {
     header: 'Seam CLI',
     content:
-      'Every seam command is interactive and will prompt you for any missing required properties with helpful suggestions. To skip the prompts, pass -n ',
+      'Every seam command is interactive and will prompt you for any missing required properties with helpful suggestions. To never be prompted, pass -n ',
   },
   {
     header: 'Options',
@@ -45,8 +47,15 @@ const sections = [
       {
         name: 'non-interactive',
         description:
-          'Do not prompt: take the first suggestion for any missing property. Alias of the legacy -y flag.',
+          'Never prompt: exit with an error if the command or any required property is missing.',
         alias: 'n',
+        type: Boolean,
+      },
+      {
+        name: 'yes',
+        description:
+          'Do not prompt to review properties when every required property was already given.',
+        alias: 'y',
         type: Boolean,
       },
     ],
@@ -64,7 +73,7 @@ const sections = [
       { name: 'seam devices list', summary: 'List devices in your workspace.' },
       {
         name: 'seam devices list {bold --non-interactive}',
-        summary: 'List devices without being prompted for anything.',
+        summary: 'List devices, failing instead of prompting.',
       },
       {
         name: 'seam locks unlock-door {bold --device-id} $MY_DOOR',
@@ -135,7 +144,7 @@ async function cli(args: ParsedArgs) {
 
   const ctx: ContextHelpers = {
     blueprint,
-    is_interactive: isInteractive(args),
+    interactivity: getInteractivity(args),
   }
 
   for (const k in args) {
@@ -144,7 +153,7 @@ async function cli(args: ParsedArgs) {
     delete args[k]
     const key = k.replace(/-/g, '_')
     args[key] = v
-    if (nonInteractiveFlags.includes(key)) continue
+    if (interactivityFlags.includes(key)) continue
     commandParams[key] = v
   }
 
@@ -245,18 +254,30 @@ async function cli(args: ParsedArgs) {
   })
 
   if (response.data?.connect_webview) {
-    await handleConnectWebviewResponse(response.data.connect_webview)
+    await handleConnectWebviewResponse(
+      response.data.connect_webview,
+      ctx.interactivity,
+    )
   }
 
-  if (response.data?.action_attempt) {
+  if (
+    response.data?.action_attempt &&
+    ctx.interactivity !== 'non-interactive'
+  ) {
     interactForActionAttemptPoll(response.data.action_attempt)
   }
 }
 
-const handleConnectWebviewResponse = async (connect_webview: any) => {
+const handleConnectWebviewResponse = async (
+  connect_webview: any,
+  interactivity: Interactivity,
+) => {
   const url = connect_webview.url
 
-  if (process.env['INSIDE_WEB_BROWSER'] !== '1') {
+  if (
+    interactivity !== 'non-interactive' &&
+    process.env['INSIDE_WEB_BROWSER'] !== '1'
+  ) {
     const { action } = await prompts({
       type: 'confirm',
       name: 'action',
@@ -271,6 +292,11 @@ const handleConnectWebviewResponse = async (connect_webview: any) => {
 }
 
 cli(parseCliArgs(process.argv.slice(2))).catch((e) => {
+  if (e instanceof NonInteractiveError) {
+    console.log(chalk.red(e.message))
+    process.exit(1)
+  }
+
   console.log(chalk.red(`CLI Error: ${e.toString()}\n${e.stack}`))
   if (e.toString().includes('object Object')) {
     console.log(e)

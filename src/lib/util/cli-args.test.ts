@@ -1,7 +1,7 @@
 import type { ParsedArgs } from 'minimist'
 import { expect, test } from 'vitest'
 
-import { isInteractive, parseCliArgs } from './cli-args.js'
+import { getInteractivity, parseCliArgs, toArgName } from './cli-args.js'
 
 // The CLI normalizes argument keys before checking them.
 const parse = (argv: string[]): ParsedArgs => {
@@ -13,20 +13,39 @@ const parse = (argv: string[]): ParsedArgs => {
   return args
 }
 
-test('isInteractive: interactive by default', () => {
-  expect(isInteractive(parse(['devices', 'list']))).toBe(true)
+test('getInteractivity: interactive by default', () => {
+  expect(getInteractivity(parse(['devices', 'list']))).toBe('interactive')
 })
 
-test('isInteractive: --non-interactive and its aliases opt out', () => {
-  expect(isInteractive(parse(['devices', 'list', '--non-interactive']))).toBe(
-    false,
+test('getInteractivity: --non-interactive and -n never prompt', () => {
+  expect(
+    getInteractivity(parse(['devices', 'list', '--non-interactive'])),
+  ).toBe('non-interactive')
+  expect(getInteractivity(parse(['devices', 'list', '-n']))).toBe(
+    'non-interactive',
   )
-  expect(isInteractive(parse(['devices', 'list', '-n']))).toBe(false)
-  expect(isInteractive(parse(['devices', 'list', '-y']))).toBe(false)
+})
+
+test('getInteractivity: --yes and -y only skip the parameter prompt', () => {
+  expect(getInteractivity(parse(['devices', 'list', '--yes']))).toBe(
+    'auto-submit',
+  )
+  expect(getInteractivity(parse(['devices', 'list', '-y']))).toBe('auto-submit')
+})
+
+test('getInteractivity: --non-interactive wins over -y', () => {
+  expect(getInteractivity(parse(['devices', 'list', '-y', '-n']))).toBe(
+    'non-interactive',
+  )
 })
 
 test('parseCliArgs: --non-interactive does not consume the next argument', () => {
   const args = parse(['devices', 'get', '-n', '--device-id', 'foo'])
   expect(args['device_id']).toBe('foo')
   expect(args._).toEqual(['devices', 'get'])
+})
+
+test('toArgName: renders a parameter as its argument', () => {
+  expect(toArgName('device_id')).toBe('--device-id')
+  expect(toArgName('code')).toBe('--code')
 })

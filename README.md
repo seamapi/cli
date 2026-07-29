@@ -11,7 +11,7 @@ A command line interface (CLI) for interacting with the Seam API.
 
 Every command is interactive: the CLI prompts for any missing required
 parameter with suggestions pulled from your workspace. Pass `--non-interactive`
-(or `-n`) to take the first suggestion instead of being asked.
+(or `-n`) to never be prompted: the command fails instead.
 
 ## Installation
 
@@ -33,9 +33,16 @@ $ paru -S seam-bin
 ## Usage
 
 Every `seam` command is interactive and will prompt you for any missing
-required properties with helpful suggestions. To skip the prompts, e.g., in
-scripts or CI, pass `--non-interactive` (or `-n`). The legacy `-y` flag remains
-supported as an alias.
+required properties with helpful suggestions.
+
+For scripts and CI, pass `--non-interactive` (or `-n`) to never be prompted.
+The command must then be complete: if the command itself is ambiguous, or any
+required property is missing, the CLI exits with an error naming what is
+missing instead of asking for it.
+
+Pass `--yes` (or `-y`) to only skip the prompt to review properties before the
+API call is made. Unlike `--non-interactive`, anything still missing is
+prompted for.
 
 ```bash
 # Login to Seam
@@ -53,8 +60,11 @@ seam connect-webviews create
 # List devices in your workspace
 seam devices list
 
-# List devices without being prompted for anything
+# List devices, failing instead of prompting
 seam devices list --non-interactive
+
+# Fails with: Missing required parameter for /locks/unlock_door: --device-id
+seam locks unlock-door --non-interactive
 
 MY_DOOR=$(seam devices get --name "Front Door" --id-only)
 
