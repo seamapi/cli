@@ -10,8 +10,8 @@ A command line interface (CLI) for interacting with the Seam API.
 ## Description
 
 Every command is interactive: the CLI prompts for any missing required
-parameter with suggestions pulled from your workspace. Pass `-y` to take the
-first suggestion instead of being asked.
+parameter with suggestions pulled from your workspace. Pass `--non-interactive`
+(or `-n`) to take the first suggestion instead of being asked.
 
 ## Installation
 
@@ -33,8 +33,9 @@ $ paru -S seam-bin
 ## Usage
 
 Every `seam` command is interactive and will prompt you for any missing
-required properties with helpful suggestions. To avoid automatic behavior,
-pass `-y`
+required properties with helpful suggestions. To skip the prompts, e.g., in
+scripts or CI, pass `--non-interactive` (or `-n`). The legacy `-y` flag remains
+supported as an alias.
 
 ```bash
 # Login to Seam
@@ -51,6 +52,9 @@ seam connect-webviews create
 
 # List devices in your workspace
 seam devices list
+
+# List devices without being prompted for anything
+seam devices list --non-interactive
 
 MY_DOOR=$(seam devices get --name "Front Door" --id-only)
 

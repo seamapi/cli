@@ -4,7 +4,7 @@ import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import chalk from 'chalk'
 import commandLineUsage from 'command-line-usage'
-import parseArgs, { type ParsedArgs } from 'minimist'
+import type { ParsedArgs } from 'minimist'
 import prompts from 'prompts'
 
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
@@ -18,6 +18,11 @@ import { interactForServerSelection } from 'lib/interact-for-server-selection.js
 import { interactForUseRemoteApiDefs } from 'lib/interact-for-use-remote-api-defs.js'
 import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
 import type { ContextHelpers } from 'lib/types.js'
+import {
+  isInteractive,
+  nonInteractiveFlags,
+  parseCliArgs,
+} from 'lib/util/cli-args.js'
 import { RequestSeamApi } from 'lib/util/request-seam-api.js'
 import { validateToken } from 'lib/validate-token.js'
 import seamapiCliVersion from 'lib/version.js'
@@ -26,7 +31,7 @@ const sections = [
   {
     header: 'Seam CLI',
     content:
-      'Every seam command is interactive and will prompt you for any missing required properties with helpful suggestions. To avoid automatic behavior, pass -y ',
+      'Every seam command is interactive and will prompt you for any missing required properties with helpful suggestions. To skip the prompts, pass -n ',
   },
   {
     header: 'Options',
@@ -35,6 +40,13 @@ const sections = [
         name: 'help',
         description: 'Display this help guide.',
         alias: 'h',
+        type: Boolean,
+      },
+      {
+        name: 'non-interactive',
+        description:
+          'Do not prompt: take the first suggestion for any missing property. Alias of the legacy -y flag.',
+        alias: 'n',
         type: Boolean,
       },
     ],
@@ -50,6 +62,10 @@ const sections = [
         summary: 'Create a connect webview to connect devices.',
       },
       { name: 'seam devices list', summary: 'List devices in your workspace.' },
+      {
+        name: 'seam devices list {bold --non-interactive}',
+        summary: 'List devices without being prompted for anything.',
+      },
       {
         name: 'seam locks unlock-door {bold --device-id} $MY_DOOR',
         summary: 'Unlock a lock.',
@@ -117,22 +133,19 @@ async function cli(args: ParsedArgs) {
 
   const commandParams: Record<string, any> = {}
 
-  /**
-   * Whether or not to auto-select first option
-   */
-  const is_interactive = args['y'] !== true
-
   const ctx: ContextHelpers = {
     blueprint,
-    is_interactive,
+    is_interactive: isInteractive(args),
   }
 
   for (const k in args) {
     if (k === '_') continue
     const v = args[k]
     delete args[k]
-    args[k.replace(/-/g, '_')] = v
-    commandParams[k.replace(/-/g, '_')] = v
+    const key = k.replace(/-/g, '_')
+    args[key] = v
+    if (nonInteractiveFlags.includes(key)) continue
+    commandParams[key] = v
   }
 
   const selectedCommand = await interactForCommandSelection(args._, ctx)
@@ -257,7 +270,7 @@ const handleConnectWebviewResponse = async (connect_webview: any) => {
   }
 }
 
-cli(parseArgs(process.argv.slice(2), { string: ['code'] })).catch((e) => {
+cli(parseCliArgs(process.argv.slice(2))).catch((e) => {
   console.log(chalk.red(`CLI Error: ${e.toString()}\n${e.stack}`))
   if (e.toString().includes('object Object')) {
     console.log(e)
