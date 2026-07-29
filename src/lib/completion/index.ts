@@ -1,6 +1,6 @@
 import type { Blueprint } from '@seamapi/blueprint'
 
-import { type CompletionSpec, getCompletionSpec } from './completion-spec.js'
+import { type CommandSpec, getCommandSpec } from '../command-spec.js'
 import { renderBashCompletion } from './render-bash.js'
 import { renderFishCompletion } from './render-fish.js'
 import { renderZshCompletion } from './render-zsh.js'
@@ -19,7 +19,7 @@ export const completionFileNames: Record<CompletionShell, string> = {
   zsh: 'seam.zsh',
 }
 
-const renderers: Record<CompletionShell, (spec: CompletionSpec) => string> = {
+const renderers: Record<CompletionShell, (spec: CommandSpec) => string> = {
   bash: renderBashCompletion,
   fish: renderFishCompletion,
   zsh: renderZshCompletion,
@@ -28,4 +28,4 @@ const renderers: Record<CompletionShell, (spec: CompletionSpec) => string> = {
 export const renderCompletion = (
   shell: CompletionShell,
   blueprint: Blueprint,
-): string => renderers[shell](getCompletionSpec(blueprint))
+): string => renderers[shell](getCommandSpec(blueprint))

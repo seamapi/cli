@@ -1,10 +1,11 @@
 import {
-  type CompletionFlag,
-  type CompletionSpec,
+  type CommandFlag,
+  type CommandSpec,
   flagTokens,
-} from './completion-spec.js'
+} from '../command-spec.js'
+import { describeForShell } from './describe.js'
 
-export const renderZshCompletion = (spec: CompletionSpec): string => {
+export const renderZshCompletion = (spec: CommandSpec): string => {
   const valuelessTokens = spec.globalFlags
     .filter(({ takesValue }) => !takesValue)
     .flatMap(flagTokens)
@@ -98,7 +99,7 @@ interface Branch {
   entries: string[]
 }
 
-const subcommandBranches = (spec: CompletionSpec): Branch[] =>
+const subcommandBranches = (spec: CommandSpec): Branch[] =>
   spec.groups.map((group) => ({
     pattern: group.path.join(' '),
     entries: group.subcommands.map(({ name, description }) =>
@@ -106,7 +107,7 @@ const subcommandBranches = (spec: CompletionSpec): Branch[] =>
     ),
   }))
 
-const flagBranches = (spec: CompletionSpec): Branch[] =>
+const flagBranches = (spec: CommandSpec): Branch[] =>
   spec.commands
     .filter(({ flags }) => flags.length > 0)
     .map((command) => ({
@@ -114,7 +115,7 @@ const flagBranches = (spec: CompletionSpec): Branch[] =>
       entries: [describeFlags(command.flags)],
     }))
 
-const flagValueBranches = (spec: CompletionSpec): Branch[] =>
+const flagValueBranches = (spec: CommandSpec): Branch[] =>
   spec.commands.flatMap((command) =>
     command.flags
       .filter(({ values }) => values.length > 0)
@@ -126,15 +127,17 @@ const flagValueBranches = (spec: CompletionSpec): Branch[] =>
       ),
   )
 
-const describeFlags = (flags: CompletionFlag[]): string =>
+const describeFlags = (flags: CommandFlag[]): string =>
   flags
     .flatMap((flag) =>
       flagTokens(flag).map((token) => describe(token, flag.description)),
     )
     .join(' ')
 
-const describe = (value: string, description: string): string =>
-  description === '' ? `'${value}'` : `'${value}:${description}'`
+const describe = (value: string, description: string): string => {
+  const summary = describeForShell(description)
+  return summary === '' ? `'${value}'` : `'${value}:${summary}'`
+}
 
 const renderCase = (name: string, branches: Branch[]): string =>
   [

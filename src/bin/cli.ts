@@ -3,10 +3,10 @@ import { randomBytes } from 'node:crypto'
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import chalk from 'chalk'
-import commandLineUsage from 'command-line-usage'
 import parseArgs, { type ParsedArgs } from 'minimist'
 import prompts from 'prompts'
 
+import { getCommandSpec } from 'lib/command-spec.js'
 import {
   completionShells,
   isCompletionShell,
@@ -22,65 +22,37 @@ import { interactForLogin } from 'lib/interact-for-login.js'
 import { interactForServerSelection } from 'lib/interact-for-server-selection.js'
 import { interactForUseRemoteApiDefs } from 'lib/interact-for-use-remote-api-defs.js'
 import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
+import { renderHelp } from 'lib/render-help.js'
 import type { ContextHelpers } from 'lib/types.js'
 import { RequestSeamApi } from 'lib/util/request-seam-api.js'
 import { validateToken } from 'lib/validate-token.js'
 import seamapiCliVersion from 'lib/version.js'
 
-const sections = [
-  {
-    header: 'Seam CLI',
-    content:
-      'Every seam command is interactive and will prompt you for any missing required properties with helpful suggestions. To avoid automatic behavior, pass -y ',
-  },
-  {
-    header: 'Options',
-    optionList: [
-      {
-        name: 'help',
-        description: 'Display this help guide.',
-        alias: 'h',
-        type: Boolean,
-      },
-    ],
-  },
-  {
-    header: 'Command List Examples',
-    content: [
-      { name: 'seam', summary: 'Interactively select commands to execute.' },
-      { name: 'seam login', summary: 'Login to Seam.' },
-      { name: 'seam select workspace', summary: 'Select your workspace.' },
-      {
-        name: 'seam connect-webviews create',
-        summary: 'Create a connect webview to connect devices.',
-      },
-      { name: 'seam devices list', summary: 'List devices in your workspace.' },
-      {
-        name: 'seam locks unlock-door {bold --device-id} $MY_DOOR',
-        summary: 'Unlock a lock.',
-      },
-      {
-        name: "seam access-codes create {bold --code} '1234' {bold --name} 'My Code'",
-        summary: 'Create an access code.',
-      },
-      {
-        name: 'seam access-codes list {bold --device-id} $MY_DOOR',
-        summary: 'List you access codes.',
-      },
-      {
-        name: 'seam completion bash',
-        summary: 'Print a shell completion script for bash, fish, or zsh.',
-      },
-    ],
-  },
-]
-
 async function cli(args: ParsedArgs) {
   const config = getConfigStore()
 
-  if (args['help'] || args['h']) {
-    const usage = commandLineUsage(sections)
-    console.log(usage)
+  const helpFlag = args['help'] ?? args['h']
+  if (helpFlag != null) {
+    // Help comes from the bundled API definitions so that it works offline and
+    // without logging in.
+    const spec = getCommandSpec(await getApiBlueprint(false))
+
+    // minimist reads the word after --help as its value, so 'seam --help
+    // devices' asks about devices just as 'seam devices --help' does.
+    const commandPath = [
+      ...args._,
+      ...(typeof helpFlag === 'string' ? [helpFlag] : []),
+    ].map(toCommandWord)
+
+    const help = renderHelp(commandPath, spec)
+
+    if (help == null) {
+      console.log(chalk.red(`Unknown command: seam ${commandPath.join(' ')}`))
+      console.log(`Run 'seam --help' to see the available commands.`)
+      process.exit(1)
+    }
+
+    console.log(help)
     return
   }
 
@@ -129,7 +101,7 @@ async function cli(args: ParsedArgs) {
     process.exit(1)
   }
 
-  args._ = args._.map((arg) => arg.toLowerCase().replace(/_/g, '-'))
+  args._ = args._.map(toCommandWord)
   for (const k in args) {
     args[k.toLowerCase().replace(/-/g, '_')] = args[k]
   }
@@ -263,6 +235,9 @@ async function cli(args: ParsedArgs) {
     interactForActionAttemptPoll(response.data.action_attempt)
   }
 }
+
+const toCommandWord = (arg: string): string =>
+  arg.toLowerCase().replace(/_/g, '-')
 
 const handleConnectWebviewResponse = async (connect_webview: any) => {
   const url = connect_webview.url

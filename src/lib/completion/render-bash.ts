@@ -1,10 +1,10 @@
 import {
-  type CompletionFlag,
-  type CompletionSpec,
+  type CommandFlag,
+  type CommandSpec,
   flagTokens,
-} from './completion-spec.js'
+} from '../command-spec.js'
 
-export const renderBashCompletion = (spec: CompletionSpec): string => {
+export const renderBashCompletion = (spec: CommandSpec): string => {
   const globalTokens = spec.globalFlags.flatMap(flagTokens).sort()
   const valuelessTokens = spec.globalFlags
     .filter(({ takesValue }) => !takesValue)
@@ -87,13 +87,13 @@ interface Branch {
   words: string[]
 }
 
-const subcommandBranches = (spec: CompletionSpec): Branch[] =>
+const subcommandBranches = (spec: CommandSpec): Branch[] =>
   spec.groups.map((group) => ({
     pattern: group.path.join(' '),
     words: group.subcommands.map(({ name }) => name),
   }))
 
-const flagBranches = (spec: CompletionSpec): Branch[] =>
+const flagBranches = (spec: CommandSpec): Branch[] =>
   spec.commands
     .filter(({ flags }) => flags.length > 0)
     .map((command) => ({
@@ -101,7 +101,7 @@ const flagBranches = (spec: CompletionSpec): Branch[] =>
       words: command.flags.flatMap(flagTokens),
     }))
 
-const flagValueBranches = (spec: CompletionSpec): Branch[] =>
+const flagValueBranches = (spec: CommandSpec): Branch[] =>
   spec.commands.flatMap((command) =>
     command.flags.filter(hasValues).flatMap((flag) =>
       flagTokens(flag).map((token) => ({
@@ -111,7 +111,7 @@ const flagValueBranches = (spec: CompletionSpec): Branch[] =>
     ),
   )
 
-const hasValues = (flag: CompletionFlag): boolean => flag.values.length > 0
+const hasValues = (flag: CommandFlag): boolean => flag.values.length > 0
 
 const renderCase = (name: string, branches: Branch[]): string =>
   [

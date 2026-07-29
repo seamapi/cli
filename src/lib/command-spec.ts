@@ -1,55 +1,58 @@
 import type { Blueprint } from '@seamapi/blueprint'
 
-import { ellipsis } from '../util/ellipsis.js'
-
 type Endpoint = Blueprint['routes'][number]['endpoints'][number]
 type Parameter = Endpoint['request']['parameters'][number]
 
-export interface CompletionFlag {
+export interface CommandFlag {
   /** Long form without the leading `--`, or `null` for short-only flags. */
   long: string | null
   /** Short form without the leading `-`, or `null` when there is none. */
   short: string | null
   description: string
-  /** Known values for the flag, used to complete its argument. */
+  /** Known values for the flag, used to complete and document its argument. */
   values: string[]
   /** Whether the flag is followed by a value. */
   takesValue: boolean
+  isRequired: boolean
 }
 
-export interface CompletionCommand {
+export interface CommandDefinition {
   path: string[]
+  /** One line naming what the command does. */
+  title: string
+  /** Longer prose about the command, empty when there is none to add. */
   description: string
-  flags: CompletionFlag[]
+  flags: CommandFlag[]
 }
 
-export interface CompletionSubcommand {
+export interface Subcommand {
   name: string
   description: string
 }
 
-export interface CompletionGroup {
+export interface CommandGroup {
   /** Command path completed by this group, empty for `seam` itself. */
   path: string[]
-  subcommands: CompletionSubcommand[]
+  subcommands: Subcommand[]
 }
 
-export interface CompletionSpec {
+export interface CommandSpec {
   /** Every invocable command, sorted by command path. */
-  commands: CompletionCommand[]
+  commands: CommandDefinition[]
   /** Every incomplete command path, sorted by command path. */
-  groups: CompletionGroup[]
+  groups: CommandGroup[]
   /** Flags accepted regardless of the command. */
-  globalFlags: CompletionFlag[]
+  globalFlags: CommandFlag[]
 }
 
-export const globalFlags: CompletionFlag[] = [
+export const globalFlags: CommandFlag[] = [
   {
     long: 'help',
     short: 'h',
-    description: 'Display the help guide.',
+    description: 'Display this help guide.',
     values: [],
     takesValue: false,
+    isRequired: false,
   },
   {
     long: 'remote-api-defs',
@@ -57,6 +60,7 @@ export const globalFlags: CompletionFlag[] = [
     description: 'Use the API definitions served by the Seam API.',
     values: [],
     takesValue: false,
+    isRequired: false,
   },
   {
     long: 'version',
@@ -64,6 +68,7 @@ export const globalFlags: CompletionFlag[] = [
     description: 'Print the CLI version.',
     values: [],
     takesValue: false,
+    isRequired: false,
   },
   {
     long: null,
@@ -71,35 +76,52 @@ export const globalFlags: CompletionFlag[] = [
     description: 'Take the first suggestion instead of prompting.',
     values: [],
     takesValue: false,
+    isRequired: false,
   },
 ]
 
-export const flagTokens = (flag: CompletionFlag): string[] => {
+export const flagTokens = (flag: CommandFlag): string[] => {
   const tokens = []
   if (flag.long != null) tokens.push(`--${flag.long}`)
   if (flag.short != null) tokens.push(`-${flag.short}`)
   return tokens
 }
 
-export const getCompletionSpec = (blueprint: Blueprint): CompletionSpec => {
+export const getCommandSpec = (blueprint: Blueprint): CommandSpec => {
   const commands = sortByPath(
     dedupeByPath([
       ...blueprint.routes
         .flatMap((route) => route.endpoints)
-        .map(toCompletionCommand),
+        .map(toCommandDefinition),
       ...localCommands,
     ]),
   )
 
-  return { commands, groups: toCompletionGroups(commands), globalFlags }
+  return { commands, groups: toCommandGroups(commands), globalFlags }
 }
 
-const stringFlag = (long: string, description: string): CompletionFlag => ({
+export const findCommand = (
+  spec: CommandSpec,
+  path: string[],
+): CommandDefinition | undefined =>
+  spec.commands.find((command) => isSamePath(command.path, path))
+
+export const findGroup = (
+  spec: CommandSpec,
+  path: string[],
+): CommandGroup | undefined =>
+  spec.groups.find((group) => isSamePath(group.path, path))
+
+const isSamePath = (a: string[], b: string[]): boolean =>
+  a.length === b.length && a.every((word, index) => word === b[index])
+
+const stringFlag = (long: string, description: string): CommandFlag => ({
   long,
   short: null,
   description,
   values: [],
   takesValue: true,
+  isRequired: false,
 })
 
 /**
@@ -108,40 +130,48 @@ const stringFlag = (long: string, description: string): CompletionFlag => ({
  * Keep in sync with the command handling in `src/bin/cli.ts` and the extra
  * commands offered by `interactForCommandSelection`.
  */
-const localCommands: CompletionCommand[] = [
+const localCommands: CommandDefinition[] = [
   {
     path: ['completion', 'bash'],
-    description: 'Print the bash completion script.',
+    title: 'Print the bash completion script.',
+    description: '',
     flags: [],
   },
   {
     path: ['completion', 'fish'],
-    description: 'Print the fish completion script.',
+    title: 'Print the fish completion script.',
+    description: '',
     flags: [],
   },
   {
     path: ['completion', 'zsh'],
-    description: 'Print the zsh completion script.',
+    title: 'Print the zsh completion script.',
+    description: '',
     flags: [],
   },
   {
     path: ['config', 'reveal-location'],
-    description: 'Print the path to the CLI configuration file.',
+    title: 'Print the path to the CLI configuration file.',
+    description: '',
     flags: [],
   },
   {
     path: ['config', 'use-remote-api-defs'],
-    description: 'Choose whether to use the API definitions served by Seam.',
+    title: 'Choose whether to use the API definitions served by Seam.',
+    description: '',
     flags: [],
   },
   {
     path: ['health', 'get-health'],
-    description: 'Report the health of the Seam API.',
+    title: 'Report the health of the Seam API.',
+    description: '',
     flags: [],
   },
   {
     path: ['login'],
-    description: 'Log in to Seam.',
+    title: 'Log in to Seam.',
+    description:
+      'Prompts for a personal access token unless one is passed with --token.',
     flags: [
       stringFlag('server', 'Seam API server to log in to.'),
       stringFlag('token', 'Personal access token to log in with.'),
@@ -150,37 +180,47 @@ const localCommands: CompletionCommand[] = [
   },
   {
     path: ['logout'],
-    description: 'Log out of Seam.',
+    title: 'Log out of Seam.',
+    description: '',
     flags: [],
   },
   {
     path: ['select', 'server'],
-    description: 'Select the Seam API server.',
+    title: 'Select the Seam API server.',
+    description: '',
     flags: [stringFlag('server', 'Seam API server to select.')],
   },
   {
     path: ['select', 'workspace'],
-    description: 'Select the current workspace.',
+    title: 'Select the current workspace.',
+    description: '',
     flags: [],
   },
 ]
 
-const toCompletionCommand = (endpoint: Endpoint): CompletionCommand => ({
-  path: toCommandPath(endpoint.path),
-  description: summarize(
-    endpoint.title === '' ? endpoint.description : endpoint.title,
-  ),
-  flags: [...endpoint.request.parameters]
-    .map(toCompletionFlag)
-    .sort((a, b) => compare(a.long ?? a.short, b.long ?? b.short)),
-})
+const toCommandDefinition = (endpoint: Endpoint): CommandDefinition => {
+  const description = toPlainText(endpoint.description)
 
-const toCompletionFlag = (parameter: Parameter): CompletionFlag => ({
+  return {
+    path: toCommandPath(endpoint.path),
+    title:
+      endpoint.title === ''
+        ? firstSentence(description)
+        : toPlainText(endpoint.title),
+    description,
+    flags: [...endpoint.request.parameters]
+      .map(toCommandFlag)
+      .sort((a, b) => compare(a.long ?? a.short, b.long ?? b.short)),
+  }
+}
+
+const toCommandFlag = (parameter: Parameter): CommandFlag => ({
   long: toFlagName(parameter.name),
   short: null,
-  description: summarize(parameter.description),
+  description: toPlainText(parameter.description),
   values: toFlagValues(parameter),
   takesValue: true,
+  isRequired: parameter.isRequired,
 })
 
 const toFlagValues = (parameter: Parameter): string[] => {
@@ -206,47 +246,58 @@ const toFlagValues = (parameter: Parameter): string[] => {
  */
 const isSafeToken = (token: string): boolean => /^[\w.:@/+-]+$/.test(token)
 
-const toCompletionGroups = (
-  commands: CompletionCommand[],
-): CompletionGroup[] => {
-  const groups = new Map<string, Map<string, string>>()
+interface GroupEntry {
+  isCommand: boolean
+  description: string
+}
+
+const toCommandGroups = (commands: CommandDefinition[]): CommandGroup[] => {
+  const groups = new Map<string, Map<string, GroupEntry>>()
 
   for (const command of commands) {
     for (const [depth, name] of command.path.entries()) {
-      const path = command.path.slice(0, depth)
-      const key = path.join(' ')
+      const key = command.path.slice(0, depth).join(' ')
 
-      const subcommands = groups.get(key) ?? new Map<string, string>()
-      groups.set(key, subcommands)
-
-      const isCommand = depth === command.path.length - 1
+      const entries = groups.get(key) ?? new Map<string, GroupEntry>()
+      groups.set(key, entries)
 
       // A command and a group may share a name, e.g., a hypothetical
       // `seam devices` alongside `seam devices list`. Prefer the command
-      // description, since it describes what running the name does.
-      if (isCommand) {
-        subcommands.set(name, command.description)
+      // title, since it describes what running the name does.
+      if (depth === command.path.length - 1) {
+        entries.set(name, { isCommand: true, description: command.title })
         continue
       }
 
-      if (!subcommands.has(name)) {
-        subcommands.set(name, `Commands for seam ${[...path, name].join(' ')}`)
+      if (!entries.has(name)) {
+        entries.set(name, { isCommand: false, description: '' })
       }
     }
   }
 
+  // Groups have no description of their own in the API definitions, so name
+  // the commands they hold instead. Leave the list whole: help wraps it, and
+  // completion shortens it to fit a menu column.
+  const summarizeGroup = (key: string): string =>
+    [...(groups.get(key)?.keys() ?? [])].join(', ')
+
   return [...groups]
-    .map(([key, subcommands]) => ({
+    .map(([key, entries]) => ({
       path: key === '' ? [] : key.split(' '),
-      subcommands: [...subcommands]
-        .map(([name, description]) => ({ name, description }))
+      subcommands: [...entries]
+        .map(([name, entry]) => ({
+          name,
+          description: entry.isCommand
+            ? entry.description
+            : summarizeGroup(key === '' ? name : `${key} ${name}`),
+        }))
         .sort((a, b) => compare(a.name, b.name)),
     }))
     .sort((a, b) => compare(a.path.join(' '), b.path.join(' ')))
 }
 
-const dedupeByPath = (commands: CompletionCommand[]): CompletionCommand[] => {
-  const byPath = new Map<string, CompletionCommand>()
+const dedupeByPath = (commands: CommandDefinition[]): CommandDefinition[] => {
+  const byPath = new Map<string, CommandDefinition>()
   for (const command of commands) {
     const key = command.path.join(' ')
     if (byPath.has(key)) continue
@@ -255,7 +306,7 @@ const dedupeByPath = (commands: CompletionCommand[]): CompletionCommand[] => {
   return [...byPath.values()]
 }
 
-const sortByPath = (commands: CompletionCommand[]): CompletionCommand[] =>
+const sortByPath = (commands: CommandDefinition[]): CommandDefinition[] =>
   [...commands].sort((a, b) => compare(a.path.join(' '), b.path.join(' ')))
 
 const compare = (a: string | null, b: string | null): number =>
@@ -266,23 +317,15 @@ const toCommandPath = (path: string): string[] =>
 
 const toFlagName = (name: string): string => name.replace(/_/g, '-')
 
-const maxDescriptionLength = 72
-
-/**
- * Reduce documentation prose to a single short line that is safe to embed in a
- * single-quoted shell string.
- */
-export const summarize = (description: string): string => {
-  const text = description
+/** Reduce documentation markdown to a single line of prose. */
+export const toPlainText = (markdown: string): string =>
+  markdown
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/[`*]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
 
+export const firstSentence = (text: string): string => {
   const [sentence] = text.split(/(?<=\.)\s/)
-
-  return ellipsis(
-    (sentence ?? text).replace(/['"`$\\:]/g, '').trim(),
-    maxDescriptionLength,
-  )
+  return sentence ?? text
 }

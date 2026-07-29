@@ -64,6 +64,24 @@ seam access-codes create --code "1234" --name "My Code"
 seam access-codes list --device-id $MY_DOOR
 ```
 
+## Help
+
+Pass `--help` to any command to see what it accepts. Without a command, it
+lists every top level command; with an incomplete command, it lists the
+subcommands under it; with a full command, it documents that command's
+options, marking the required ones.
+
+```bash
+# Every top level command
+seam --help
+
+# The commands under seam devices
+seam devices --help
+
+# The options accepted by seam devices list
+seam devices list --help
+```
+
 ## Shell completion
 
 The CLI can print a completion script for bash, fish, and zsh that completes

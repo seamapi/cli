@@ -1,6 +1,7 @@
-import type { CompletionFlag, CompletionSpec } from './completion-spec.js'
+import type { CommandFlag, CommandSpec } from '../command-spec.js'
+import { describeForShell } from './describe.js'
 
-export const renderFishCompletion = (spec: CompletionSpec): string =>
+export const renderFishCompletion = (spec: CommandSpec): string =>
   `${[
     header,
     helpers,
@@ -38,7 +39,7 @@ function __seam_using --description 'Test whether the command line names the giv
     test "$command" = "$argv[1]"
 end`
 
-const subcommandCompletions = (spec: CompletionSpec): string[] =>
+const subcommandCompletions = (spec: CommandSpec): string[] =>
   spec.groups.flatMap((group) =>
     group.subcommands.map(({ name, description }) =>
       complete([
@@ -49,7 +50,7 @@ const subcommandCompletions = (spec: CompletionSpec): string[] =>
     ),
   )
 
-const flagCompletions = (spec: CompletionSpec): string[] =>
+const flagCompletions = (spec: CommandSpec): string[] =>
   spec.commands.flatMap((command) =>
     command.flags.map((flag) =>
       complete([
@@ -59,10 +60,10 @@ const flagCompletions = (spec: CompletionSpec): string[] =>
     ),
   )
 
-const globalFlagCompletions = (spec: CompletionSpec): string[] =>
+const globalFlagCompletions = (spec: CommandSpec): string[] =>
   spec.globalFlags.map((flag) => complete(flagOptions(flag)))
 
-const flagOptions = (flag: CompletionFlag): string[] => [
+const flagOptions = (flag: CommandFlag): string[] => [
   ...(flag.short == null ? [] : [`-s ${flag.short}`]),
   ...(flag.long == null ? [] : [`-l ${flag.long}`]),
   ...(flag.takesValue ? ['-r'] : []),
@@ -70,8 +71,10 @@ const flagOptions = (flag: CompletionFlag): string[] => [
   describe(flag.description),
 ]
 
-const describe = (description: string): string =>
-  description === '' ? '' : `-d '${description}'`
+const describe = (description: string): string => {
+  const summary = describeForShell(description)
+  return summary === '' ? '' : `-d '${summary}'`
+}
 
 const complete = (options: string[]): string =>
   ['complete -c seam', ...options.filter((option) => option !== '')].join(' ')
