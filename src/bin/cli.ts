@@ -13,6 +13,14 @@ import {
 } from 'lib/completion/index.js'
 import { getConfigStore } from 'lib/config/index.js'
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
+import {
+  getToken,
+  getTokenFromEnv,
+  getWorkspaceIdFromEnv,
+  tokenEnvVar,
+  warnEnvVarOverride,
+  workspaceIdEnvVar,
+} from 'lib/get-credentials.js'
 import { getResponseKey } from 'lib/get-response-key.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
@@ -108,15 +116,16 @@ async function cli(args: ParsedArgs) {
 
     config.set(`${getServer()}.pat`, `seam_apikey1_token`)
     output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
+    warnEnvVarOverride(tokenEnvVar, getTokenFromEnv(), 'token')
     return
   }
 
   if (
-    !config.get(`${getServer()}.pat`) &&
+    getToken() == null &&
     args._[0] !== 'login' &&
     !isEqual(args._, ['select', 'server'])
   ) {
-    output.error(`Not logged in. Please run "seam login"`)
+    output.error(`Not logged in. Please run "seam login" or set ${tokenEnvVar}`)
     process.exitCode = 1
     return
   }
@@ -165,9 +174,15 @@ async function cli(args: ParsedArgs) {
       await validateToken(token, args['workspace_id'])
       config.set(`${getServer()}.pat`, token)
       config.delete('current_workspace_id')
+      warnEnvVarOverride(tokenEnvVar, getTokenFromEnv(), 'token')
     }
     if (args['workspace_id']) {
       config.set(`current_workspace_id`, args['workspace_id'])
+      warnEnvVarOverride(
+        workspaceIdEnvVar,
+        getWorkspaceIdFromEnv(),
+        'workspace',
+      )
     }
     if (args['token'] || args['workspace_id'] || args['server']) {
       return
@@ -180,6 +195,7 @@ async function cli(args: ParsedArgs) {
     await interactForLogin()
     return
   } else if (isEqual(selectedCommand, ['logout'])) {
+    warnEnvVarOverride(tokenEnvVar, getTokenFromEnv(), 'token')
     config.delete('pat')
     output.info('Logged out!')
     return

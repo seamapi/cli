@@ -1,6 +1,11 @@
 import { randomBytes } from 'node:crypto'
 
 import { getConfigStore } from './config/index.js'
+import {
+  getTokenFromEnv,
+  tokenEnvVar,
+  warnEnvVarOverride,
+} from './get-credentials.js'
 import { getServer } from './get-server.js'
 import { getOutput } from './output/get-output.js'
 import { prompt } from './util/prompt.js'
@@ -39,6 +44,7 @@ export async function interactForServerSelection() {
     config.set('server', `https://${userUrlSeed}.fakeseamconnect.seam.vc`)
     config.set(`${getServer()}.pat`, `seam_apikey1_token`)
     output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
+    warnEnvVarOverride(tokenEnvVar, getTokenFromEnv(), 'token')
   } else {
     config.set('server', server)
   }

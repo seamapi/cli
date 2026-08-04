@@ -155,6 +155,34 @@ Missing required parameter for /locks/unlock_door: --device-id
 An error exits non-zero. A request that fails reports its `error` on stdout,
 so it can be inspected from a pipe; anything else is written to stderr only.
 
+### Environment variables
+
+Credentials may be given in the environment instead of being stored by
+`seam login` and `seam select workspace`:
+
+- `SEAM_CLI_TOKEN`: a Personal Access Token or API Key,
+- `SEAM_CLI_WORKSPACE_ID`: the workspace requests are made against.
+
+Either one, both, or neither may be set. Whatever is set wins over what is
+stored, which makes them useful for CI, for a single command, or for working
+against another workspace in one shell.
+
+```bash
+# One command against another workspace
+SEAM_CLI_WORKSPACE_ID=$OTHER_WORKSPACE seam devices list
+
+# No login needed: authenticate from the environment
+export SEAM_CLI_TOKEN=$SEAM_API_KEY
+seam devices list
+```
+
+An API Key is scoped to a single workspace, so it needs no workspace id. A
+Personal Access Token works across workspaces, so it needs one from either
+`SEAM_CLI_WORKSPACE_ID` or `seam select workspace`.
+
+Commands that store credentials still store them while these are set, and
+report that the environment overrides what was stored.
+
 ## Help
 
 Pass `--help` to any command to see what it accepts. Without a command, it

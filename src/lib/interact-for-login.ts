@@ -2,6 +2,11 @@ import { isApiKey, isPersonalAccessToken } from '@seamapi/http/connect'
 import chalk from 'chalk'
 
 import { getConfigStore } from './config/index.js'
+import {
+  getTokenFromEnv,
+  tokenEnvVar,
+  warnEnvVarOverride,
+} from './get-credentials.js'
 import { getServer } from './get-server.js'
 import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 import { getOutput } from './output/get-output.js'
@@ -52,4 +57,5 @@ export const interactForLogin = async () => {
 
   config.set(`${getServer()}.pat`, token)
   output.info(`Token saved! You may begin using the CLI!`)
+  warnEnvVarOverride(tokenEnvVar, getTokenFromEnv(), 'token')
 }
