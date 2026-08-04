@@ -5,15 +5,19 @@ import { getServer } from './get-server.js'
 
 export type ApiBlueprint = Blueprint
 
+export interface GetApiBlueprintOptions {
+  update?: boolean
+}
+
 export const getApiBlueprint = async (
   useRemoteDefinitions: boolean,
+  options: GetApiBlueprintOptions = {},
 ): Promise<ApiBlueprint> => {
   // Remote definitions describe whatever the server is currently running, so
-  // build them directly from the server's OpenAPI document. This runtime path
-  // does not load @seamapi/types.
+  // build them directly from the server's OpenAPI document.
   if (useRemoteDefinitions) return await createRemoteBlueprint()
 
-  return await getBlueprint()
+  return await getBlueprint(options)
 }
 
 const createRemoteBlueprint = async (): Promise<Blueprint> => {

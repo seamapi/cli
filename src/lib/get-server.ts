@@ -1,4 +1,4 @@
-import { getConfigStore } from './get-config-store.js'
+import { getConfigStore } from './config/index.js'
 
 export const getServer = (): string => {
   const config = getConfigStore()

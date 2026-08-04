@@ -21,6 +21,9 @@ Install the CLI globally using [npm] with
 $ npm install --global @seamapi/cli
 ```
 
+Alternatively, download a standalone binary for your platform from the
+[latest GitHub release].
+
 On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
 
 ```
@@ -28,7 +31,9 @@ $ paru -S seam-bin
 ```
 
 [aur]: https://aur.archlinux.org/packages/seam-bin
+[latest GitHub release]: https://github.com/seamapi/cli/releases/latest
 [npm]: https://www.npmjs.com/
+[Seam Wizard]: https://github.com/seamapi/wizard
 
 ## Usage
 
@@ -45,6 +50,15 @@ For scripts and CI, pass `--non-interactive` (or `-y`) to never be prompted.
 The command must then be complete: if the command itself is ambiguous, or any
 required property is missing, the CLI exits with an error naming what is
 missing instead of asking for it.
+
+To take a project from zero to a working Seam integration, run the
+[Seam Wizard] from the project's root:
+
+```bash
+seam wizard
+```
+
+For API commands:
 
 ```bash
 # Login to Seam

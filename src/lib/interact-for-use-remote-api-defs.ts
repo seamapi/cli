@@ -1,6 +1,6 @@
 import prompts from 'prompts'
 
-import { getConfigStore } from './get-config-store.js'
+import { getConfigStore } from './config/index.js'
 
 export async function interactForUseRemoteApiDefs() {
   const { use_remote_api_defs } = await prompts([

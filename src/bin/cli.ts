@@ -7,8 +7,8 @@ import commandLineUsage from 'command-line-usage'
 import type { ParsedArgs } from 'minimist'
 import prompts from 'prompts'
 
+import { getConfigStore } from 'lib/config/index.js'
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
-import { getConfigStore } from 'lib/get-config-store.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
 import { interactForCommandParams } from 'lib/interact-for-command-params.js'
@@ -58,6 +58,11 @@ const sections = [
         alias: 'y',
         type: Boolean,
       },
+      {
+        name: 'update',
+        description: 'Force an update of the cached Seam API definitions.',
+        type: Boolean,
+      },
     ],
   },
   {
@@ -65,6 +70,10 @@ const sections = [
     content: [
       { name: 'seam', summary: 'Interactively select commands to execute.' },
       { name: 'seam login', summary: 'Login to Seam.' },
+      {
+        name: 'seam wizard',
+        summary: 'Set up Seam in the current project.',
+      },
       { name: 'seam select workspace', summary: 'Select your workspace.' },
       {
         name: 'seam connect-webviews create',
@@ -142,7 +151,12 @@ async function cli(args: ParsedArgs) {
   const use_remote_api_defs =
     args['remote_api_defs'] ?? config.get('use_remote_api_defs')
 
-  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false)
+  const update = args['update'] === true
+  delete args['update']
+
+  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false, {
+    update,
+  })
 
   const commandParams: Record<string, any> = {}
 
@@ -314,7 +328,20 @@ const handleConnectWebviewResponse = async (
   }
 }
 
-cli(parseCliArgs(process.argv.slice(2))).catch((e) => {
+const run = async (argv: string[]) => {
+  if (argv[0] === 'wizard') {
+    const { default: wizard } = await import('@seamapi/wizard')
+    await wizard({
+      argv: argv.slice(1),
+      commandName: 'seam wizard',
+    })
+    return
+  }
+
+  await cli(parseCliArgs(argv))
+}
+
+run(process.argv.slice(2)).catch((e) => {
   if (e instanceof NonInteractiveError) {
     console.log(chalk.red(e.message))
     process.exit(1)

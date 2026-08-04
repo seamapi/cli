@@ -2,7 +2,7 @@ import { isApiKey, isPersonalAccessToken } from '@seamapi/http/connect'
 import chalk from 'chalk'
 import prompts from 'prompts'
 
-import { getConfigStore } from './get-config-store.js'
+import { getConfigStore } from './config/index.js'
 import { getServer } from './get-server.js'
 import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 import { withLoading } from './util/with-loading.js'

@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 
 import prompts from 'prompts'
 
-import { getConfigStore } from './get-config-store.js'
+import { getConfigStore } from './config/index.js'
 import { getServer } from './get-server.js'
 
 export async function interactForServerSelection() {
