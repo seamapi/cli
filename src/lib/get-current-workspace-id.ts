@@ -1,11 +1,9 @@
-import { getConfigStore } from './config/index.js'
+import { getWorkspaceId } from './get-credentials.js'
 import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 
 export const getCurrentWorkspaceId = async (): Promise<string> => {
-  const configStore = getConfigStore()
-
-  const currentWorkspaceId = configStore.get('current_workspace_id')
-  if (typeof currentWorkspaceId === 'string') return currentWorkspaceId
+  const currentWorkspaceId = getWorkspaceId()
+  if (currentWorkspaceId != null) return currentWorkspaceId
 
   return await interactForWorkspaceId()
 }
