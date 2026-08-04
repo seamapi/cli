@@ -13,8 +13,6 @@ export const testBlueprint = {
           title: 'List Devices',
           description:
             'Returns a list of all [devices](https://docs.seam.co). Results are paginated.',
-          // Paginated, yet the definitions document no page_cursor parameter.
-          hasPagination: true,
           request: {
             parameters: [
               {

@@ -1,5 +1,4 @@
 import { getCommandBlueprintDef } from './get-command-blueprint-def.js'
-import { getRequestParameters } from './get-request-parameters.js'
 import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
 import type { ContextHelpers } from './types.js'
 
@@ -16,7 +15,7 @@ export const interactForCommandParams = async (
     {
       command: args.command,
       params: args.params,
-      parameters: getRequestParameters(endpoint),
+      parameters: endpoint.request.parameters,
     },
     ctx,
   )

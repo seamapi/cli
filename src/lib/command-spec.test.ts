@@ -37,58 +37,7 @@ test('command spec: includes commands handled by the CLI itself', () => {
 test('command spec: turns parameters into kebab-case flags', () => {
   expect(
     findCommand(spec, ['devices', 'list'])?.flags.map(({ long }) => long),
-  ).toEqual(['device-type', 'is-managed', 'limit', 'page-cursor'])
-})
-
-test('command spec: offers --page-cursor on every paginated command', () => {
-  const pageCursor = findCommand(spec, ['devices', 'list'])?.flags.find(
-    ({ long }) => long === 'page-cursor',
-  )
-  expect(pageCursor).toMatchObject({
-    isRequired: false,
-    takesValue: true,
-    values: [],
-  })
-  expect(pageCursor?.description).toContain('next_page_cursor')
-
-  // An endpoint that does not paginate has no page to ask for.
-  expect(
-    findCommand(spec, ['devices', 'unmanaged', 'get'])?.flags.map(
-      ({ long }) => long,
-    ),
-  ).not.toContain('page-cursor')
-})
-
-test('command spec: keeps the documented --page-cursor when there is one', () => {
-  const documented = getCommandSpec({
-    routes: [
-      {
-        endpoints: [
-          {
-            path: '/devices/list',
-            title: 'List Devices',
-            description: '',
-            hasPagination: true,
-            request: {
-              parameters: [
-                {
-                  name: 'page_cursor',
-                  description: 'The cursor as the definitions describe it.',
-                  format: 'string',
-                  isRequired: false,
-                },
-              ],
-            },
-          },
-        ],
-      },
-    ],
-  } as unknown as Parameters<typeof getCommandSpec>[0])
-
-  const flags = findCommand(documented, ['devices', 'list'])?.flags ?? []
-  expect(flags.filter(({ long }) => long === 'page-cursor')).toMatchObject([
-    { description: 'The cursor as the definitions describe it.' },
-  ])
+  ).toEqual(['device-type', 'is-managed', 'limit'])
 })
 
 test('command spec: carries whether a flag is required', () => {
@@ -99,7 +48,7 @@ test('command spec: carries whether a flag is required', () => {
     findCommand(spec, ['devices', 'list'])?.flags.map(
       ({ isRequired }) => isRequired,
     ),
-  ).toEqual([false, false, false, false])
+  ).toEqual([false, false, false])
 })
 
 test('command spec: collects values for enum and boolean flags', () => {

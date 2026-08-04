@@ -32,7 +32,7 @@ test('bash completion: dispatches on the command path', () => {
   expect(script).toContain('complete -F _seam_completion seam')
   expect(script).toContain("'devices') echo 'list unmanaged' ;;")
   expect(script).toContain(
-    "'devices list') echo '--device-type --is-managed --limit --page-cursor' ;;",
+    "'devices list') echo '--device-type --is-managed --limit' ;;",
   )
   expect(script).toContain(
     "'devices list --device-type') echo 'august_lock schlage_lock' ;;",

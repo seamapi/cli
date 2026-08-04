@@ -138,6 +138,10 @@ one yourself. Run `seam <command> --help` to see whether a command paginates.
 Request params may be piped or redirected in as a JSON object. Params given as
 arguments win over params read from stdin.
 
+An argument the command does not accept is an error, so a typo is reported
+rather than sent. Params read from stdin are passed through as given, so
+anything the API itself accepts may be sent that way.
+
 ```bash
 # Read params from a file
 seam locks unlock-door < params.json
