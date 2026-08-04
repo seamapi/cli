@@ -5,12 +5,8 @@ import {
   SeamHttpWithoutWorkspace,
 } from '@seamapi/http/connect'
 
-import {
-  getToken,
-  getWorkspaceId,
-  tokenEnvVar,
-  workspaceIdEnvVar,
-} from './get-credentials.js'
+import { tokenEnvVar, workspaceIdEnvVar } from './env.js'
+import { getToken, getWorkspaceId } from './get-credentials.js'
 import { getServer } from './get-server.js'
 
 export const getSeam = async (): Promise<SeamHttp> => {

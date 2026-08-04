@@ -12,15 +12,18 @@ import {
   renderCompletion,
 } from 'lib/completion/index.js'
 import { getConfigStore } from 'lib/config/index.js'
-import { getApiBlueprint } from 'lib/get-api-blueprint.js'
 import {
-  getToken,
+  assertEnvVarUnset,
+  endpointEnvVar,
+  EnvVarOverrideError,
+  getEndpointFromEnv,
   getTokenFromEnv,
   getWorkspaceIdFromEnv,
   tokenEnvVar,
-  warnEnvVarOverride,
   workspaceIdEnvVar,
-} from 'lib/get-credentials.js'
+} from 'lib/env.js'
+import { getApiBlueprint } from 'lib/get-api-blueprint.js'
+import { getToken } from 'lib/get-credentials.js'
 import { getResponseKey } from 'lib/get-response-key.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
@@ -108,6 +111,9 @@ async function cli(args: ParsedArgs) {
     args._[1] === 'set' &&
     args._[2] === 'fake-server'
   ) {
+    assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
+    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
+
     const randomstring = randomBytes(5).toString('hex')
     const fakeApiUrl = `https://${randomstring}.fakeseamconnect.seam.vc`
 
@@ -116,7 +122,6 @@ async function cli(args: ParsedArgs) {
 
     config.set(`${getServer()}.pat`, `seam_apikey1_token`)
     output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
-    warnEnvVarOverride(tokenEnvVar, getTokenFromEnv(), 'token')
     return
   }
 
@@ -165,6 +170,19 @@ async function cli(args: ParsedArgs) {
 
   const selectedCommand = await interactForCommandSelection(args._, ctx)
   if (isEqual(selectedCommand, ['login'])) {
+    // Nothing is stored while the environment overrides it, so refuse before
+    // storing anything rather than part way through.
+    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
+    if (args['server']) {
+      assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
+    }
+    if (args['workspace_id']) {
+      assertEnvVarUnset(
+        workspaceIdEnvVar,
+        getWorkspaceIdFromEnv(),
+        'select a workspace',
+      )
+    }
     if (args['server']) {
       config.set('server', args['server'])
       config.delete('current_workspace_id')
@@ -174,15 +192,9 @@ async function cli(args: ParsedArgs) {
       await validateToken(token, args['workspace_id'])
       config.set(`${getServer()}.pat`, token)
       config.delete('current_workspace_id')
-      warnEnvVarOverride(tokenEnvVar, getTokenFromEnv(), 'token')
     }
     if (args['workspace_id']) {
       config.set(`current_workspace_id`, args['workspace_id'])
-      warnEnvVarOverride(
-        workspaceIdEnvVar,
-        getWorkspaceIdFromEnv(),
-        'workspace',
-      )
     }
     if (args['token'] || args['workspace_id'] || args['server']) {
       return
@@ -195,7 +207,7 @@ async function cli(args: ParsedArgs) {
     await interactForLogin()
     return
   } else if (isEqual(selectedCommand, ['logout'])) {
-    warnEnvVarOverride(tokenEnvVar, getTokenFromEnv(), 'token')
+    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log out')
     config.delete('pat')
     output.info('Logged out!')
     return
@@ -211,6 +223,11 @@ async function cli(args: ParsedArgs) {
     await interactForUseRemoteApiDefs()
     return
   } else if (isEqual(selectedCommand, ['select', 'workspace'])) {
+    assertEnvVarUnset(
+      workspaceIdEnvVar,
+      getWorkspaceIdFromEnv(),
+      'select a workspace',
+    )
     if (isNonInteractive) {
       throw new NonInteractiveError(
         'Cannot select a workspace in non-interactive mode: pass --workspace-id to "seam login"',
@@ -225,6 +242,7 @@ async function cli(args: ParsedArgs) {
       commandParams['since'] = date.toISOString()
     }
   } else if (isEqual(selectedCommand, ['select', 'server'])) {
+    assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
     if (args['server']) {
       config.set('server', args['server'])
       config.delete('current_workspace_id')
@@ -353,7 +371,7 @@ run(process.argv.slice(2)).catch((e: unknown) => {
   const output = getOutput()
   process.exitCode = 1
 
-  if (e instanceof NonInteractiveError) {
+  if (e instanceof NonInteractiveError || e instanceof EnvVarOverrideError) {
     output.error(chalk.red(e.message))
     return
   }

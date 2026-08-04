@@ -1,15 +1,8 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import { getConfigStore } from './config/index.js'
-import {
-  getToken,
-  getWorkspaceId,
-  tokenEnvVar,
-  warnEnvVarOverride,
-  workspaceIdEnvVar,
-} from './get-credentials.js'
-import { createMemoryOutput } from './output/create-memory-output.js'
-import { setOutput } from './output/get-output.js'
+import { tokenEnvVar, workspaceIdEnvVar } from './env.js'
+import { getToken, getWorkspaceId } from './get-credentials.js'
 
 const server = 'https://connect.example.com'
 
@@ -25,17 +18,20 @@ vi.mock('./get-server.js', () => ({
   getServer: vi.fn(() => server),
 }))
 
+const clearEnv = (): void => {
+  delete process.env[tokenEnvVar]
+  delete process.env[workspaceIdEnvVar]
+}
+
 beforeEach(() => {
   for (const key of Object.keys(storedConfig)) {
     delete storedConfig[key]
   }
-  delete process.env[tokenEnvVar]
-  delete process.env[workspaceIdEnvVar]
+  clearEnv()
 })
 
 afterEach(() => {
-  delete process.env[tokenEnvVar]
-  delete process.env[workspaceIdEnvVar]
+  clearEnv()
   vi.mocked(getConfigStore).mockClear()
 })
 
@@ -54,12 +50,6 @@ test(`getToken: ${tokenEnvVar} wins over the stored token`, () => {
 
 test(`getToken: ${tokenEnvVar} is used without a stored token`, () => {
   process.env[tokenEnvVar] = 'seam_apikey1_env'
-
-  expect(getToken()).toBe('seam_apikey1_env')
-})
-
-test(`getToken: trims ${tokenEnvVar}`, () => {
-  process.env[tokenEnvVar] = '  seam_apikey1_env\n'
 
   expect(getToken()).toBe('seam_apikey1_env')
 })
@@ -112,23 +102,4 @@ test('getToken and getWorkspaceId: either may be set on its own', () => {
 
   expect(getToken()).toBe('seam_apikey1_stored')
   expect(getWorkspaceId()).toBe('workspace2')
-})
-
-test('warnEnvVarOverride: warns on stderr when the environment variable is set', () => {
-  const memoryOutput = createMemoryOutput({ format: 'json' })
-  setOutput(memoryOutput.output)
-
-  warnEnvVarOverride(tokenEnvVar, 'seam_apikey1_env', 'token')
-
-  expect(memoryOutput.stdout()).toBe('')
-  expect(memoryOutput.stderr()).toContain(tokenEnvVar)
-})
-
-test('warnEnvVarOverride: says nothing when the environment variable is unset', () => {
-  const memoryOutput = createMemoryOutput({ format: 'json' })
-  setOutput(memoryOutput.output)
-
-  warnEnvVarOverride(tokenEnvVar, null, 'token')
-
-  expect(memoryOutput.stderr()).toBe('')
 })

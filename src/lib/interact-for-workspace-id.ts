@@ -2,10 +2,10 @@ import { SeamHttpWithoutWorkspace } from '@seamapi/http/connect'
 
 import { getConfigStore } from './config/index.js'
 import {
+  assertEnvVarUnset,
   getWorkspaceIdFromEnv,
-  warnEnvVarOverride,
   workspaceIdEnvVar,
-} from './get-credentials.js'
+} from './env.js'
 import { getSeamMultiWorkspace } from './get-seam.js'
 import { getServer } from './get-server.js'
 import { prompt } from './util/prompt.js'
@@ -14,7 +14,11 @@ import { withLoading } from './util/with-loading.js'
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const config = getConfigStore()
 
-  warnEnvVarOverride(workspaceIdEnvVar, getWorkspaceIdFromEnv(), 'workspace')
+  assertEnvVarUnset(
+    workspaceIdEnvVar,
+    getWorkspaceIdFromEnv(),
+    'select a workspace',
+  )
 
   const seam = personalAccessToken
     ? SeamHttpWithoutWorkspace.fromPersonalAccessToken(personalAccessToken, {
