@@ -32,7 +32,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 
 const isStateKey = (key: string): boolean => {
   return (
-    key === currentWorkspaceIdKey || key === patKey || key.endsWith(`.${patKey}`)
+    key === currentWorkspaceIdKey ||
+    key === patKey ||
+    key.endsWith(`.${patKey}`)
   )
 }
 
