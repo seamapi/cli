@@ -28,5 +28,8 @@ export const interactForResource = async <Resource>({
       const { title, value, description } = toChoice(resource)
       return { label: title, value, hint: description }
     }),
+    // Resource pickers are only reached from the parameter editing flow,
+    // which catches the back error and returns to its menu.
+    allowBack: true,
   })
 }

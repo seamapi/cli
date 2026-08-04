@@ -6,6 +6,9 @@ export const interactForTimestamp = async () => {
     message: 'Enter a timestamp:',
     placeholder: now,
     defaultValue: now,
+    // Timestamps are only prompted for from the parameter editing flow,
+    // which catches the back error and returns to its menu.
+    allowBack: true,
     validate: (value) => {
       if (value == null || value === '') return undefined
       if (Number.isNaN(new Date(value).getTime())) {

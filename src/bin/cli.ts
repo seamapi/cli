@@ -190,11 +190,12 @@ async function cli(args: ParsedArgs) {
 
   const selectedCommand = await interactForCommandSelection(args._, ctx)
 
-  // Hit 'back' on a top-level command path, so we start again
+  // Hit 'back' in the command menu, so go up one level: drop the '[Back]'
+  // marker and the last real path word.
   if (selectedCommand.slice(-1)[0] === '[Back]') {
     return await cli({
       ...args,
-      _: [],
+      _: selectedCommand.slice(0, -2),
     })
   }
 

@@ -2,7 +2,7 @@ import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import type { ContextHelpers } from './types.js'
 import { NonInteractiveError } from './util/cli-args.js'
-import { promptAutocomplete } from './util/prompt.js'
+import { promptAutocomplete, PromptBackError } from './util/prompt.js'
 
 const uniqBy = <T>(items: T[], keyOf: (item: T) => unknown): T[] => {
   const seen = new Set<unknown>()
@@ -92,16 +92,25 @@ export async function interactForCommandSelection(
 
   const commandPathStr = commandPath.join('/').replace(/-/g, '_')
 
-  const selectedCommand = await promptAutocomplete({
-    message: `Select a command: /${commandPathStr}`,
-    choices: [
-      ...possibleCommands.map((cmd) => ({
-        label:
-          cmd?.[commandPath.length] ?? `[Call /${commandPathStr} Directly]`,
-        value: cmd?.[commandPath.length] ?? '<none>',
-      })),
-    ].sort((a, b) => ergonomicSort(a.value, b.value)),
-  })
+  let selectedCommand: string
+  try {
+    selectedCommand = await promptAutocomplete({
+      message: `Select a command: /${commandPathStr}`,
+      choices: [
+        ...possibleCommands.map((cmd) => ({
+          label:
+            cmd?.[commandPath.length] ?? `[Call /${commandPathStr} Directly]`,
+          value: cmd?.[commandPath.length] ?? '<none>',
+        })),
+      ].sort((a, b) => ergonomicSort(a.value, b.value)),
+      allowBack: commandPath.length > 0,
+    })
+  } catch (error) {
+    if (!(error instanceof PromptBackError)) throw error
+    // The left arrow acts like the [Back] entry, which exists whenever
+    // allowBack is set above.
+    selectedCommand = '[Back]'
+  }
 
   if (selectedCommand === '<none>') {
     return commandPath

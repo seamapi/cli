@@ -1,5 +1,4 @@
-import type { EventEmitter } from 'node:events'
-import type { Key } from 'node:readline'
+import type { Writable } from 'node:stream'
 
 import {
   autocomplete,
@@ -12,6 +11,26 @@ import {
 } from '@clack/prompts'
 
 import { NonInteractiveError } from './cli-args.js'
+import {
+  attachPromptInput,
+  type PromptInputKind,
+  type PromptInputSource,
+  type PromptInputStream,
+} from './prompt-input.js'
+
+interface PromptIo {
+  stdin: PromptInputSource
+  output: Writable & { isTTY?: boolean | undefined }
+}
+
+// Prompts are rendered to stderr: a selection is not a command result,
+// so it must not end up in stdout when the CLI is piped.
+let io: PromptIo = { stdin: process.stdin, output: process.stderr }
+
+/** Redirect prompt IO to fake streams so tests can drive real prompts. */
+export const setPromptIoForTesting = (overrides: PromptIo): void => {
+  io = overrides
+}
 
 /**
  * Whether the CLI can ask the user a question.
@@ -22,12 +41,23 @@ import { NonInteractiveError } from './cli-args.js'
  * question.
  */
 export const canPrompt = (): boolean =>
-  process.stdin.isTTY === true && process.stderr.isTTY === true
+  io.stdin.isTTY === true && io.output.isTTY === true
 
 /** The user dismissed a prompt with ctrl-c or escape instead of answering. */
 export class PromptCancelledError extends Error {
   constructor() {
     super('Cancelled')
+  }
+}
+
+/**
+ * The user pressed the left arrow to return to the previous prompt without
+ * answering. Only prompts called with allowBack throw this, and their
+ * callers are expected to catch it: one that escapes is a bug.
+ */
+export class PromptBackError extends Error {
+  constructor() {
+    super('Back')
   }
 }
 
@@ -43,56 +73,29 @@ const ensureInteractive = (): void => {
       'Cannot prompt without a terminal: pass the missing arguments, or pipe them in as JSON',
     )
   }
-  installArrowKeyAliases()
 }
 
-/**
- * The arrow keypress an Emacs-style control keypress stands for, or
- * undefined for any other key: ctrl-p is up and ctrl-n is down.
- */
-export const arrowKeyFor = (key: Key | undefined): Key | undefined => {
-  if (key?.ctrl !== true || key.meta === true || key.shift === true) {
-    return undefined
+const runPrompt = async <Value>(
+  options: { kind: PromptInputKind; allowBack?: boolean | undefined },
+  prompt: (input: PromptInputStream) => Promise<Value | symbol>,
+): Promise<Value> => {
+  ensureInteractive()
+  const handle = attachPromptInput(
+    { kind: options.kind, allowBack: options.allowBack ?? false },
+    io.stdin,
+  )
+  try {
+    const value = await prompt(handle.stream)
+    if (isCancel(value)) {
+      throw handle.wentBack()
+        ? new PromptBackError()
+        : new PromptCancelledError()
+    }
+    return value as Value
+  } finally {
+    handle.detach()
   }
-  const base = { ctrl: false, meta: false, shift: false }
-  if (key.name === 'p') return { ...base, name: 'up', sequence: '\x1B[A' }
-  if (key.name === 'n') return { ...base, name: 'down', sequence: '\x1B[B' }
-  return undefined
 }
-
-/**
- * Re-emit Emacs-style control keypresses as the arrow keys they stand for.
- *
- * Clack navigates on the readline key name, so a synthetic arrow keypress
- * moves the cursor in every prompt kind. Its own alias table cannot express
- * this: aliases match bare key names, unaware of ctrl, and are ignored by
- * prompts that track typed input, such as autocomplete.
- */
-export const emitArrowKeyAliases = (input: EventEmitter): void => {
-  input.on('keypress', (_char, key: Key | undefined) => {
-    const arrowKey = arrowKeyFor(key)
-    if (arrowKey !== undefined) input.emit('keypress', undefined, arrowKey)
-  })
-}
-
-let arrowKeyAliasesInstalled = false
-
-// Keypress events only flow while a prompt has stdin in raw mode, so the
-// listener is inert the rest of the time and never holds the process open.
-const installArrowKeyAliases = (): void => {
-  if (arrowKeyAliasesInstalled) return
-  arrowKeyAliasesInstalled = true
-  emitArrowKeyAliases(process.stdin)
-}
-
-const unwrap = <Value>(value: Value | symbol): Value => {
-  if (isCancel(value)) throw new PromptCancelledError()
-  return value as Value
-}
-
-// Prompts are rendered to stderr: a selection is not a command result,
-// so it must not end up in stdout when the CLI is piped.
-const output = process.stderr
 
 const toOptions = <Value>(
   choices: Array<PromptChoice<Value>>,
@@ -109,27 +112,34 @@ export const promptText = async (options: {
   placeholder?: string
   defaultValue?: string
   validate?: (value: string | undefined) => string | undefined
+  allowBack?: boolean
 }): Promise<string> => {
-  ensureInteractive()
-  return unwrap(await text({ ...options, output }))
+  const { allowBack, ...textOptions } = options
+  return await runPrompt(
+    { kind: 'text', allowBack },
+    async (input) => await text({ ...textOptions, input, output: io.output }),
+  )
 }
 
 export const promptNumber = async (options: {
   message: string
   validate?: (value: number) => string | undefined
+  allowBack?: boolean
 }): Promise<number> => {
-  ensureInteractive()
-  const value = unwrap(
-    await text({
-      message: options.message,
-      validate: (value) => {
-        if (value == null || value.trim() === '') return 'Enter a number'
-        const parsed = Number(value)
-        if (Number.isNaN(parsed)) return 'Enter a number'
-        return options.validate?.(parsed)
-      },
-      output,
-    }),
+  const value = await runPrompt(
+    { kind: 'text', allowBack: options.allowBack },
+    async (input) =>
+      await text({
+        message: options.message,
+        validate: (value) => {
+          if (value == null || value.trim() === '') return 'Enter a number'
+          const parsed = Number(value)
+          if (Number.isNaN(parsed)) return 'Enter a number'
+          return options.validate?.(parsed)
+        },
+        input,
+        output: io.output,
+      }),
   )
   return Number(value)
 }
@@ -139,56 +149,63 @@ export const promptConfirm = async (options: {
   initialValue?: boolean
   active?: string
   inactive?: string
-}): Promise<boolean> => {
-  ensureInteractive()
-  return unwrap(await confirm({ ...options, output }))
-}
+}): Promise<boolean> =>
+  await runPrompt(
+    { kind: 'confirm' },
+    async (input) => await confirm({ ...options, input, output: io.output }),
+  )
 
 export const promptSelect = async <Value>(options: {
   message: string
   choices: Array<PromptChoice<Value>>
-}): Promise<Value> => {
-  ensureInteractive()
-  return unwrap(
-    await select<Value>({
-      message: options.message,
-      options: toOptions(options.choices),
-      output,
-    }),
+  allowBack?: boolean
+}): Promise<Value> =>
+  await runPrompt(
+    { kind: 'choice', allowBack: options.allowBack },
+    async (input) =>
+      await select<Value>({
+        message: options.message,
+        options: toOptions(options.choices),
+        input,
+        output: io.output,
+      }),
   )
-}
 
 export const promptAutocomplete = async <Value>(options: {
   message: string
   choices: Array<PromptChoice<Value>>
-}): Promise<Value> => {
-  ensureInteractive()
-  return unwrap(
-    await autocomplete<Value>({
-      message: options.message,
-      options: toOptions(options.choices),
-      // Search a list by any part of a name or hint, rather than only by
-      // the label, which is all clack matches for itself.
-      filter: searchChoices,
-      output,
-    }),
+  allowBack?: boolean
+}): Promise<Value> =>
+  await runPrompt(
+    { kind: 'choice', allowBack: options.allowBack },
+    async (input) =>
+      await autocomplete<Value>({
+        message: options.message,
+        options: toOptions(options.choices),
+        // Search a list by any part of a name or hint, rather than only by
+        // the label, which is all clack matches for itself.
+        filter: searchChoices,
+        input,
+        output: io.output,
+      }),
   )
-}
 
 export const promptAutocompleteMultiselect = async <Value>(options: {
   message: string
   choices: Array<PromptChoice<Value>>
-}): Promise<Value[]> => {
-  ensureInteractive()
-  return unwrap(
-    await autocompleteMultiselect<Value>({
-      message: options.message,
-      options: toOptions(options.choices),
-      filter: searchChoices,
-      output,
-    }),
+  allowBack?: boolean
+}): Promise<Value[]> =>
+  await runPrompt(
+    { kind: 'choice', allowBack: options.allowBack },
+    async (input) =>
+      await autocompleteMultiselect<Value>({
+        message: options.message,
+        options: toOptions(options.choices),
+        filter: searchChoices,
+        input,
+        output: io.output,
+      }),
   )
-}
 
 export interface SearchableChoice {
   label?: string | undefined
