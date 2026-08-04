@@ -72,7 +72,7 @@ test('command spec: groups every incomplete command path', () => {
     findGroup(spec, ['devices'])?.subcommands.map(({ name }) => name),
   ).toEqual(['list', 'unmanaged'])
   expect(findGroup(spec, ['devices', 'unmanaged'])?.subcommands).toEqual([
-    { name: 'get', description: 'Gets an unmanaged device.' },
+    { name: 'get', kind: 'api', description: 'Gets an unmanaged device.' },
   ])
 })
 
@@ -84,6 +84,21 @@ test('command spec: names the commands a group holds', () => {
   expect(
     subcommands.find(({ name }) => name === 'completion')?.description,
   ).toBe('bash, fish, zsh')
+})
+
+test('command spec: tells CLI commands apart from API commands', () => {
+  expect(findCommand(spec, ['login'])?.kind).toBe('cli')
+  expect(findCommand(spec, ['devices', 'list'])?.kind).toBe('api')
+  // health is handled by the CLI but calls the Seam API.
+  expect(findCommand(spec, ['health', 'get-health'])?.kind).toBe('api')
+
+  const root = findGroup(spec, [])?.subcommands ?? []
+  const kindOf = (name: string): string | undefined =>
+    root.find((sub) => sub.name === name)?.kind
+  expect(kindOf('select')).toBe('cli')
+  expect(kindOf('wizard')).toBe('cli')
+  expect(kindOf('devices')).toBe('api')
+  expect(kindOf('health')).toBe('api')
 })
 
 test('command spec: a command path is either a command or a group', () => {

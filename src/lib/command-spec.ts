@@ -16,8 +16,14 @@ export interface CommandFlag {
   isRequired: boolean
 }
 
+/**
+ * Whether a command is part of the CLI itself or calls a Seam API endpoint.
+ */
+export type CommandKind = 'cli' | 'api'
+
 export interface CommandDefinition {
   path: string[]
+  kind: CommandKind
   /** One line naming what the command does. */
   title: string
   /** Longer prose about the command, empty when there is none to add. */
@@ -27,6 +33,8 @@ export interface CommandDefinition {
 
 export interface Subcommand {
   name: string
+  /** 'api' when the name holds any command that calls the Seam API. */
+  kind: CommandKind
   description: string
 }
 
@@ -141,42 +149,49 @@ const stringFlag = (long: string, description: string): CommandFlag => ({
 const localCommands: CommandDefinition[] = [
   {
     path: ['completion', 'bash'],
+    kind: 'cli',
     title: 'Print the bash completion script.',
     description: '',
     flags: [],
   },
   {
     path: ['completion', 'fish'],
+    kind: 'cli',
     title: 'Print the fish completion script.',
     description: '',
     flags: [],
   },
   {
     path: ['completion', 'zsh'],
+    kind: 'cli',
     title: 'Print the zsh completion script.',
     description: '',
     flags: [],
   },
   {
     path: ['config', 'reveal-location'],
+    kind: 'cli',
     title: 'Print the path to the CLI configuration file.',
     description: '',
     flags: [],
   },
   {
     path: ['config', 'use-remote-api-defs'],
+    kind: 'cli',
     title: 'Choose whether to use the API definitions served by Seam.',
     description: '',
     flags: [],
   },
   {
     path: ['health', 'get-health'],
+    kind: 'api',
     title: 'Report the health of the Seam API.',
     description: '',
     flags: [],
   },
   {
     path: ['login'],
+    kind: 'cli',
     title: 'Log in to Seam.',
     description:
       'Prompts for a personal access token unless one is passed with --token.',
@@ -188,24 +203,28 @@ const localCommands: CommandDefinition[] = [
   },
   {
     path: ['logout'],
+    kind: 'cli',
     title: 'Log out of Seam.',
     description: '',
     flags: [],
   },
   {
     path: ['select', 'server'],
+    kind: 'cli',
     title: 'Select the Seam API server.',
     description: '',
     flags: [stringFlag('server', 'Seam API server to select.')],
   },
   {
     path: ['select', 'workspace'],
+    kind: 'cli',
     title: 'Select the current workspace.',
     description: '',
     flags: [],
   },
   {
     path: ['wizard'],
+    kind: 'cli',
     title: 'Set up Seam in the current project.',
     description:
       'Takes a project from zero to a working Seam integration. Run seam wizard --help for its own options.',
@@ -218,6 +237,7 @@ const toCommandDefinition = (endpoint: Endpoint): CommandDefinition => {
 
   return {
     path: toCommandPath(endpoint.path),
+    kind: 'api',
     title:
       endpoint.title === ''
         ? firstSentence(description)
@@ -263,6 +283,7 @@ const isSafeToken = (token: string): boolean => /^[\w.:@/+-]+$/.test(token)
 
 interface GroupEntry {
   isCommand: boolean
+  kind: CommandKind
   description: string
 }
 
@@ -276,17 +297,24 @@ const toCommandGroups = (commands: CommandDefinition[]): CommandGroup[] => {
       const entries = groups.get(key) ?? new Map<string, GroupEntry>()
       groups.set(key, entries)
 
+      // An entry is an API command if any command it holds calls the API.
+      const kind =
+        command.kind === 'api' ? 'api' : (entries.get(name)?.kind ?? 'cli')
+
       // A command and a group may share a name, e.g., a hypothetical
       // `seam devices` alongside `seam devices list`. Prefer the command
       // title, since it describes what running the name does.
       if (depth === command.path.length - 1) {
-        entries.set(name, { isCommand: true, description: command.title })
+        entries.set(name, { isCommand: true, kind, description: command.title })
         continue
       }
 
-      if (!entries.has(name)) {
-        entries.set(name, { isCommand: false, description: '' })
-      }
+      const entry = entries.get(name)
+      entries.set(name, {
+        isCommand: entry?.isCommand ?? false,
+        kind,
+        description: entry?.description ?? '',
+      })
     }
   }
 
@@ -302,6 +330,7 @@ const toCommandGroups = (commands: CommandDefinition[]): CommandGroup[] => {
       subcommands: [...entries]
         .map(([name, entry]) => ({
           name,
+          kind: entry.kind,
           description: entry.isCommand
             ? entry.description
             : summarizeGroup(key === '' ? name : `${key} ${name}`),

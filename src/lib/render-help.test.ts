@@ -28,6 +28,21 @@ test('root help: lists every top level command', () => {
   expect(rendered).toContain("Run 'seam <command> --help'")
 })
 
+test('root help: groups CLI commands apart from API commands', () => {
+  const rendered = helpText()
+
+  const commands = rendered.indexOf('Commands')
+  const apiCommands = rendered.indexOf('API Commands')
+  const examples = rendered.indexOf('Command List Examples')
+  expect(commands).toBeGreaterThan(-1)
+  expect(apiCommands).toBeGreaterThan(commands)
+  expect(examples).toBeGreaterThan(apiCommands)
+
+  // login is a CLI command, devices calls the API.
+  expect(rendered.indexOf('login')).toBeLessThan(apiCommands)
+  expect(rendered.indexOf('devices')).toBeGreaterThan(apiCommands)
+})
+
 test('group help: lists the subcommands of the group', () => {
   const rendered = helpText('devices')
   expect(rendered).toContain('seam devices <command> [options]')
@@ -35,6 +50,7 @@ test('group help: lists the subcommands of the group', () => {
   expect(rendered).toContain('unmanaged')
   // A group is not the place for the whole command list.
   expect(rendered).not.toContain('Command List Examples')
+  expect(rendered).not.toContain('API Commands')
   expect(rendered).not.toContain('login')
 })
 

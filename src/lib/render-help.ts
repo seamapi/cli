@@ -64,17 +64,34 @@ const groupSections = (group: CommandGroup, spec: CommandSpec): Section[] => {
       ? { header: 'Seam CLI', content: overview }
       : { header: name, content: `Commands under ${name}.` },
     { header: 'Usage', content: `${name} <command> [options]` },
-    {
-      header: 'Commands',
-      content: group.subcommands.map(({ name, description }) => ({
-        name,
-        summary: description,
-      })),
-    },
+    ...commandSectionsForGroup(group, isRoot),
     optionSection(spec.globalFlags),
     ...(isRoot ? [{ header: 'Command List Examples', content: examples }] : []),
     { content: `Run '${name} <command> --help' to see a command in detail.` },
   ]
+}
+
+const commandSectionsForGroup = (
+  group: CommandGroup,
+  isRoot: boolean,
+): Section[] => {
+  const content = (subcommands: CommandGroup['subcommands']) =>
+    subcommands.map(({ name, description }) => ({ name, summary: description }))
+
+  // The root guide separates the commands of the CLI itself from the commands
+  // that call the Seam API. Anywhere deeper the split adds nothing: a group
+  // holds commands of one kind.
+  if (!isRoot) {
+    return [{ header: 'Commands', content: content(group.subcommands) }]
+  }
+
+  const cli = group.subcommands.filter(({ kind }) => kind === 'cli')
+  const api = group.subcommands.filter(({ kind }) => kind === 'api')
+
+  return [
+    { header: 'Commands', content: content(cli) },
+    { header: 'API Commands', content: content(api) },
+  ].filter((section) => section.content.length > 0)
 }
 
 const commandSections = (
