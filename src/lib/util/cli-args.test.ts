@@ -1,7 +1,13 @@
 import type { ParsedArgs } from 'minimist'
 import { expect, test } from 'vitest'
 
-import { getInteractivity, parseCliArgs, toArgName } from './cli-args.js'
+import {
+  getInteractivity,
+  parseCliArgs,
+  toArgName,
+  toGivenArgName,
+  toParameterName,
+} from './cli-args.js'
 
 // The CLI normalizes argument keys before checking them.
 const parse = (argv: string[]): ParsedArgs => {
@@ -51,9 +57,37 @@ test('parseCliArgs: interactivity flags do not consume the next argument', () =>
   expect(args._).toEqual(['devices', 'get'])
 })
 
+test('parseCliArgs: reads a page cursor exactly as given', () => {
+  // Cursors are opaque, so anything that looks like a number must survive.
+  expect(
+    parse(['devices', 'list', '--page-cursor', '0755'])['page_cursor'],
+  ).toBe('0755')
+  expect(
+    parse(['devices', 'list', '--page-cursor', '1e5'])['page_cursor'],
+  ).toBe('1e5')
+  expect(
+    parse(['devices', 'list', '--page-cursor=eyJrIjoxfQ=='])['page_cursor'],
+  ).toBe('eyJrIjoxfQ==')
+  expect(
+    parse(['devices', 'list', '--page_cursor', '0755'])['page_cursor'],
+  ).toBe('0755')
+})
+
 test('toArgName: renders a parameter as its argument', () => {
   expect(toArgName('device_id')).toBe('--device-id')
   expect(toArgName('code')).toBe('--code')
+})
+
+test('toParameterName: reads an argument key as the parameter it names', () => {
+  expect(toParameterName('page-cursor')).toBe('page_cursor')
+  expect(toParameterName('page_cursor')).toBe('page_cursor')
+  expect(toParameterName('PAGE-CURSOR')).toBe('page_cursor')
+  expect(toParameterName('limit')).toBe('limit')
+})
+
+test('toGivenArgName: renders a one letter key as a short argument', () => {
+  expect(toGivenArgName('n')).toBe('-n')
+  expect(toGivenArgName('page_cursor')).toBe('--page-cursor')
 })
 
 test('getInteractivity: never prompts without a terminal', () => {

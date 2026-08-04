@@ -190,6 +190,116 @@ test('cli: params given as flags win over params piped in', async () => {
   expect(requests[0]?.body).toEqual({ limit: 5 })
 })
 
+test('cli: sends a page cursor as the opaque string it is', async () => {
+  requests = []
+  const { exitCode } = await runCli([
+    'devices',
+    'list',
+    '--page-cursor',
+    '0755',
+  ])
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.path).toBe('/devices/list')
+  expect(requests[0]?.body).toEqual({ page_cursor: '0755' })
+})
+
+test('cli: documents --page-cursor for a paginated command', async () => {
+  const { stdout, exitCode } = await runCli(['devices', 'list', '--help'])
+
+  expect(exitCode).toBe(0)
+  expect(stdout).toContain('--page-cursor')
+})
+
+test('cli: reports an unknown argument rather than sending it', async () => {
+  requests = []
+  const { stdout, stderr, exitCode } = await runCli([
+    'devices',
+    'list',
+    '--limitt',
+    '5',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain('Unknown parameter for /devices/list: --limitt')
+  expect(stderr).toContain("Run 'seam devices list --help'")
+  expect(requests).toHaveLength(0)
+})
+
+test('cli: reports an unknown argument to a command it handles itself', async () => {
+  const { stdout, stderr, exitCode } = await runCli([
+    'select',
+    'server',
+    '--serverr',
+    'https://example.com',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain('Unknown parameter for select server: --serverr')
+  expect(stderr).toContain("Run 'seam select server --help'")
+})
+
+test('cli: reports an unknown argument to a command taking none', async () => {
+  const { stderr, exitCode } = await runCli(['completion', 'bash', '--shell'])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Unknown parameter for completion bash: --shell')
+})
+
+test('cli: takes the arguments a command it handles itself accepts', async () => {
+  const { stdout, exitCode } = await runCli(['completion', 'bash'])
+
+  expect(exitCode).toBe(0)
+  expect(stdout).toContain('complete -F _seam_completion seam')
+})
+
+test('cli: names every unknown argument at once', async () => {
+  requests = []
+  const { stderr, exitCode } = await runCli([
+    'devices',
+    'list',
+    '--limitt',
+    '5',
+    '--pagecursor',
+    'abc',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain(
+    'Unknown parameters for /devices/list: --limitt --pagecursor',
+  )
+  expect(requests).toHaveLength(0)
+})
+
+test('cli: reports an unknown short argument as the short form', async () => {
+  requests = []
+  const { stderr, exitCode } = await runCli(['devices', 'list', '-n'])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Unknown parameter for /devices/list: -n')
+  expect(requests).toHaveLength(0)
+})
+
+test('cli: sends an argument once, however it is written', async () => {
+  requests = []
+  const { exitCode } = await runCli(['devices', 'list', '--LIMIT', '5'])
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({ limit: 5 })
+})
+
+test('cli: does not hold params read from stdin to the command', async () => {
+  requests = []
+  const { exitCode } = await runCli(['devices', 'list'], {
+    input: JSON.stringify({ limit: 2, nope: true }),
+  })
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({ limit: 2, nope: true })
+})
+
 test('cli: does not send cli flags as request params', async () => {
   requests = []
   await runCli(['devices', 'list', '--json', '-y'])

@@ -151,6 +151,18 @@ export const findGroup = (
 ): CommandGroup | undefined =>
   spec.groups.find((group) => isSamePath(group.path, path))
 
+/**
+ * The definition of a command the CLI handles itself, or `undefined` when the
+ * path is an endpoint or no command at all.
+ *
+ * Unlike {@link findCommand} this needs no blueprint, since these commands are
+ * declared by the CLI rather than derived from the API definitions.
+ */
+export const findLocalCommand = (
+  path: string[],
+): CommandDefinition | undefined =>
+  localCommands.find((command) => isSamePath(command.path, path))
+
 const isSamePath = (a: string[], b: string[]): boolean =>
   a.length === b.length && a.every((word, index) => word === b[index])
 

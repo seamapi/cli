@@ -85,7 +85,10 @@ seam devices list --non-interactive
 # Fails with: Missing required parameter for /locks/unlock_door: --device-id
 seam locks unlock-door --non-interactive
 
-MY_DOOR=$(seam devices get --name "Front Door" --id-only)
+# Fails with: Unknown parameter for /devices/list: --limitt
+seam devices list --limitt 5
+
+MY_DOOR=$(seam devices get --name "Front Door" | jq -r '.device.device_id')
 
 # Unlock a lock
 seam locks unlock-door --device-id $MY_DOOR
@@ -113,10 +116,31 @@ seam devices list > devices.json
 seam devices list | jq '.devices[].device_id'
 ```
 
+### Pagination
+
+Every command that paginates accepts `--page-cursor` to select a page of
+results, alongside `--limit` for the size of that page. Each response reports
+its `pagination`, whose `next_page_cursor` is the cursor for the page after it.
+
+```bash
+# The first page, and the cursor for the next one
+seam devices list --limit 2 | jq '.pagination.next_page_cursor'
+
+# The page after it
+seam devices list --limit 2 --page-cursor "$CURSOR"
+```
+
+A cursor is opaque: pass it back exactly as it was reported, and do not build
+one yourself. Run `seam <command> --help` to see whether a command paginates.
+
 ### JSON
 
 Request params may be piped or redirected in as a JSON object. Params given as
 arguments win over params read from stdin.
+
+An argument the command does not accept is an error, so a typo is reported
+rather than sent. Params read from stdin are passed through as given, so
+anything the API itself accepts may be sent that way.
 
 ```bash
 # Read params from a file

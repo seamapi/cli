@@ -67,6 +67,10 @@ const examples = [
     summary: 'Create an access code.',
   },
   {
+    name: 'seam devices list {bold --page-cursor} $NEXT_PAGE_CURSOR',
+    summary: 'List the next page of devices.',
+  },
+  {
     name: 'seam devices list > devices.json',
     summary: 'Write the response to a file as JSON.',
   },

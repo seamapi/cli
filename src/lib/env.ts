@@ -15,6 +15,10 @@ export const workspaceIdEnvVar = 'SEAM_CLI_WORKSPACE_ID'
 /** Overrides the server stored by `seam select server`. */
 export const endpointEnvVar = 'SEAM_CLI_ENDPOINT'
 
+/** Every variable read here is declared on `ProcessEnv` in `env.d.ts`. */
+type SeamCliEnvVar =
+  typeof endpointEnvVar | typeof tokenEnvVar | typeof workspaceIdEnvVar
+
 export const getTokenFromEnv = (): string | null => readEnvVar(tokenEnvVar)
 
 export const getWorkspaceIdFromEnv = (): string | null =>
@@ -48,7 +52,7 @@ export const assertEnvVarUnset = (
   )
 }
 
-const readEnvVar = (envVar: string): string | null => {
+const readEnvVar = (envVar: SeamCliEnvVar): string | null => {
   const value = process.env[envVar]
 
   if (value == null) return null
