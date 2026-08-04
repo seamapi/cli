@@ -108,7 +108,11 @@ export const getCommandSpec = (blueprint: Blueprint): CommandSpec => {
     dedupeByPath([
       ...blueprint.routes
         .flatMap((route) => route.endpoints)
-        .map(toCommandDefinition),
+        .map(toCommandDefinition)
+        // Command and flag names end up unquoted or single-quoted in shell
+        // scripts, so drop any the definitions should never contain rather
+        // than emit something a shell could read as syntax.
+        .filter((command) => command.path.every(isSafeToken)),
       ...localCommands,
     ]),
   )
@@ -245,6 +249,7 @@ const toCommandDefinition = (endpoint: Endpoint): CommandDefinition => {
     description,
     flags: [...endpoint.request.parameters]
       .map(toCommandFlag)
+      .filter((flag) => flag.long == null || isSafeToken(flag.long))
       .sort((a, b) => compare(a.long ?? a.short, b.long ?? b.short)),
   }
 }
@@ -275,9 +280,10 @@ const toFlagValues = (parameter: Parameter): string[] => {
 }
 
 /**
- * Whether a word can be written unquoted in a completion script. Command,
- * flag, and enum names come from the API definitions, so never emit one that
- * could be read as shell syntax.
+ * Whether a word is safe to write into a shell script. Command, flag, and
+ * enum names come from the API definitions and are embedded unquoted or
+ * single-quoted in completion scripts, so never emit one that a shell could
+ * read as syntax.
  */
 const isSafeToken = (token: string): boolean => /^[\w.:@/+-]+$/.test(token)
 

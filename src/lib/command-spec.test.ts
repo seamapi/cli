@@ -101,6 +101,54 @@ test('command spec: tells CLI commands apart from API commands', () => {
   expect(kindOf('health')).toBe('api')
 })
 
+test('command spec: never emits names a shell could read as syntax', () => {
+  const hostile = {
+    routes: [
+      {
+        endpoints: [
+          {
+            path: "/devices'; rm -rf /; '/list",
+            title: 'Hostile Path',
+            description: '',
+            request: { parameters: [] },
+          },
+          {
+            path: '/devices/list',
+            title: 'List Devices',
+            description: '',
+            request: {
+              parameters: [
+                {
+                  name: "limit'; rm -rf /; '",
+                  description: '',
+                  format: 'number',
+                  isRequired: false,
+                },
+                {
+                  name: 'limit',
+                  description: '',
+                  format: 'number',
+                  isRequired: false,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  } as unknown as Parameters<typeof getCommandSpec>[0]
+
+  const hostileSpec = getCommandSpec(hostile)
+  const paths = hostileSpec.commands.map(({ path }) => path.join(' '))
+  expect(paths.filter((path) => path.includes('rm -rf'))).toEqual([])
+  expect(paths).toContain('devices list')
+  expect(
+    findCommand(hostileSpec, ['devices', 'list'])?.flags.map(
+      ({ long }) => long,
+    ),
+  ).toEqual(['limit'])
+})
+
 test('command spec: a command path is either a command or a group', () => {
   expect(findGroup(spec, ['devices', 'list'])).toBeUndefined()
   expect(findCommand(spec, ['devices'])).toBeUndefined()
