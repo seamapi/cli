@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 import { $ } from 'execa'
 
 const versionFile = './src/lib/version.ts'
-const blueprintVersionFile = './src/lib/blueprint-version.ts'
 
 const main = async (): Promise<void> => {
   const version = await injectVersion(resolveFile(versionFile))
@@ -12,11 +11,11 @@ const main = async (): Promise<void> => {
   console.log(`✓ Version ${version} injected into ${versionFile}`)
 
   const blueprintVersion = await injectBlueprintVersion(
-    resolveFile(blueprintVersionFile),
+    resolveFile(versionFile),
   )
   // eslint-disable-next-line no-console
   console.log(
-    `✓ Blueprint version ${blueprintVersion} injected into ${blueprintVersionFile}`,
+    `✓ Blueprint version ${blueprintVersion} injected into ${versionFile}`,
   )
 
   const { command } = await $`tsc --project tsconfig.prepack.json`
