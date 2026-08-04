@@ -1,8 +1,9 @@
-import { existsSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
 import Configstore from 'configstore'
 import envPaths from 'env-paths'
+
+import { migrateConfigStore } from './migrate-config-store.js'
 
 const configFileName = 'cli.json'
 const legacyConfigStoreId = 'seam-cli'
@@ -10,103 +11,21 @@ const currentWorkspaceIdKey = 'current_workspace_id'
 const patKey = 'pat'
 const paths = envPaths('seam', { suffix: '' })
 
-const getConfigPath = (): string => {
-  return join(paths.config, configFileName)
-}
+export const getConfigStore = () => {
+  const settingsStore = new Configstore(legacyConfigStoreId, undefined, {
+    configPath: getConfigPath(),
+  })
+  const stateStore = new Configstore(legacyConfigStoreId, undefined, {
+    configPath: getStateConfigPath(),
+  })
 
-const getStateConfigPath = (): string => {
-  return join(paths.log, configFileName)
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return value != null && typeof value === 'object' && !Array.isArray(value)
-}
-
-const isStateKey = (key: string): boolean => {
-  return (
-    key === currentWorkspaceIdKey ||
-    key === patKey ||
-    key.endsWith(`.${patKey}`)
+  migrateConfigStore(
+    settingsStore,
+    stateStore,
+    new Configstore(legacyConfigStoreId),
   )
-}
 
-const mergeConfig = (
-  baseConfig: Record<string, unknown>,
-  overrideConfig: Record<string, unknown>,
-): Record<string, unknown> => {
-  const mergedConfig = { ...baseConfig }
-
-  for (const [key, value] of Object.entries(overrideConfig)) {
-    const baseValue = mergedConfig[key]
-    mergedConfig[key] =
-      isRecord(baseValue) && isRecord(value)
-        ? mergeConfig(baseValue, value)
-        : value
-  }
-
-  return mergedConfig
-}
-
-const splitConfig = (
-  config: Record<string, unknown>,
-): {
-  settings: Record<string, unknown>
-  state: Record<string, unknown>
-} => {
-  const settings: Record<string, unknown> = {}
-  const state: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(config)) {
-    if (isStateKey(key)) {
-      state[key] = value
-      continue
-    }
-
-    if (isRecord(value)) {
-      const splitValue = splitConfig(value)
-      if (Object.keys(splitValue.settings).length > 0) {
-        settings[key] = splitValue.settings
-      }
-
-      if (Object.keys(splitValue.state).length > 0) {
-        state[key] = splitValue.state
-      }
-
-      continue
-    }
-
-    settings[key] = value
-  }
-
-  return { settings, state }
-}
-
-const writeIfChanged = (
-  store: Configstore,
-  nextConfig: Record<string, unknown>,
-): void => {
-  if (JSON.stringify(store.all) !== JSON.stringify(nextConfig)) {
-    store.all = nextConfig
-  }
-}
-
-const migrateConfig = (
-  settingsStore: Configstore,
-  stateStore: Configstore,
-  legacyStore: Configstore,
-): void => {
-  if (!existsSync(legacyStore.path)) return
-
-  const legacyConfig = legacyStore.all
-
-  if (Object.keys(legacyConfig).length > 0) {
-    const { settings, state } = splitConfig(legacyConfig)
-
-    writeIfChanged(settingsStore, mergeConfig(settings, settingsStore.all))
-    writeIfChanged(stateStore, mergeConfig(state, stateStore.all))
-  }
-
-  rmSync(legacyStore.path, { force: true })
+  return new SeamConfigStore(settingsStore, stateStore)
 }
 
 class SeamConfigStore {
@@ -167,15 +86,73 @@ class SeamConfigStore {
   }
 }
 
-export const getConfigStore = () => {
-  const settingsStore = new Configstore(legacyConfigStoreId, undefined, {
-    configPath: getConfigPath(),
-  })
-  const stateStore = new Configstore(legacyConfigStoreId, undefined, {
-    configPath: getStateConfigPath(),
-  })
+const getConfigPath = (): string => {
+  return join(paths.config, configFileName)
+}
 
-  migrateConfig(settingsStore, stateStore, new Configstore(legacyConfigStoreId))
+const getStateConfigPath = (): string => {
+  return join(paths.log, configFileName)
+}
 
-  return new SeamConfigStore(settingsStore, stateStore)
+const mergeConfig = (
+  baseConfig: Record<string, unknown>,
+  overrideConfig: Record<string, unknown>,
+): Record<string, unknown> => {
+  const mergedConfig = { ...baseConfig }
+
+  for (const [key, value] of Object.entries(overrideConfig)) {
+    const baseValue = mergedConfig[key]
+    mergedConfig[key] =
+      isRecord(baseValue) && isRecord(value)
+        ? mergeConfig(baseValue, value)
+        : value
+  }
+
+  return mergedConfig
+}
+
+const splitConfig = (
+  config: Record<string, unknown>,
+): {
+  settings: Record<string, unknown>
+  state: Record<string, unknown>
+} => {
+  const settings: Record<string, unknown> = {}
+  const state: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(config)) {
+    if (isStateKey(key)) {
+      state[key] = value
+      continue
+    }
+
+    if (isRecord(value)) {
+      const splitValue = splitConfig(value)
+      if (Object.keys(splitValue.settings).length > 0) {
+        settings[key] = splitValue.settings
+      }
+
+      if (Object.keys(splitValue.state).length > 0) {
+        state[key] = splitValue.state
+      }
+
+      continue
+    }
+
+    settings[key] = value
+  }
+
+  return { settings, state }
+}
+
+const isStateKey = (key: string): boolean => {
+  return (
+    key === currentWorkspaceIdKey ||
+    key === patKey ||
+    key.endsWith(`.${patKey}`)
+  )
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return value != null && typeof value === 'object' && !Array.isArray(value)
 }
