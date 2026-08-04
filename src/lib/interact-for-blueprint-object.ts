@@ -51,11 +51,11 @@ export const interactForBlueprintObject = async (
 
   const cmdPath = `/${args.command.join('/').replace(/-/g, '_')}`
 
-  const should_auto_submit =
+  const shouldAutoSubmit =
     ctx.interactivity !== 'interactive' &&
     haveAllRequiredParams &&
     !args.isSubProperty
-  if (should_auto_submit) {
+  if (shouldAutoSubmit) {
     return args.params
   }
 
@@ -160,18 +160,16 @@ export const interactForBlueprintObject = async (
     args.params[paramToEdit] = await interactForAccessCode(args.params as any)
     return interactForBlueprintObject(args, ctx)
   } else if (paramToEdit === 'connected_account_id') {
-    const connected_account_id = await interactForConnectedAccount()
-    args.params[paramToEdit] = connected_account_id
+    const connectedAccountId = await interactForConnectedAccount()
+    args.params[paramToEdit] = connectedAccountId
     return interactForBlueprintObject(args, ctx)
   } else if (
     paramToEdit === 'user_identity_id' ||
     paramToEdit === 'user_identity_ids'
   ) {
-    const user_identity_id = await interactForUserIdentity()
+    const userIdentityId = await interactForUserIdentity()
     args.params[paramToEdit] =
-      paramToEdit === 'user_identity_ids'
-        ? [user_identity_id]
-        : user_identity_id
+      paramToEdit === 'user_identity_ids' ? [userIdentityId] : userIdentityId
     return interactForBlueprintObject(args, ctx)
   } else if (paramToEdit.endsWith('acs_system_id')) {
     args.params[paramToEdit] = await interactForAcsSystem()

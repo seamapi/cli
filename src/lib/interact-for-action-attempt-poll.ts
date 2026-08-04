@@ -6,11 +6,11 @@ import { prompt } from './util/prompt.js'
 import { withLoading } from './util/with-loading.js'
 
 export const interactForActionAttemptPoll = async (
-  action_attempt: ActionAttemptsGetResponse['action_attempt'],
+  actionAttempt: ActionAttemptsGetResponse['action_attempt'],
 ) => {
-  if (action_attempt.status === 'pending') {
-    const { poll_for_action_attempt } = await prompt({
-      name: 'poll_for_action_attempt',
+  if (actionAttempt.status === 'pending') {
+    const { pollForActionAttempt } = await prompt({
+      name: 'pollForActionAttempt',
       message: "Would you like to poll the action attempt until it's ready?",
       type: 'toggle',
       initial: true,
@@ -18,19 +18,19 @@ export const interactForActionAttemptPoll = async (
       inactive: 'no',
     })
 
-    if (poll_for_action_attempt) {
+    if (pollForActionAttempt) {
       const seam = await getSeam()
-      const { action_attempt_id } = action_attempt
+      const { action_attempt_id: actionAttemptId } = actionAttempt
 
-      const updated_action_attempt = await withLoading(
+      const updatedActionAttempt = await withLoading(
         'Polling action attempt...',
         () =>
           seam.actionAttempts.get(
-            { action_attempt_id },
+            { action_attempt_id: actionAttemptId },
             { waitForActionAttempt: { pollingInterval: 240, timeout: 10_000 } },
           ),
       )
-      getOutput().data({ action_attempt: updated_action_attempt })
+      getOutput().data({ action_attempt: updatedActionAttempt })
     }
   }
 }

@@ -19,9 +19,6 @@ export default [
   {
     files: ['src/bin/**/*.ts', 'src/lib/**/*.ts'],
     rules: {
-      // TODO: Rename the identifiers that mirror the snake_case parameter names
-      // of the Seam API so that everything here is camelCase.
-      camelcase: 'off',
       // TODO: Replace the console calls with a logger wrapper.
       'no-console': 'off',
     },

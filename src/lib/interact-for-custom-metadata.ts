@@ -10,16 +10,16 @@ type UpdatedCustomMetadata = {
 }
 
 export const interactForCustomMetadata = async (
-  custom_metadata: CustomMetadata,
+  customMetadata: CustomMetadata,
 ) => {
-  const updated_custom_metadata: UpdatedCustomMetadata = { ...custom_metadata }
+  const updatedCustomMetadata: UpdatedCustomMetadata = { ...customMetadata }
   const output = getOutput()
 
   const displayCurrentCustomMetadata = () => {
     output.info('custom_metadata:')
-    if (Object.keys(updated_custom_metadata).length > 0) {
-      Object.keys(updated_custom_metadata).forEach((key, index) => {
-        output.info(`${index + 1}: ${key}: ${updated_custom_metadata[key]}`)
+    if (Object.keys(updatedCustomMetadata).length > 0) {
+      Object.keys(updatedCustomMetadata).forEach((key, index) => {
+        output.info(`${index + 1}: ${key}: ${updatedCustomMetadata[key]}`)
       })
     } else {
       output.info('The custom metadata param is empty.')
@@ -61,31 +61,29 @@ export const interactForCustomMetadata = async (
           newValue = Boolean(newValue)
         }
         if (newValue === 'null') {
-          updated_custom_metadata[newKey] = null
+          updatedCustomMetadata[newKey] = null
         } else {
-          updated_custom_metadata[newKey] = newValue
+          updatedCustomMetadata[newKey] = newValue
         }
       }
     } else if (action === 'remove') {
-      const { custom_key_to_remove } = await prompt({
+      const { customKeyToRemove } = await prompt({
         type: 'select',
-        name: 'custom_key_to_remove',
+        name: 'customKeyToRemove',
         message: 'Choose a key-value pair to remove from params:',
-        choices: Object.keys(updated_custom_metadata).map(
-          (custom_metadata_key) => {
-            return {
-              title: `${custom_metadata_key}: ${updated_custom_metadata[custom_metadata_key]}`,
-              value: custom_metadata_key,
-            }
-          },
-        ),
+        choices: Object.keys(updatedCustomMetadata).map((customMetadataKey) => {
+          return {
+            title: `${customMetadataKey}: ${updatedCustomMetadata[customMetadataKey]}`,
+            value: customMetadataKey,
+          }
+        }),
       })
 
-      if (custom_key_to_remove) {
-        delete custom_metadata[custom_key_to_remove]
+      if (customKeyToRemove) {
+        delete customMetadata[customKeyToRemove]
       }
     }
   } while (action !== 'done')
 
-  return updated_custom_metadata
+  return updatedCustomMetadata
 }
