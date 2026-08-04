@@ -43,7 +43,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             *.tgz
-            release/seam*
+            release/seam-*
             release/checksums.txt
           body_path: ${{ github.workspace }}/${{ steps.changelog.outputs.outfile }}
   npm:
@@ -113,20 +113,18 @@ jobs:
           conflicts=('seam')
           options=('!strip' '!debug')
           source=("\${url}/raw/v\${pkgver}/LICENSE.txt"
-                  "seam-\${pkgver}.bash::\${url}/releases/download/v\${pkgver}/seam.bash"
-                  "seam-\${pkgver}.fish::\${url}/releases/download/v\${pkgver}/seam.fish"
-                  "seam-\${pkgver}.zsh::\${url}/releases/download/v\${pkgver}/seam.zsh")
+                  "\${url}/releases/download/v\${pkgver}/seam-completions-v\${pkgver}.tar.gz")
           source_x86_64=("\${pkgname}-\${pkgver}-x86_64::\${url}/releases/download/v\${pkgver}/seam-v\${pkgver}-linux-x64")
           source_aarch64=("\${pkgname}-\${pkgver}-aarch64::\${url}/releases/download/v\${pkgver}/seam-v\${pkgver}-linux-arm64")
-          sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
+          sha256sums=('SKIP' 'SKIP')
           sha256sums_x86_64=('SKIP')
           sha256sums_aarch64=('SKIP')
 
           package() {
             install -Dm755 "\${pkgname}-\${pkgver}-\${CARCH}" "\${pkgdir}/usr/bin/seam"
-            install -Dm644 "seam-\${pkgver}.bash" "\${pkgdir}/usr/share/bash-completion/completions/seam"
-            install -Dm644 "seam-\${pkgver}.fish" "\${pkgdir}/usr/share/fish/vendor_completions.d/seam.fish"
-            install -Dm644 "seam-\${pkgver}.zsh" "\${pkgdir}/usr/share/zsh/site-functions/_seam"
+            install -Dm644 seam.bash "\${pkgdir}/usr/share/bash-completion/completions/seam"
+            install -Dm644 seam.fish "\${pkgdir}/usr/share/fish/vendor_completions.d/seam.fish"
+            install -Dm644 seam.zsh "\${pkgdir}/usr/share/zsh/site-functions/_seam"
             install -Dm644 LICENSE.txt "\${pkgdir}/usr/share/licenses/\${pkgname}/LICENSE"
           }
           PKGBUILD
