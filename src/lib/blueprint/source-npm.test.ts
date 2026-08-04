@@ -16,7 +16,7 @@ import {
   vi,
 } from 'vitest'
 
-import getBlueprint from './blueprint.js'
+import { getBlueprint } from './source-npm.js'
 
 const typesVersion = '1.985.0'
 const manifestUrl = 'https://registry.npmjs.org/@seamapi/types/latest'
@@ -80,7 +80,7 @@ const hoursAgo = (hours: number): string =>
 
 beforeAll(async () => {
   const pkg = JSON.parse(
-    await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
+    await readFile(new URL('../../../package.json', import.meta.url), 'utf8'),
   ) as { dependencies: Record<string, string> }
   pinnedBlueprintVersion = pkg.dependencies['@seamapi/blueprint'] ?? ''
 

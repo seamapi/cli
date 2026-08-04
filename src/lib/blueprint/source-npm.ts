@@ -1,52 +1,45 @@
-import {
-  access,
-  mkdir,
-  readFile,
-  rename,
-  rm,
-  writeFile,
-} from 'node:fs/promises'
-import { dirname, join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { access, mkdir, rm, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import type { Blueprint, TypesModuleInput } from '@seamapi/blueprint'
 import envPaths from 'env-paths'
 import { extract } from 'tar'
 
-import { withLoading } from './util/with-loading.js'
-import { seamapiBlueprintVersion } from './version.js'
+import { withLoading } from '../util/with-loading.js'
+import {
+  getBlueprintVersion,
+  getCacheFile,
+  isUpdateCheckDue,
+  readCache,
+  writeCache,
+} from './cache.js'
 
 const typesPackageName = '@seamapi/types'
 const openapiTarEntryName = 'package/lib/seam/connect/openapi.js'
 const registryUrl = 'https://registry.npmjs.org'
-const updateCheckInterval = 24 * 60 * 60 * 1000
-
-const cacheFileName = 'blueprint.json'
-
-interface BlueprintCache {
-  blueprintVersion: string
-  typesVersion: string
-  checkedAt: string
-  blueprint: Blueprint
-}
 
 interface TypesPackageManifest {
   version: string
   dist: { tarball: string }
 }
 
-interface GetBlueprintOptions {
+export interface GetBlueprintOptions {
   update?: boolean
   cacheDirectory?: string
 }
 
-const getBlueprint = async (
+/**
+ * Build a blueprint from the latest published Seam API types on npm,
+ * using the on-disk cache unless it is stale or an update is forced.
+ */
+export const getBlueprint = async (
   options: GetBlueprintOptions = {},
 ): Promise<Blueprint> => {
   const update = options.update ?? false
   const cacheDirectory =
     options.cacheDirectory ?? envPaths('seam', { suffix: '' }).cache
-  const cacheFile = join(cacheDirectory, cacheFileName)
+  const cacheFile = getCacheFile(cacheDirectory)
   const blueprintVersion = await getBlueprintVersion()
 
   const cache = await readCache(cacheFile)
@@ -98,41 +91,6 @@ const getBlueprint = async (
   })
 
   return blueprint
-}
-
-const getBlueprintVersion = async (): Promise<string> => {
-  if (seamapiBlueprintVersion !== '0.0.0') return seamapiBlueprintVersion
-
-  // The version is only injected when the package is packed, so a
-  // development checkout reads the pinned version from package.json
-  // to keep invalidating the cache on version changes as expected.
-  const pkg = await findOwnPackageJson()
-  return pkg?.dependencies?.['@seamapi/blueprint'] ?? seamapiBlueprintVersion
-}
-
-const findOwnPackageJson = async (): Promise<{
-  dependencies?: Record<string, string>
-} | null> => {
-  let directory = dirname(fileURLToPath(import.meta.url))
-  while (true) {
-    try {
-      const pkg = JSON.parse(
-        await readFile(join(directory, 'package.json'), 'utf8'),
-      ) as { name?: string; dependencies?: Record<string, string> }
-      if (pkg.name === '@seamapi/cli') return pkg
-    } catch {
-      // Keep walking up until a package.json for this package is found.
-    }
-    const parent = dirname(directory)
-    if (parent === directory) return null
-    directory = parent
-  }
-}
-
-const isUpdateCheckDue = (checkedAt: string): boolean => {
-  const checkedAtTime = Date.parse(checkedAt)
-  if (Number.isNaN(checkedAtTime)) return true
-  return Date.now() - checkedAtTime > updateCheckInterval
 }
 
 const fetchLatestTypesPackageManifest =
@@ -214,40 +172,5 @@ const exists = async (file: string): Promise<boolean> => {
   }
 }
 
-const readCache = async (file: string): Promise<BlueprintCache | null> => {
-  try {
-    const cache = JSON.parse(await readFile(file, 'utf8')) as unknown
-    if (!isBlueprintCache(cache)) return null
-    return cache
-  } catch {
-    return null
-  }
-}
-
-const writeCache = async (
-  file: string,
-  cache: BlueprintCache,
-): Promise<void> => {
-  const temporaryFile = `${file}.tmp`
-  await mkdir(dirname(file), { recursive: true })
-  await writeFile(temporaryFile, `${JSON.stringify(cache)}\n`, 'utf8')
-  await rename(temporaryFile, file)
-}
-
-const isBlueprintCache = (cache: unknown): cache is BlueprintCache => {
-  if (cache == null || typeof cache !== 'object') return false
-  const { blueprintVersion, typesVersion, checkedAt, blueprint } =
-    cache as Record<string, unknown>
-  return (
-    typeof blueprintVersion === 'string' &&
-    typeof typesVersion === 'string' &&
-    typeof checkedAt === 'string' &&
-    blueprint != null &&
-    typeof blueprint === 'object'
-  )
-}
-
 const toErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
-
-export default getBlueprint

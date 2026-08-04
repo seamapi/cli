@@ -1,4 +1,4 @@
-import { getCommandBlueprintDef } from '../get-command-blueprint-def.js'
+import { getCommandBlueprintDef } from '../blueprint/endpoint.js'
 import type { ContextHelpers } from '../types.js'
 import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
 

@@ -16,6 +16,11 @@ import {
   UsageError,
 } from 'lib/args/parse.js'
 import { validateToken } from 'lib/auth/validate-token.js'
+import {
+  getCommandBlueprintDef,
+  getResponseKey,
+} from 'lib/blueprint/endpoint.js'
+import { getApiBlueprint } from 'lib/blueprint/index.js'
 import { findLocalCommand, getCommandSpec } from 'lib/command-spec.js'
 import { getConfigStore } from 'lib/config/index.js'
 import {
@@ -29,10 +34,7 @@ import {
   tokenEnvVar,
   workspaceIdEnvVar,
 } from 'lib/env.js'
-import { getApiBlueprint } from 'lib/get-api-blueprint.js'
-import { getCommandBlueprintDef } from 'lib/get-command-blueprint-def.js'
 import { getToken } from 'lib/get-credentials.js'
-import { getResponseKey } from 'lib/get-response-key.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact/interact-for-action-attempt-poll.js'
 import { interactForCommandParams } from 'lib/interact/interact-for-command-params.js'

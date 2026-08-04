@@ -1,7 +1,7 @@
 import type { Blueprint } from '@seamapi/blueprint'
 
-import getBlueprint from './blueprint.js'
-import { getServer } from './get-server.js'
+import { getBlueprint } from './source-npm.js'
+import { createRemoteBlueprint } from './source-remote.js'
 
 export type ApiBlueprint = Blueprint
 
@@ -18,14 +18,4 @@ export const getApiBlueprint = async (
   if (useRemoteDefinitions) return await createRemoteBlueprint()
 
   return await getBlueprint(options)
-}
-
-const createRemoteBlueprint = async (): Promise<Blueprint> => {
-  const [{ createBlueprint }, { getOpenapiSchema }] = await Promise.all([
-    import('@seamapi/blueprint'),
-    import('@seamapi/http/connect'),
-  ])
-  const openapi = await getOpenapiSchema(getServer())
-
-  return await createBlueprint({ openapi }, { omitUndocumented: true })
 }
