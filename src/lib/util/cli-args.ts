@@ -40,11 +40,17 @@ export const parseCliArgs = (argv: string[]): ParsedArgs =>
   })
 
 export const getInteractivity = (args: ParsedArgs): Interactivity => {
-  // Prefer the flag that cannot hang when both are given.
-  if (args['non_interactive'] === true || args['y'] === true) {
-    return 'non-interactive'
+  const isNonInteractive =
+    args['non_interactive'] === true || args['y'] === true
+  const isInteractive = args['interactive'] === true || args['i'] === true
+
+  if (isNonInteractive && isInteractive) {
+    throw new Error(
+      'The --interactive and --non-interactive flags cannot be used together',
+    )
   }
-  if (args['interactive'] === true || args['i'] === true) return 'interactive'
+  if (isNonInteractive) return 'non-interactive'
+  if (isInteractive) return 'interactive'
   return 'auto'
 }
 
