@@ -150,10 +150,10 @@ async function cli(args: ParsedArgs) {
     return
   }
 
-  const use_remote_api_defs =
+  const useRemoteApiDefs =
     args['remote_api_defs'] ?? config.get('use_remote_api_defs')
 
-  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false, {
+  const blueprint = await getApiBlueprint(useRemoteApiDefs ?? false, {
     update,
   })
 
@@ -363,10 +363,10 @@ const assertKnownArgs = (
 }
 
 const handleConnectWebviewResponse = async (
-  connect_webview: any,
+  connectWebview: any,
   interactivity: Interactivity,
 ) => {
-  const url = connect_webview.url
+  const url = connectWebview.url
 
   if (
     interactivity !== 'non-interactive' &&

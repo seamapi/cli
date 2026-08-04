@@ -19,7 +19,7 @@ const header = `# fish completion for the seam command.
 #
 #   seam completion fish > ~/.config/fish/completions/seam.fish`
 
-const helpers = `function __seam_command --description 'Print the seam command path on the command line'
+const helpers = `function __seam_command --description 'Print the seam command path on the command-line'
     set -l tokens (commandline -opc)
     set -l command
     if test (count $tokens) -gt 1
@@ -34,7 +34,7 @@ const helpers = `function __seam_command --description 'Print the seam command p
     string join ' ' -- $command
 end
 
-function __seam_using --description 'Test whether the command line names the given seam command'
+function __seam_using --description 'Test whether the command-line names the given seam command'
     set -l command (__seam_command)
     test "$command" = "$argv[1]"
 end`

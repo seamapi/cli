@@ -5,7 +5,7 @@
 [![npm](https://img.shields.io/npm/v/@seamapi/cli.svg)](https://www.npmjs.com/package/@seamapi/cli)
 [![GitHub Actions](https://github.com/seamapi/cli/actions/workflows/check.yml/badge.svg)](https://github.com/seamapi/cli/actions/workflows/check.yml)
 
-A command line interface (CLI) for interacting with the Seam API.
+A command-line interface (CLI) for interacting with the Seam API.
 
 ## Description
 

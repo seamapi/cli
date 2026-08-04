@@ -3,10 +3,10 @@ import { getOutput } from './output/get-output.js'
 import { prompt } from './util/prompt.js'
 
 export async function interactForUseRemoteApiDefs() {
-  const { use_remote_api_defs } = await prompt([
+  const { useRemoteApiDefs } = await prompt([
     {
       type: 'select',
-      name: 'use_remote_api_defs',
+      name: 'useRemoteApiDefs',
       message: 'Always use remote API Definitions?',
       choices: [
         {
@@ -22,6 +22,6 @@ export async function interactForUseRemoteApiDefs() {
   ])
 
   const config = getConfigStore()
-  config.set('use_remote_api_defs', use_remote_api_defs)
-  getOutput().info(`Use remote API Definitions: ${use_remote_api_defs}`)
+  config.set('use_remote_api_defs', useRemoteApiDefs)
+  getOutput().info(`Use remote API Definitions: ${useRemoteApiDefs}`)
 }
