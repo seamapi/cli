@@ -9,9 +9,9 @@ A command line interface (CLI) for interacting with the Seam API.
 
 ## Description
 
-Every command is interactive: the CLI prompts for any missing required
-parameter with suggestions pulled from your workspace. Pass `-y` to take the
-first suggestion instead of being asked.
+Commands run as soon as every required parameter is given. Anything missing is
+prompted for, with suggestions pulled from your workspace. Pass
+`--non-interactive` (or `-y`) to never be prompted: the command fails instead.
 
 ## Installation
 
@@ -37,9 +37,19 @@ $ paru -S seam-bin
 
 ## Usage
 
-Every `seam` command is interactive and will prompt you for any missing
-required properties with helpful suggestions. To avoid automatic behavior,
-pass `-y`.
+Every `seam` command makes its request as soon as every required property is
+given. When something is missing, the CLI prompts you for it with helpful
+suggestions.
+
+Pass `--interactive` (or `-i`) to always be prompted to review and edit
+properties before the request is made. The prompt is prefilled with whatever
+you passed as arguments, so this is the way to add optional properties, or to
+check a request before making it.
+
+For scripts and CI, pass `--non-interactive` (or `-y`) to never be prompted.
+The command must then be complete: if the command itself is ambiguous, or any
+required property is missing, the CLI exits with an error naming what is
+missing instead of asking for it.
 
 To take a project from zero to a working Seam integration, run the
 [Seam Wizard] from the project's root:
@@ -65,6 +75,15 @@ seam connect-webviews create
 
 # List devices in your workspace
 seam devices list
+
+# Review and edit filters before listing devices
+seam devices list --interactive
+
+# List devices, failing instead of prompting
+seam devices list --non-interactive
+
+# Fails with: Missing required parameter for /locks/unlock_door: --device-id
+seam locks unlock-door --non-interactive
 
 MY_DOOR=$(seam devices get --name "Front Door" --id-only)
 

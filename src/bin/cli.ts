@@ -4,7 +4,7 @@ import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import chalk from 'chalk'
 import commandLineUsage from 'command-line-usage'
-import parseArgs, { type ParsedArgs } from 'minimist'
+import type { ParsedArgs } from 'minimist'
 import prompts from 'prompts'
 
 import { getConfigStore } from 'lib/config/index.js'
@@ -18,6 +18,13 @@ import { interactForServerSelection } from 'lib/interact-for-server-selection.js
 import { interactForUseRemoteApiDefs } from 'lib/interact-for-use-remote-api-defs.js'
 import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
 import type { ContextHelpers } from 'lib/types.js'
+import {
+  getInteractivity,
+  type Interactivity,
+  interactivityFlags,
+  NonInteractiveError,
+  parseCliArgs,
+} from 'lib/util/cli-args.js'
 import { RequestSeamApi } from 'lib/util/request-seam-api.js'
 import { validateToken } from 'lib/validate-token.js'
 import seamapiCliVersion from 'lib/version.js'
@@ -26,7 +33,7 @@ const sections = [
   {
     header: 'Seam CLI',
     content:
-      'Every seam command is interactive and will prompt you for any missing required properties with helpful suggestions. To avoid automatic behavior, pass -y ',
+      'Every seam command runs as soon as every required property is given, and otherwise prompts you for what is missing with helpful suggestions. Pass -i to always review properties first, or -y to never be prompted. ',
   },
   {
     header: 'Options',
@@ -35,6 +42,20 @@ const sections = [
         name: 'help',
         description: 'Display this help guide.',
         alias: 'h',
+        type: Boolean,
+      },
+      {
+        name: 'interactive',
+        description:
+          'Always prompt to review and edit properties, prefilled with the given arguments.',
+        alias: 'i',
+        type: Boolean,
+      },
+      {
+        name: 'non-interactive',
+        description:
+          'Never prompt: exit with an error if the command or any required property is missing.',
+        alias: 'y',
         type: Boolean,
       },
       {
@@ -59,6 +80,14 @@ const sections = [
         summary: 'Create a connect webview to connect devices.',
       },
       { name: 'seam devices list', summary: 'List devices in your workspace.' },
+      {
+        name: 'seam devices list {bold --interactive}',
+        summary: 'Review and edit filters before listing devices.',
+      },
+      {
+        name: 'seam devices list {bold --non-interactive}',
+        summary: 'List devices, failing instead of prompting.',
+      },
       {
         name: 'seam locks unlock-door {bold --device-id} $MY_DOOR',
         summary: 'Unlock a lock.',
@@ -131,22 +160,21 @@ async function cli(args: ParsedArgs) {
 
   const commandParams: Record<string, any> = {}
 
-  /**
-   * Whether or not to auto-select first option
-   */
-  const is_interactive = args['y'] !== true
-
   const ctx: ContextHelpers = {
     blueprint,
-    is_interactive,
+    interactivity: getInteractivity(args),
   }
+
+  const isNonInteractive = ctx.interactivity === 'non-interactive'
 
   for (const k in args) {
     if (k === '_') continue
     const v = args[k]
     delete args[k]
-    args[k.replace(/-/g, '_')] = v
-    commandParams[k.replace(/-/g, '_')] = v
+    const key = k.replace(/-/g, '_')
+    args[key] = v
+    if (interactivityFlags.includes(key)) continue
+    commandParams[key] = v
   }
 
   const selectedCommand = await interactForCommandSelection(args._, ctx)
@@ -167,6 +195,11 @@ async function cli(args: ParsedArgs) {
     if (args['token'] || args['workspace_id'] || args['server']) {
       return
     }
+    if (isNonInteractive) {
+      throw new NonInteractiveError(
+        'Missing required parameter for login: --token',
+      )
+    }
     await interactForLogin()
     return
   } else if (isEqual(selectedCommand, ['logout'])) {
@@ -177,9 +210,19 @@ async function cli(args: ParsedArgs) {
     console.log(config.path)
     return
   } else if (isEqual(selectedCommand, ['config', 'use-remote-api-defs'])) {
+    if (isNonInteractive) {
+      throw new NonInteractiveError(
+        'Cannot select whether to use remote API definitions in non-interactive mode',
+      )
+    }
     await interactForUseRemoteApiDefs()
     return
   } else if (isEqual(selectedCommand, ['select', 'workspace'])) {
+    if (isNonInteractive) {
+      throw new NonInteractiveError(
+        'Cannot select a workspace in non-interactive mode: pass --workspace-id to "seam login"',
+      )
+    }
     await interactForWorkspaceId()
     return
   } else if (isEqual(selectedCommand, ['events', 'list'])) {
@@ -193,6 +236,11 @@ async function cli(args: ParsedArgs) {
       config.set('server', args['server'])
       config.delete('current_workspace_id')
       return
+    }
+    if (isNonInteractive) {
+      throw new NonInteractiveError(
+        'Missing required parameter for select server: --server',
+      )
     }
     await interactForServerSelection()
     return
@@ -246,18 +294,27 @@ async function cli(args: ParsedArgs) {
   })
 
   if (response.data?.connect_webview) {
-    await handleConnectWebviewResponse(response.data.connect_webview)
+    await handleConnectWebviewResponse(
+      response.data.connect_webview,
+      ctx.interactivity,
+    )
   }
 
-  if (response.data?.action_attempt) {
+  if (response.data?.action_attempt && !isNonInteractive) {
     interactForActionAttemptPoll(response.data.action_attempt)
   }
 }
 
-const handleConnectWebviewResponse = async (connect_webview: any) => {
+const handleConnectWebviewResponse = async (
+  connect_webview: any,
+  interactivity: Interactivity,
+) => {
   const url = connect_webview.url
 
-  if (process.env['INSIDE_WEB_BROWSER'] !== '1') {
+  if (
+    interactivity !== 'non-interactive' &&
+    process.env['INSIDE_WEB_BROWSER'] !== '1'
+  ) {
     const { action } = await prompts({
       type: 'confirm',
       name: 'action',
@@ -281,10 +338,15 @@ const run = async (argv: string[]) => {
     return
   }
 
-  await cli(parseArgs(argv, { string: ['code'] }))
+  await cli(parseCliArgs(argv))
 }
 
 run(process.argv.slice(2)).catch((e) => {
+  if (e instanceof NonInteractiveError) {
+    console.log(chalk.red(e.message))
+    process.exit(1)
+  }
+
   console.log(chalk.red(`CLI Error: ${e.toString()}\n${e.stack}`))
   if (e.toString().includes('object Object')) {
     console.log(e)
