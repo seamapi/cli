@@ -52,6 +52,13 @@ export const assertEnvVarUnset = (
   )
 }
 
+/**
+ * Whether the CLI runs inside a hosted web terminal, where it cannot open
+ * anything in a browser of its own.
+ */
+export const isInsideWebBrowser = (): boolean =>
+  process.env['INSIDE_WEB_BROWSER'] === '1'
+
 const readEnvVar = (envVar: SeamCliEnvVar): string | null => {
   const value = process.env[envVar]
 

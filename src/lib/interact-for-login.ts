@@ -11,7 +11,7 @@ import { withLoading } from './util/with-loading.js'
 import { validateToken } from './validate-token.js'
 
 export const interactForLogin = async () => {
-  const config = await getConfigStore()
+  const config = getConfigStore()
   const output = getOutput()
 
   assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')

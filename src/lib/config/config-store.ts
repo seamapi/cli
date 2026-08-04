@@ -11,7 +11,19 @@ const currentWorkspaceIdKey = 'current_workspace_id'
 const patKey = 'pat'
 const paths = envPaths('seam', { suffix: '' })
 
-export const getConfigStore = () => {
+let configStore: SeamConfigStore | null = null
+
+export const getConfigStore = (): SeamConfigStore => {
+  configStore ??= createConfigStore()
+  return configStore
+}
+
+/** Drop the memoized store so a test may read a fresh one. */
+export const resetConfigStore = (): void => {
+  configStore = null
+}
+
+const createConfigStore = (): SeamConfigStore => {
   const settingsStore = new Configstore(legacyConfigStoreId, undefined, {
     configPath: getConfigPath(),
   })
@@ -79,7 +91,7 @@ export const splitConfig = (
   return { settings, state }
 }
 
-class SeamConfigStore {
+export class SeamConfigStore {
   readonly path: string
 
   constructor(

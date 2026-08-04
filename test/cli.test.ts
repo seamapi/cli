@@ -474,6 +474,42 @@ test('cli: refuses to select a server while SEAM_CLI_ENDPOINT is set', async () 
   )
 })
 
+test('cli: logout removes the stored token and workspace', async () => {
+  // A dedicated state home: logging out of the shared one would break
+  // every test that runs after this one.
+  const logoutStateHome = join(await mkdtemp(join(tmpdir(), 'seam-cli-test-')))
+  await mkdir(join(logoutStateHome, 'seam'), { recursive: true })
+  const stateFile = join(logoutStateHome, 'seam', 'cli.json')
+  await writeFile(
+    stateFile,
+    JSON.stringify({
+      [endpoint]: { pat: 'seam_apikey1_token' },
+      // A token stored before tokens were kept per server.
+      pat: 'seam_apikey1_legacy',
+      current_workspace_id: 'workspace1',
+    }),
+  )
+
+  // Info messages only print in text format, so ask for it explicitly.
+  const { stderr, exitCode } = await runCli(['logout', '--no-json'], {
+    stateHome: logoutStateHome,
+  })
+
+  expect(exitCode).toBe(0)
+  expect(stderr).toContain('Logged out!')
+
+  const state = JSON.parse(await readFile(stateFile, 'utf8'))
+  expect(state[endpoint]?.pat).toBeUndefined()
+  expect(state.pat).toBeUndefined()
+  expect(state.current_workspace_id).toBeUndefined()
+
+  const next = await runCli(['devices', 'list'], {
+    stateHome: logoutStateHome,
+  })
+  expect(next.exitCode).toBe(1)
+  expect(next.stderr).toContain('Not logged in')
+})
+
 test('cli: refuses to log out while SEAM_CLI_TOKEN is set', async () => {
   const { stderr, exitCode } = await runCli(['logout'], {
     env: { SEAM_CLI_TOKEN: 'seam_apikey1_from_env' },

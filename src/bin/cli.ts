@@ -19,6 +19,7 @@ import {
   getEndpointFromEnv,
   getTokenFromEnv,
   getWorkspaceIdFromEnv,
+  isInsideWebBrowser,
   tokenEnvVar,
   workspaceIdEnvVar,
 } from 'lib/env.js'
@@ -242,6 +243,9 @@ async function cli(args: ParsedArgs) {
   } else if (isEqual(selectedCommand, ['logout'])) {
     assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log out')
     config.delete(`${getServer()}.pat`)
+    // Configs written before tokens were stored per server may still hold an
+    // un-namespaced token, so drop that too.
+    config.delete('pat')
     config.delete('current_workspace_id')
     output.info('Logged out!')
     return
@@ -407,10 +411,7 @@ const handleConnectWebviewResponse = async (
 ) => {
   const url = connectWebview.url
 
-  if (
-    interactivity !== 'non-interactive' &&
-    process.env['INSIDE_WEB_BROWSER'] !== '1'
-  ) {
+  if (interactivity !== 'non-interactive' && !isInsideWebBrowser()) {
     const action = await promptConfirm({
       message: 'Would you like to open the webview in your browser?',
       initialValue: false,

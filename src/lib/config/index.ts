@@ -1,1 +1,5 @@
-export { getConfigStore } from './config-store.js'
+export {
+  getConfigStore,
+  resetConfigStore,
+  type SeamConfigStore,
+} from './config-store.js'
