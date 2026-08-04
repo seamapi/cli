@@ -85,7 +85,10 @@ seam devices list --non-interactive
 # Fails with: Missing required parameter for /locks/unlock_door: --device-id
 seam locks unlock-door --non-interactive
 
-MY_DOOR=$(seam devices get --name "Front Door" --id-only)
+# Fails with: Unknown parameter for /devices/list: --limitt
+seam devices list --limitt 5
+
+MY_DOOR=$(seam devices get --name "Front Door" | jq -r '.device.device_id')
 
 # Unlock a lock
 seam locks unlock-door --device-id $MY_DOOR

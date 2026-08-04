@@ -13,6 +13,8 @@ import {
 } from 'lib/completion/index.js'
 import { getConfigStore } from 'lib/config/index.js'
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
+import { getCommandBlueprintDef } from 'lib/get-command-blueprint-def.js'
+import { getRequestParameters } from 'lib/get-request-parameters.js'
 import { getResponseKey } from 'lib/get-response-key.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
@@ -33,6 +35,9 @@ import {
   type Interactivity,
   NonInteractiveError,
   parseCliArgs,
+  toGivenArgName,
+  toParameterName,
+  UsageError,
 } from 'lib/util/cli-args.js'
 import { canPrompt, prompt } from 'lib/util/prompt.js'
 import { readStdinJson } from 'lib/util/read-stdin-json.js'
@@ -122,8 +127,17 @@ async function cli(args: ParsedArgs) {
   }
 
   args._ = args._.map(toCommandWord)
-  for (const k in args) {
-    args[k.toLowerCase().replace(/-/g, '_')] = args[k]
+
+  // Argument keys name parameters however they are written, so normalize each
+  // one to the name the API gives it. Replace the key rather than adding the
+  // normalized form alongside it, or an argument would be sent twice: once as
+  // written and once as the API names it.
+  for (const key of Object.keys(args)) {
+    if (key === '_') continue
+    const name = toParameterName(key)
+    if (name === key) continue
+    args[name] = args[key]
+    delete args[key]
   }
 
   const use_remote_api_defs =
@@ -144,15 +158,16 @@ async function cli(args: ParsedArgs) {
 
   const isNonInteractive = ctx.interactivity === 'non-interactive'
 
-  for (const k in args) {
-    if (k === '_') continue
-    const v = args[k]
-    delete args[k]
-    const key = k.replace(/-/g, '_')
-    args[key] = v
+  // Params given as arguments, kept apart from the params read from stdin so
+  // that only the arguments are held to what the command accepts.
+  const argParams: Record<string, any> = {}
+  for (const [key, value] of Object.entries(args)) {
+    if (key === '_') continue
     if (cliFlags.includes(key)) continue
-    commandParams[key] = v
+    argParams[key] = value
   }
+
+  Object.assign(commandParams, argParams)
 
   const selectedCommand = await interactForCommandSelection(args._, ctx)
   if (isEqual(selectedCommand, ['login'])) {
@@ -245,6 +260,30 @@ async function cli(args: ParsedArgs) {
     })
   }
 
+  const apiPath = `/${selectedCommand.join('/').replace(/-/g, '_')}`
+
+  // An argument the command does not accept is a mistake, not a param: report
+  // it rather than sending it, since the request would either fail somewhere
+  // less obvious or quietly ignore what was asked for.
+  const accepted = new Set(
+    getRequestParameters(getCommandBlueprintDef(selectedCommand, ctx)).map(
+      ({ name }) => name,
+    ),
+  )
+  const unknownArgs = Object.keys(argParams).filter((key) => !accepted.has(key))
+  if (unknownArgs.length > 0) {
+    throw new UsageError(
+      `Unknown ${
+        unknownArgs.length === 1 ? 'parameter' : 'parameters'
+      } for ${apiPath}: ${unknownArgs.map(toGivenArgName).join(' ')}`,
+      {
+        hint: `Run 'seam ${selectedCommand.join(
+          ' ',
+        )} --help' to see the parameters it accepts.`,
+      },
+    )
+  }
+
   const params = await interactForCommandParams(
     { command: selectedCommand, params: commandParams },
     ctx,
@@ -258,8 +297,6 @@ async function cli(args: ParsedArgs) {
       _: previousCommands,
     })
   }
-
-  const apiPath = `/${selectedCommand.join('/').replace(/-/g, '_')}`
 
   if (apiPath.includes('/events/list') && params.between) {
     delete params.since
@@ -336,6 +373,12 @@ const run = async (argv: string[]) => {
 run(process.argv.slice(2)).catch((e: unknown) => {
   const output = getOutput()
   process.exitCode = 1
+
+  if (e instanceof UsageError) {
+    output.error(chalk.red(e.message))
+    if (e.hint !== '') output.error(e.hint)
+    return
+  }
 
   if (e instanceof NonInteractiveError) {
     output.error(chalk.red(e.message))

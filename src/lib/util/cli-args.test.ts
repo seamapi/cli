@@ -1,7 +1,13 @@
 import type { ParsedArgs } from 'minimist'
 import { expect, test } from 'vitest'
 
-import { getInteractivity, parseCliArgs, toArgName } from './cli-args.js'
+import {
+  getInteractivity,
+  parseCliArgs,
+  toArgName,
+  toGivenArgName,
+  toParameterName,
+} from './cli-args.js'
 
 // The CLI normalizes argument keys before checking them.
 const parse = (argv: string[]): ParsedArgs => {
@@ -70,6 +76,18 @@ test('parseCliArgs: reads a page cursor exactly as given', () => {
 test('toArgName: renders a parameter as its argument', () => {
   expect(toArgName('device_id')).toBe('--device-id')
   expect(toArgName('code')).toBe('--code')
+})
+
+test('toParameterName: reads an argument key as the parameter it names', () => {
+  expect(toParameterName('page-cursor')).toBe('page_cursor')
+  expect(toParameterName('page_cursor')).toBe('page_cursor')
+  expect(toParameterName('PAGE-CURSOR')).toBe('page_cursor')
+  expect(toParameterName('limit')).toBe('limit')
+})
+
+test('toGivenArgName: renders a one letter key as a short argument', () => {
+  expect(toGivenArgName('n')).toBe('-n')
+  expect(toGivenArgName('page_cursor')).toBe('--page-cursor')
 })
 
 test('getInteractivity: never prompts without a terminal', () => {
