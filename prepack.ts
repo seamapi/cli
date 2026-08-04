@@ -4,11 +4,10 @@ import { fileURLToPath } from 'node:url'
 
 import { $ } from 'execa'
 
-import getBlueprint from './src/lib/blueprint.js'
 import {
   completionFileNames,
   completionShells,
-  renderCompletion,
+  renderCompletionStub,
 } from './src/lib/completion/index.js'
 
 const versionFile = './src/lib/version.ts'
@@ -29,7 +28,7 @@ const main = async (): Promise<void> => {
 
   await writeCompletions(resolveFile(completionsDirectory))
   // eslint-disable-next-line no-console
-  console.log(`✓ Shell completions written to ${completionsDirectory}`)
+  console.log(`✓ Shell completion loaders written to ${completionsDirectory}`)
 
   const { command } = await $`tsc --project tsconfig.prepack.json`
   // eslint-disable-next-line no-console
@@ -37,20 +36,13 @@ const main = async (): Promise<void> => {
 }
 
 const writeCompletions = async (path: string): Promise<void> => {
-  // Always generate from the latest published API definitions, using a
-  // temporary cache so packing neither reads nor pollutes the user cache.
-  const blueprint = await getBlueprint({
-    update: true,
-    cacheDirectory: resolveFile('./tmp/prepack-blueprint'),
-  })
-
   await mkdir(path, { recursive: true })
 
   await Promise.all(
     completionShells.map(async (shell) => {
       await writeFile(
         join(path, completionFileNames[shell]),
-        renderCompletion(shell, blueprint),
+        renderCompletionStub(shell),
         'utf8',
       )
     }),

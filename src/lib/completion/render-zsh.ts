@@ -88,7 +88,12 @@ const completionFunction = (valuelessTokens: string[]): string =>
   _describe -t options 'option' _seam_reply
 }`
 
-const dispatch = `if [ "\${funcstack[1]}" = '_seam' ]; then
+// The script runs in three ways. Autoloaded from fpath as _seam, it must
+// complete the in-flight request: funcstack holds _seam. Evaluated by the
+// loader stub inside the autoloaded _seam, the same applies, but eval pushes
+// '(eval)' onto funcstack, so search the whole stack rather than the top.
+// Sourced into a shell, funcstack holds no _seam: register with compdef.
+const dispatch = `if (( \${funcstack[(I)_seam]} )); then
   _seam "$@"
 else
   compdef _seam seam

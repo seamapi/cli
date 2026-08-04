@@ -6,6 +6,7 @@ import {
   completionShells,
   isCompletionShell,
   renderCompletion,
+  renderCompletionStub,
 } from './index.js'
 
 test('isCompletionShell: accepts only supported shells', () => {
@@ -64,4 +65,26 @@ test.each(completionShells)('%s completion: quotes safely', (shell) => {
   // Descriptions are embedded in single-quoted shell strings.
   expect(script).not.toContain("device's")
   expect(script.endsWith('\n')).toBe(true)
+})
+
+test.each(completionShells)(
+  '%s completion stub: loads completions from the CLI',
+  (shell) => {
+    const stub = renderCompletionStub(shell)
+    expect(stub).toContain(`seam completion ${shell}`)
+    expect(stub.endsWith('\n')).toBe(true)
+  },
+)
+
+test('zsh completion stub: is an autoloadable completion function', () => {
+  expect(renderCompletionStub('zsh').startsWith('#compdef seam\n')).toBe(true)
+})
+
+test('zsh completion: completes the in-flight request when evaluated by the stub', () => {
+  // eval pushes '(eval)' onto funcstack, so the dispatch must search the
+  // whole stack for _seam, not only the top.
+  expect(renderCompletion('zsh', testBlueprint)).toContain(
+    // eslint-disable-next-line no-template-curly-in-string
+    'if (( ${funcstack[(I)_seam]} )); then',
+  )
 })

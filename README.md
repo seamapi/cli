@@ -124,10 +124,12 @@ seam completion fish > ~/.config/fish/completions/seam.fish
 seam completion zsh > "${fpath[1]}/_seam"
 ```
 
-The same scripts are packaged under `completions/` in the published package
-and attached to each [GitHub release], so a system package may install them
-without running the CLI. The `seam-bin` AUR package installs them for all
-three shells.
+System packages install completion loaders instead: small scripts packaged
+under `completions/` in the published package and attached to each
+[GitHub release]. A loader runs `seam completion` the first time the shell
+completes a seam command, so installed completions always match the CLI's
+current Seam API definitions and never go stale between package updates. The
+`seam-bin` AUR package installs the loaders for all three shells.
 
 Completions are generated from the cached Seam API definitions, so they may
 briefly lag a newly released API. Pass `--update` to refresh the cache first,
