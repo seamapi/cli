@@ -2,7 +2,6 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import type { Blueprint } from '@seamapi/blueprint'
 import { $ } from 'execa'
 
 import getBlueprint from './src/lib/blueprint.js'
@@ -13,7 +12,6 @@ import {
 } from './src/lib/completion/index.js'
 
 const versionFile = './src/lib/version.ts'
-const blueprintFile = './src/lib/blueprint.ts'
 const completionsDirectory = './completions'
 
 const main = async (): Promise<void> => {
@@ -21,13 +19,15 @@ const main = async (): Promise<void> => {
   // eslint-disable-next-line no-console
   console.log(`✓ Version ${version} injected into ${versionFile}`)
 
-  const blueprint = await getBlueprint({ regenerate: true })
-
-  await injectBlueprint(resolveFile(blueprintFile), blueprint)
+  const blueprintVersion = await injectBlueprintVersion(
+    resolveFile(versionFile),
+  )
   // eslint-disable-next-line no-console
-  console.log(`✓ Blueprint injected into ${blueprintFile}`)
+  console.log(
+    `✓ Blueprint version ${blueprintVersion} injected into ${versionFile}`,
+  )
 
-  await writeCompletions(resolveFile(completionsDirectory), blueprint)
+  await writeCompletions(resolveFile(completionsDirectory))
   // eslint-disable-next-line no-console
   console.log(`✓ Shell completions written to ${completionsDirectory}`)
 
@@ -36,10 +36,14 @@ const main = async (): Promise<void> => {
   console.log(`✓ Rebuilt with '${command}'`)
 }
 
-const writeCompletions = async (
-  path: string,
-  blueprint: Blueprint,
-): Promise<void> => {
+const writeCompletions = async (path: string): Promise<void> => {
+  // Always generate from the latest published API definitions, using a
+  // temporary cache so packing neither reads nor pollutes the user cache.
+  const blueprint = await getBlueprint({
+    update: true,
+    cacheDirectory: resolveFile('./tmp/prepack-blueprint'),
+  })
+
   await mkdir(path, { recursive: true })
 
   await Promise.all(
@@ -69,15 +73,27 @@ const injectVersion = async (path: string): Promise<string> => {
   return version
 }
 
-const injectBlueprint = async (
-  path: string,
-  blueprint: unknown,
-): Promise<void> => {
+const injectBlueprintVersion = async (path: string): Promise<string> => {
+  const { dependencies } = await readPackageJson()
+  const version = dependencies?.['@seamapi/blueprint']
+
+  if (version == null) {
+    throw new Error('Missing @seamapi/blueprint in package.json dependencies')
+  }
+
+  if (!/^\d+\.\d+\.\d+$/.test(version)) {
+    throw new Error(
+      `The @seamapi/blueprint dependency must be pinned to an exact version in package.json, got '${version}'`,
+    )
+  }
+
   await replaceInFile(
     path,
-    'const seamapiBlueprint: Blueprint | null = null',
-    `const seamapiBlueprint: Blueprint | null = ${JSON.stringify(blueprint)} as unknown as Blueprint`,
+    "const seamapiBlueprintVersion = '0.0.0'",
+    `const seamapiBlueprintVersion = '${version}'`,
   )
+
+  return version
 }
 
 const replaceInFile = async (
@@ -97,9 +113,13 @@ const replaceInFile = async (
 const resolveFile = (path: string): string =>
   fileURLToPath(new URL(path, import.meta.url))
 
-const readPackageJson = async (): Promise<{ version?: string }> =>
+const readPackageJson = async (): Promise<{
+  version?: string
+  dependencies?: Record<string, string>
+}> =>
   JSON.parse(await readFile(resolveFile('package.json'), 'utf8')) as {
     version?: string
+    dependencies?: Record<string, string>
   }
 
 await main()

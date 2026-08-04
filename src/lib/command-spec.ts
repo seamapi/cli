@@ -63,6 +63,14 @@ export const globalFlags: CommandFlag[] = [
     isRequired: false,
   },
   {
+    long: 'update',
+    short: null,
+    description: 'Force an update of the cached Seam API definitions.',
+    values: [],
+    takesValue: false,
+    isRequired: false,
+  },
+  {
     long: 'version',
     short: null,
     description: 'Print the CLI version.',
@@ -194,6 +202,13 @@ const localCommands: CommandDefinition[] = [
     path: ['select', 'workspace'],
     title: 'Select the current workspace.',
     description: '',
+    flags: [],
+  },
+  {
+    path: ['wizard'],
+    title: 'Set up Seam in the current project.',
+    description:
+      'Takes a project from zero to a working Seam integration. Run seam wizard --help for its own options.',
     flags: [],
   },
 ]

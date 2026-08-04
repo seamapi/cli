@@ -34,6 +34,7 @@ const overview =
 const examples = [
   { name: 'seam', summary: 'Interactively select commands to execute.' },
   { name: 'seam login', summary: 'Login to Seam.' },
+  { name: 'seam wizard', summary: 'Set up Seam in the current project.' },
   { name: 'seam select workspace', summary: 'Select your workspace.' },
   {
     name: 'seam connect-webviews create',

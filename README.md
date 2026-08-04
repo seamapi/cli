@@ -21,6 +21,9 @@ Install the CLI globally using [npm] with
 $ npm install --global @seamapi/cli
 ```
 
+Alternatively, download a standalone binary for your platform from the
+[latest GitHub release].
+
 On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
 
 ```
@@ -28,13 +31,24 @@ $ paru -S seam-bin
 ```
 
 [aur]: https://aur.archlinux.org/packages/seam-bin
+[latest GitHub release]: https://github.com/seamapi/cli/releases/latest
 [npm]: https://www.npmjs.com/
+[Seam Wizard]: https://github.com/seamapi/wizard
 
 ## Usage
 
 Every `seam` command is interactive and will prompt you for any missing
 required properties with helpful suggestions. To avoid automatic behavior,
-pass `-y`
+pass `-y`.
+
+To take a project from zero to a working Seam integration, run the
+[Seam Wizard] from the project's root:
+
+```bash
+seam wizard
+```
+
+For API commands:
 
 ```bash
 # Login to Seam
@@ -110,13 +124,17 @@ seam completion fish > ~/.config/fish/completions/seam.fish
 seam completion zsh > "${fpath[1]}/_seam"
 ```
 
-The same scripts are packaged under `completions/` in the published package,
-so a system package may install them without running the CLI.
+The same scripts are packaged under `completions/` in the published package
+and attached to each [GitHub release], so a system package may install them
+without running the CLI. The `seam-bin` AUR package installs them for all
+three shells.
 
-Completions are generated from the API definitions bundled with the CLI. They
-do not reflect definitions served by a Seam API server, so they may be out of
-date when `seam config use-remote-api-defs` is enabled, and when running the
-CLI from a source checkout with `npm run seam`.
+Completions are generated from the cached Seam API definitions, so they may
+briefly lag a newly released API. Pass `--update` to refresh the cache first,
+e.g., `seam completion bash --update`. They do not reflect definitions served
+by another Seam API server when `seam config use-remote-api-defs` is enabled.
+
+[GitHub release]: https://github.com/seamapi/cli/releases/latest
 
 ## Development and Testing
 

@@ -12,8 +12,8 @@ import {
   isCompletionShell,
   renderCompletion,
 } from 'lib/completion/index.js'
+import { getConfigStore } from 'lib/config/index.js'
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
-import { getConfigStore } from 'lib/get-config-store.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
 import { interactForCommandParams } from 'lib/interact-for-command-params.js'
@@ -31,11 +31,13 @@ import seamapiCliVersion from 'lib/version.js'
 async function cli(args: ParsedArgs) {
   const config = getConfigStore()
 
+  const update = args['update'] === true
+
   const helpFlag = args['help'] ?? args['h']
   if (helpFlag != null) {
-    // Help comes from the bundled API definitions so that it works offline and
-    // without logging in.
-    const spec = getCommandSpec(await getApiBlueprint(false))
+    // Help comes from the cached API definitions so that it works without
+    // logging in, and offline once the cache is warm.
+    const spec = getCommandSpec(await getApiBlueprint(false, { update }))
 
     // minimist reads the word after --help as its value, so 'seam --help
     // devices' asks about devices just as 'seam devices --help' does.
@@ -69,10 +71,12 @@ async function cli(args: ParsedArgs) {
       process.exit(1)
     }
 
-    // Completions always come from the bundled API definitions so that they
-    // can be generated offline and without logging in. They may lag the
-    // definitions served by Seam when config use-remote-api-defs is enabled.
-    console.log(renderCompletion(shell, await getApiBlueprint(false)))
+    // Completions always come from the cached API definitions so that they
+    // can be generated without logging in. They may lag the definitions
+    // served by Seam when config use-remote-api-defs is enabled.
+    console.log(
+      renderCompletion(shell, await getApiBlueprint(false, { update })),
+    )
     return
   }
 
@@ -109,7 +113,11 @@ async function cli(args: ParsedArgs) {
   const use_remote_api_defs =
     args['remote_api_defs'] ?? config.get('use_remote_api_defs')
 
-  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false)
+  delete args['update']
+
+  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false, {
+    update,
+  })
 
   const commandParams: Record<string, any> = {}
 
@@ -256,7 +264,20 @@ const handleConnectWebviewResponse = async (connect_webview: any) => {
   }
 }
 
-cli(parseArgs(process.argv.slice(2), { string: ['code'] })).catch((e) => {
+const run = async (argv: string[]) => {
+  if (argv[0] === 'wizard') {
+    const { default: wizard } = await import('@seamapi/wizard')
+    await wizard({
+      argv: argv.slice(1),
+      commandName: 'seam wizard',
+    })
+    return
+  }
+
+  await cli(parseArgs(argv, { string: ['code'] }))
+}
+
+run(process.argv.slice(2)).catch((e) => {
   console.log(chalk.red(`CLI Error: ${e.toString()}\n${e.stack}`))
   if (e.toString().includes('object Object')) {
     console.log(e)
