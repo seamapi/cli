@@ -202,17 +202,28 @@ seam completion zsh > "${fpath[1]}/_seam"
 ```
 
 System packages install completion loaders instead: small scripts packaged
-under `completions/` in the published package and attached to each
-[GitHub release]. A loader runs `seam completion` the first time the shell
-completes a seam command, so installed completions always match the CLI's
-current Seam API definitions and never go stale between package updates. The
-`seam-bin` AUR package installs the loaders for all three shells.
+under `completions/` in the published package, and released as
+`seam-completions-v<version>.tar.gz` on each [GitHub release]. A loader runs
+`seam completion` the first time the shell completes a seam command, so
+installed completions always match the CLI's current Seam API definitions and
+never go stale between package updates. The `seam-bin` AUR package installs
+the loaders for all three shells.
 
 Completions are generated from the cached Seam API definitions, so they may
 briefly lag a newly released API. Pass `--update` to refresh the cache first,
 e.g., `seam completion bash --update`. They do not reflect definitions served
 by another Seam API server when `seam config use-remote-api-defs` is enabled.
 
+If completions do not appear after installing them system wide:
+
+- Bash reads them via the [bash-completion] package,
+  so it must be installed and sourced by the shell.
+- Zsh caches the completion functions it found at startup: after installing,
+  rebuild the cache with `rm -f ~/.zcompdump*` and start a new shell.
+  This applies to frameworks that call `compinit -C`, e.g., oh-my-zsh.
+- Fish needs nothing extra: completions load on demand in new sessions.
+
+[bash-completion]: https://github.com/scop/bash-completion
 [GitHub release]: https://github.com/seamapi/cli/releases/latest
 
 ## Development and Testing

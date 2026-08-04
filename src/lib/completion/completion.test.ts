@@ -3,6 +3,7 @@ import { expect, test } from 'vitest'
 import { testBlueprint } from '../../../test/fixtures/blueprint.js'
 import { describeForShell } from './describe.js'
 import {
+  completionScriptSentinels,
   completionShells,
   isCompletionShell,
   renderCompletion,
@@ -73,6 +74,19 @@ test.each(completionShells)(
     const stub = renderCompletionStub(shell)
     expect(stub).toContain(`seam completion ${shell}`)
     expect(stub.endsWith('\n')).toBe(true)
+  },
+)
+
+test.each(completionShells)(
+  '%s completion stub: evaluates only what the script generator produces',
+  (shell) => {
+    const sentinel = completionScriptSentinels[shell]
+    // The stub requires the sentinel, and the generated script provides it
+    // as its exact first line, so the two cannot drift apart.
+    expect(renderCompletionStub(shell)).toContain(sentinel)
+    expect(
+      renderCompletion(shell, testBlueprint).startsWith(`${sentinel}\n`),
+    ).toBe(true)
   },
 )
 

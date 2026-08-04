@@ -40,10 +40,23 @@ export const renderCompletion = (
  * at first completion, never at shell startup.
  *
  * The loader degrades to no completions when the seam command is missing or
- * cannot produce a script, e.g., offline before the definitions are cached.
+ * does not produce a completion script: a script is only evaluated when it
+ * starts with the exact first line 'seam completion' generates, so nothing
+ * else the CLI may print, e.g., 'Not logged in' from a version without the
+ * completion command, is ever evaluated as shell code.
  */
 export const renderCompletionStub = (shell: CompletionShell): string =>
   stubs[shell]
+
+/**
+ * First line of each generated completion script, which the loaders require
+ * before evaluating one. Must match the output of {@link renderCompletion}.
+ */
+export const completionScriptSentinels: Record<CompletionShell, string> = {
+  bash: '# bash completion for the seam command.',
+  fish: '# fish completion for the seam command.',
+  zsh: '#compdef seam',
+}
 
 const stubHeader = (shell: CompletionShell): string =>
   `# ${shell} completion loader for the seam command.
@@ -58,7 +71,12 @@ const stubs: Record<CompletionShell, string> = {
 # Install to /usr/share/bash-completion/completions/seam
 
 if command -v seam > /dev/null 2>&1; then
-  eval "$(seam completion bash 2> /dev/null)"
+  __seam_completion_script="$(seam completion bash 2> /dev/null)"
+  # Evaluate only a completion script, never anything else the CLI printed.
+  case "$__seam_completion_script" in
+    '${completionScriptSentinels.bash}'*) eval "$__seam_completion_script" ;;
+  esac
+  unset __seam_completion_script
 fi
 `,
   fish: `${stubHeader('fish')}
@@ -66,7 +84,11 @@ fi
 # Install to /usr/share/fish/vendor_completions.d/seam.fish
 
 if command --query seam
-    seam completion fish 2> /dev/null | source
+    set -l __seam_completion_script (seam completion fish 2> /dev/null | string collect)
+    # Source only a completion script, never anything else the CLI printed.
+    if string match --quiet '${completionScriptSentinels.fish}*' -- $__seam_completion_script
+        printf '%s\\n' $__seam_completion_script | source
+    end
 end
 `,
   zsh: `#compdef seam
@@ -74,9 +96,15 @@ ${stubHeader('zsh')}
 #
 # Install to a directory in fpath as _seam
 
-# The generated script ends by dispatching on funcstack, so evaluating it
-# while this autoloaded _seam runs both redefines _seam and completes the
-# in-flight request.
-eval "$(seam completion zsh 2> /dev/null)"
+local __seam_completion_script
+__seam_completion_script="$(seam completion zsh 2> /dev/null)"
+
+# Evaluate only a completion script, never anything else the CLI printed.
+# The script ends by dispatching on funcstack, so evaluating it while this
+# autoloaded _seam runs both redefines _seam and completes the in-flight
+# request.
+if [[ "$__seam_completion_script" == '${completionScriptSentinels.zsh}'* ]]; then
+  eval "$__seam_completion_script"
+fi
 `,
 }
