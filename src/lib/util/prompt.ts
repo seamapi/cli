@@ -32,7 +32,43 @@ export const prompt = async <T extends string = string>(
   const questionList = Array.isArray(questions) ? questions : [questions]
 
   return await prompts(
-    questionList.map((question) => ({ ...question, stdout: process.stderr })),
+    questionList.map((question) => ({
+      ...question,
+      // Search a list by any part of a name, rather than only by what it
+      // starts with, which is all prompts does for itself.
+      ...(question.type === 'autocomplete' && question.suggest == null
+        ? { suggest: searchChoices }
+        : {}),
+      stdout: process.stderr,
+    })),
     options,
   )
+}
+
+export interface SearchableChoice {
+  title?: string | undefined
+  description?: string | undefined
+}
+
+/**
+ * Filter choices by every whitespace separated term of the input, matched
+ * case insensitively against the title and the description.
+ */
+export const searchChoices = async <Choice extends SearchableChoice>(
+  input: string,
+  choices: Choice[],
+): Promise<Choice[]> => {
+  const terms = input
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((term) => term.length > 0)
+
+  if (terms.length === 0) return choices
+
+  return choices.filter((choice) => {
+    const searchable = `${choice.title ?? ''} ${choice.description ?? ''}`
+      .toLowerCase()
+      .trim()
+    return terms.every((term) => searchable.includes(term))
+  })
 }
