@@ -44,9 +44,27 @@ export class NonInteractiveError extends Error {
   override name = 'NonInteractiveError'
 }
 
+/**
+ * Thrown when the arguments do not name something the CLI can run.
+ */
+export class UsageError extends Error {
+  override name = 'UsageError'
+
+  /** What to run instead, reported after the message. */
+  readonly hint: string
+
+  constructor(message: string, { hint = '' }: { hint?: string } = {}) {
+    super(message)
+    this.hint = hint
+  }
+}
+
 export const parseCliArgs = (argv: string[]): ParsedArgs =>
   parseArgs(argv, {
-    string: ['code'],
+    // A page cursor is opaque, so keep it exactly as given: read as a number
+    // it would lose leading zeroes and turn exponent notation into a digit
+    // string, naming a page the API never issued.
+    string: ['code', 'page-cursor', 'page_cursor'],
     boolean: ['non-interactive', 'interactive', 'json'],
     // Deliberately not aliased to -n, which is reserved for a future
     // --dry-run flag.
@@ -90,3 +108,17 @@ export const getInteractivity = (
  */
 export const toArgName = (parameterName: string): string =>
   `--${parameterName.replace(/_/g, '-')}`
+
+/**
+ * Read an argument key as the parameter it names, e.g., `--page-cursor`,
+ * `--page_cursor`, and `--PAGE-CURSOR` all name `page_cursor`.
+ */
+export const toParameterName = (argKey: string): string =>
+  argKey.toLowerCase().replace(/-/g, '_')
+
+/**
+ * Render an argument key as the argument it was given as, naming a one letter
+ * key as the short form it can only have been written as, e.g., `-n`.
+ */
+export const toGivenArgName = (argKey: string): string =>
+  argKey.length === 1 ? `-${argKey}` : toArgName(argKey)

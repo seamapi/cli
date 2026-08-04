@@ -5,7 +5,7 @@ import { isDeepStrictEqual as isEqual } from 'node:util'
 import chalk from 'chalk'
 import type { ParsedArgs } from 'minimist'
 
-import { getCommandSpec } from 'lib/command-spec.js'
+import { findLocalCommand, getCommandSpec } from 'lib/command-spec.js'
 import {
   completionShells,
   isCompletionShell,
@@ -13,6 +13,7 @@ import {
 } from 'lib/completion/index.js'
 import { getConfigStore } from 'lib/config/index.js'
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
+import { getCommandBlueprintDef } from 'lib/get-command-blueprint-def.js'
 import { getResponseKey } from 'lib/get-response-key.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
@@ -33,6 +34,9 @@ import {
   type Interactivity,
   NonInteractiveError,
   parseCliArgs,
+  toGivenArgName,
+  toParameterName,
+  UsageError,
 } from 'lib/util/cli-args.js'
 import { canPrompt, prompt } from 'lib/util/prompt.js'
 import { readStdinJson } from 'lib/util/read-stdin-json.js'
@@ -77,6 +81,29 @@ async function cli(args: ParsedArgs) {
     return
   }
 
+  args._ = args._.map(toCommandWord)
+
+  // Argument keys name parameters however they are written, so normalize each
+  // one to the name the API gives it. Replace the key rather than adding the
+  // normalized form alongside it, or an argument would be sent twice: once as
+  // written and once as the API names it.
+  for (const key of Object.keys(args)) {
+    if (key === '_') continue
+    const name = toParameterName(key)
+    if (name === key) continue
+    args[name] = args[key]
+    delete args[key]
+  }
+
+  // Params given as arguments, kept apart from the params read from stdin so
+  // that only the arguments are held to what the command accepts.
+  const argParams: Record<string, any> = {}
+  for (const [key, value] of Object.entries(args)) {
+    if (key === '_') continue
+    if (cliFlags.includes(key)) continue
+    argParams[key] = value
+  }
+
   if (args._[0] === 'completion') {
     const shell = args._[1]
 
@@ -85,6 +112,8 @@ async function cli(args: ParsedArgs) {
       process.exitCode = 1
       return
     }
+
+    assertKnownArgs(argParams, ['completion', shell])
 
     // Completions always come from the cached API definitions so that they
     // can be generated without logging in. They may lag the definitions
@@ -121,11 +150,6 @@ async function cli(args: ParsedArgs) {
     return
   }
 
-  args._ = args._.map(toCommandWord)
-  for (const k in args) {
-    args[k.toLowerCase().replace(/-/g, '_')] = args[k]
-  }
-
   const useRemoteApiDefs =
     args['remote_api_defs'] ?? config.get('use_remote_api_defs')
 
@@ -144,17 +168,22 @@ async function cli(args: ParsedArgs) {
 
   const isNonInteractive = ctx.interactivity === 'non-interactive'
 
-  for (const k in args) {
-    if (k === '_') continue
-    const v = args[k]
-    delete args[k]
-    const key = k.replace(/-/g, '_')
-    args[key] = v
-    if (cliFlags.includes(key)) continue
-    commandParams[key] = v
-  }
+  Object.assign(commandParams, argParams)
 
   const selectedCommand = await interactForCommandSelection(args._, ctx)
+
+  // Hit 'back' on a top-level command path, so we start again
+  if (selectedCommand.slice(-1)[0] === '[Back]') {
+    return await cli({
+      ...args,
+      _: [],
+    })
+  }
+
+  // Check the arguments before the command acts on any of them, so a mistake
+  // is reported rather than half applied.
+  assertKnownArgs(argParams, selectedCommand, ctx)
+
   if (isEqual(selectedCommand, ['login'])) {
     if (args['server']) {
       config.set('server', args['server'])
@@ -236,14 +265,7 @@ async function cli(args: ParsedArgs) {
       commandParams['accepted_providers'].split(',')
   }
 
-  // Hit 'back' on a top-level command path, so we start again
-  const lastCommandPath = selectedCommand.slice(-1)[0]
-  if (lastCommandPath === '[Back]') {
-    return await cli({
-      ...args,
-      _: [],
-    })
-  }
+  const apiPath = `/${selectedCommand.join('/').replace(/-/g, '_')}`
 
   const params = await interactForCommandParams(
     { command: selectedCommand, params: commandParams },
@@ -258,8 +280,6 @@ async function cli(args: ParsedArgs) {
       _: previousCommands,
     })
   }
-
-  const apiPath = `/${selectedCommand.join('/').replace(/-/g, '_')}`
 
   if (apiPath.includes('/events/list') && params.between) {
     delete params.since
@@ -285,6 +305,62 @@ async function cli(args: ParsedArgs) {
 
 const toCommandWord = (arg: string): string =>
   arg.toLowerCase().replace(/_/g, '-')
+
+/**
+ * Report any argument the command does not accept, rather than acting on it.
+ * An unrecognized argument is a mistake: forwarded to the API it would fail
+ * somewhere less obvious or be quietly ignored, and on a command the CLI
+ * handles itself it would go nowhere at all.
+ *
+ * Only arguments are checked. Params read from stdin are passed through as
+ * given, so a caller may send whatever the API itself accepts.
+ *
+ * `ctx` is only needed to look up an endpoint's parameters, so commands the
+ * CLI declares itself can be checked before any blueprint is loaded.
+ */
+const assertKnownArgs = (
+  argParams: Record<string, any>,
+  command: string[],
+  ctx?: ContextHelpers,
+): void => {
+  const local = findLocalCommand(command)
+
+  let accepted: Set<string>
+  if (local != null) {
+    accepted = new Set(
+      local.flags.flatMap(({ long }) =>
+        long == null ? [] : [toParameterName(long)],
+      ),
+    )
+  } else if (ctx != null) {
+    accepted = new Set(
+      getCommandBlueprintDef(command, ctx).request.parameters.map(
+        ({ name }) => name,
+      ),
+    )
+  } else {
+    throw new Error(`No definition for command seam ${command.join(' ')}`)
+  }
+
+  const unknown = Object.keys(argParams).filter((key) => !accepted.has(key))
+  if (unknown.length === 0) return
+
+  // Name an endpoint command by its path, as missing params are named, and a
+  // command the CLI handles itself by the words that run it.
+  const target =
+    local == null
+      ? `/${command.join('/').replace(/-/g, '_')}`
+      : command.join(' ')
+
+  throw new UsageError(
+    `Unknown ${
+      unknown.length === 1 ? 'parameter' : 'parameters'
+    } for ${target}: ${unknown.map(toGivenArgName).join(' ')}`,
+    {
+      hint: `Run 'seam ${command.join(' ')} --help' to see what it accepts.`,
+    },
+  )
+}
 
 const handleConnectWebviewResponse = async (
   connectWebview: any,
@@ -336,6 +412,12 @@ const run = async (argv: string[]) => {
 run(process.argv.slice(2)).catch((e: unknown) => {
   const output = getOutput()
   process.exitCode = 1
+
+  if (e instanceof UsageError) {
+    output.error(chalk.red(e.message))
+    if (e.hint !== '') output.error(e.hint)
+    return
+  }
 
   if (e instanceof NonInteractiveError) {
     output.error(chalk.red(e.message))
