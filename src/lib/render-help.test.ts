@@ -72,6 +72,23 @@ test('command help: documents the flags of the command', () => {
   expect(rendered).toContain('-y')
 })
 
+test('command help: keeps parameters apart from the CLI options', () => {
+  const rendered = helpText('devices', 'list')
+
+  const parameters = rendered.indexOf('Parameters')
+  const options = rendered.indexOf('Options')
+  expect(parameters).toBeGreaterThan(-1)
+  expect(options).toBeGreaterThan(parameters)
+
+  // The command's own parameters sit under Parameters, the CLI's flags
+  // under Options.
+  expect(rendered.indexOf('--limit')).toBeLessThan(options)
+  expect(rendered.indexOf('--version')).toBeGreaterThan(options)
+
+  // A command with no parameters has no Parameters section.
+  expect(helpText('logout')).not.toContain('Parameters')
+})
+
 test('command help: marks required flags and documents known values', () => {
   expect(helpText('devices', 'unmanaged', 'get')).toContain('[required]')
   expect(helpText('devices', 'list')).toContain(

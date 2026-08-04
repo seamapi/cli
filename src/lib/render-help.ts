@@ -136,20 +136,23 @@ const commandSections = (
       ),
     },
     { header: 'Usage', content: `${name} [options]` },
-    optionSection([...command.flags, ...spec.globalFlags]),
+    // The command's own parameters are what the request is made of, so keep
+    // them apart from the options every seam command takes.
+    ...(hasFlags ? [optionSection(command.flags, 'Parameters')] : []),
+    optionSection(spec.globalFlags),
     ...(hasFlags
       ? [
           {
             content:
-              'Any required option left out is prompted for interactively.',
+              'Any required parameter left out is prompted for interactively.',
           },
         ]
       : []),
   ]
 }
 
-const optionSection = (flags: CommandFlag[]): Section => ({
-  header: 'Options',
+const optionSection = (flags: CommandFlag[], header = 'Options'): Section => ({
+  header,
   optionList: flags.map(toOptionDefinition),
 })
 
