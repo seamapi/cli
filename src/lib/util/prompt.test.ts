@@ -1,34 +1,35 @@
 import { expect, test } from 'vitest'
 
-import { searchChoices } from './prompt.js'
+import { type SearchableChoice, searchChoices } from './prompt.js'
 
 const workspaces = [
-  { title: 'Sandbox', description: 'ws_1' },
-  { title: 'Production Europe', description: 'ws_2' },
-  { title: 'Production US', description: 'ws_3' },
+  { label: 'Sandbox', hint: 'ws_1' },
+  { label: 'Production Europe', hint: 'ws_2' },
+  { label: 'Production US', hint: 'ws_3' },
 ]
 
-test('searchChoices: matches every term against the title and description', async () => {
-  await expect(searchChoices('prod us', workspaces)).resolves.toEqual([
-    workspaces[2],
-  ])
-  await expect(searchChoices('WS_1', workspaces)).resolves.toEqual([
-    workspaces[0],
-  ])
-  await expect(searchChoices('nope', workspaces)).resolves.toEqual([])
+const search = <Choice extends SearchableChoice>(
+  input: string,
+  choices: Choice[],
+) => choices.filter((choice) => searchChoices(input, choice))
+
+test('searchChoices: matches every term against the label and hint', () => {
+  expect(search('prod us', workspaces)).toEqual([workspaces[2]])
+  expect(search('WS_1', workspaces)).toEqual([workspaces[0]])
+  expect(search('nope', workspaces)).toEqual([])
 })
 
-test('searchChoices: matches any part of a name, not only its start', async () => {
+test('searchChoices: matches any part of a name, not only its start', () => {
   const servers = [
-    { title: 'http://localhost:3020' },
-    { title: 'https://connect.getseam.com' },
-    { title: 'https://fakeseamconnect.seam.vc' },
+    { label: 'http://localhost:3020' },
+    { label: 'https://connect.getseam.com' },
+    { label: 'https://fakeseamconnect.seam.vc' },
   ]
 
-  await expect(searchChoices('fake', servers)).resolves.toEqual([servers[2]])
+  expect(search('fake', servers)).toEqual([servers[2]])
 })
 
-test('searchChoices: offers every choice until something is typed', async () => {
-  await expect(searchChoices('', workspaces)).resolves.toEqual(workspaces)
-  await expect(searchChoices('  ', workspaces)).resolves.toEqual(workspaces)
+test('searchChoices: offers every choice until something is typed', () => {
+  expect(search('', workspaces)).toEqual(workspaces)
+  expect(search('  ', workspaces)).toEqual(workspaces)
 })

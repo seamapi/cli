@@ -1,10 +1,19 @@
-import { prompt } from './util/prompt.js'
+import { promptText } from './util/prompt.js'
+
 export const interactForTimestamp = async () => {
-  const { timestamp } = await prompt({
-    name: 'timestamp',
-    type: 'date',
+  const now = new Date().toISOString()
+  const timestamp = await promptText({
     message: 'Enter a timestamp:',
+    placeholder: now,
+    defaultValue: now,
+    validate: (value) => {
+      if (value == null || value === '') return undefined
+      if (Number.isNaN(new Date(value).getTime())) {
+        return `Enter a valid timestamp, e.g. ${now}`
+      }
+      return undefined
+    },
   })
 
-  return timestamp.toISOString()
+  return new Date(timestamp).toISOString()
 }

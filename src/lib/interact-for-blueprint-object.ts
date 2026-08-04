@@ -14,7 +14,14 @@ import { getOutput } from './output/get-output.js'
 import type { ContextHelpers } from './types.js'
 import { NonInteractiveError, toArgName } from './util/cli-args.js'
 import { ellipsis } from './util/ellipsis.js'
-import { prompt } from './util/prompt.js'
+import {
+  promptAutocomplete,
+  promptAutocompleteMultiselect,
+  promptConfirm,
+  promptNumber,
+  promptSelect,
+  promptText,
+} from './util/prompt.js'
 
 const ergonomicPropOrder = [
   'name',
@@ -84,23 +91,21 @@ export const interactForBlueprintObject = async (
     : `[${cmdPath}] Parameters`
 
   getOutput().info()
-  const { paramToEdit } = await prompt({
-    name: 'paramToEdit',
+  const paramToEdit = await promptAutocomplete({
     message: parameterSelectionMessage,
-    type: 'autocomplete',
     choices: [
       ...(haveAllRequiredParams && !args.isSubProperty
         ? [
             {
               value: 'done',
-              title: `[Make API Call] ${cmdPath}`,
+              label: `[Make API Call] ${cmdPath}`,
             },
           ]
         : []),
       ...(haveAllRequiredParams && args.isSubProperty
         ? [
             {
-              title: `[Save]`,
+              label: `[Save]`,
               value: 'done',
             },
           ]
@@ -108,9 +113,9 @@ export const interactForBlueprintObject = async (
       ...Object.keys(properties)
         .map((k) => {
           return {
-            title: k + (required.includes(k) ? '*' : ''),
+            label: k + (required.includes(k) ? '*' : ''),
             value: k,
-            description:
+            hint:
               args.params[k] !== undefined
                 ? typeof args.params[k] === 'object'
                   ? ellipsis(JSON.stringify(args.params[k]), 60)
@@ -122,13 +127,13 @@ export const interactForBlueprintObject = async (
       ...(args.isSubProperty
         ? [
             {
-              title: `[Leave Empty]`,
+              label: `[Leave Empty]`,
               value: 'empty',
             },
           ]
         : []),
       {
-        title: `[Back]`,
+        label: `[Back]`,
         value: 'back',
       },
     ],
@@ -201,36 +206,26 @@ export const interactForBlueprintObject = async (
       if (prop.format === 'datetime') {
         value = await interactForTimestamp()
       } else {
-        value = (
-          await prompt({
-            name: 'value',
-            message: `${paramToEdit}:`,
-            type: 'text',
-          })
-        ).value
+        value = await promptText({
+          message: `${paramToEdit}:`,
+        })
       }
       args.params[paramToEdit] = value
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'enum') {
-      const value = (
-        await prompt({
-          name: 'value',
-          message: `${paramToEdit}:`,
-          type: 'select',
-          choices: prop.values.map((v) => ({
-            title: v.name,
-            value: v.name,
-          })),
-        })
-      ).value
+      const value = await promptSelect({
+        message: `${paramToEdit}:`,
+        choices: prop.values.map((v) => ({
+          label: v.name,
+          value: v.name,
+        })),
+      })
       args.params[paramToEdit] = value
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'boolean') {
-      const { value } = await prompt({
-        name: 'value',
+      const value = await promptConfirm({
         message: `${paramToEdit}:`,
-        type: 'toggle',
-        initial: true,
+        initialValue: true,
         active: 'true',
         inactive: 'false',
       })
@@ -239,17 +234,13 @@ export const interactForBlueprintObject = async (
 
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'list' && prop.itemFormat === 'enum') {
-      const value = (
-        await prompt({
-          name: 'value',
-          message: `${paramToEdit}:`,
-          type: 'autocompleteMultiselect',
-          choices: prop.itemEnumValues.map((v) => ({
-            title: v.name,
-            value: v.name,
-          })),
-        })
-      ).value
+      const value = await promptAutocompleteMultiselect({
+        message: `${paramToEdit}:`,
+        choices: prop.itemEnumValues.map((v) => ({
+          label: v.name,
+          value: v.name,
+        })),
+      })
       args.params[paramToEdit] = value
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'list') {
@@ -271,10 +262,8 @@ export const interactForBlueprintObject = async (
       )
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'number') {
-      const { value } = await prompt({
-        name: 'value',
+      const value = await promptNumber({
         message: `${paramToEdit}:`,
-        type: 'number',
       })
 
       args.params[paramToEdit] = value

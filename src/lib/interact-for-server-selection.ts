@@ -10,7 +10,7 @@ import {
 } from './env.js'
 import { getServer } from './get-server.js'
 import { getOutput } from './output/get-output.js'
-import { prompt } from './util/prompt.js'
+import { promptAutocomplete, promptText } from './util/prompt.js'
 
 export async function interactForServerSelection() {
   assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
@@ -21,27 +21,19 @@ export async function interactForServerSelection() {
     'https://fakeseamconnect.seam.vc',
   ]
 
-  const { server } = await prompt([
-    {
-      // Searchable, as selecting a device or a command is.
-      type: 'autocomplete',
-      name: 'server',
-      message: 'Select a server:',
-      choices: servers.map((server) => ({ title: server, value: server })),
-    },
-  ])
+  // Searchable, as selecting a device or a command is.
+  const server = await promptAutocomplete({
+    message: 'Select a server:',
+    choices: servers.map((server) => ({ label: server, value: server })),
+  })
 
   const config = getConfigStore()
   const output = getOutput()
   if (server === servers[2]) {
-    let { userUrlSeed } = await prompt([
-      {
-        type: 'text',
-        name: 'userUrlSeed',
-        message:
-          'You can input a custom server URL or leave this field empty to use a new fakeserver.',
-      },
-    ])
+    let userUrlSeed = await promptText({
+      message:
+        'You can input a custom server URL or leave this field empty to use a new fakeserver.',
+    })
 
     if (userUrlSeed.trim().length === 0) {
       userUrlSeed = randomBytes(5).toString('hex')

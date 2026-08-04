@@ -1,4 +1,12 @@
-import prompts, { type Answers, type Options, type PromptObject } from 'prompts'
+import {
+  autocomplete,
+  autocompleteMultiselect,
+  confirm,
+  isCancel,
+  type Option,
+  select,
+  text,
+} from '@clack/prompts'
 
 import { NonInteractiveError } from './cli-args.js'
 
@@ -13,62 +21,154 @@ import { NonInteractiveError } from './cli-args.js'
 export const canPrompt = (): boolean =>
   process.stdin.isTTY === true && process.stderr.isTTY === true
 
-/**
- * Ask the user a question.
- *
- * Prompts are rendered to stderr: a selection is not a command result,
- * so it must not end up in stdout when the CLI is piped.
- */
-export const prompt = async <T extends string = string>(
-  questions: PromptObject<T> | Array<PromptObject<T>>,
-  options?: Options,
-): Promise<Answers<T>> => {
+/** The user dismissed a prompt with ctrl-c or escape instead of answering. */
+export class PromptCancelledError extends Error {
+  constructor() {
+    super('Cancelled')
+  }
+}
+
+export interface PromptChoice<Value> {
+  label: string
+  value: Value
+  hint?: string | undefined
+}
+
+const ensureInteractive = (): void => {
   if (!canPrompt()) {
     throw new NonInteractiveError(
       'Cannot prompt without a terminal: pass the missing arguments, or pipe them in as JSON',
     )
   }
+}
 
-  const questionList = Array.isArray(questions) ? questions : [questions]
+const unwrap = <Value>(value: Value | symbol): Value => {
+  if (isCancel(value)) throw new PromptCancelledError()
+  return value as Value
+}
 
-  return await prompts(
-    questionList.map((question) => ({
-      ...question,
-      // Search a list by any part of a name, rather than only by what it
-      // starts with, which is all prompts does for itself.
-      ...(question.type === 'autocomplete' && question.suggest == null
-        ? { suggest: searchChoices }
-        : {}),
-      stdout: process.stderr,
-    })),
-    options,
+// Prompts are rendered to stderr: a selection is not a command result,
+// so it must not end up in stdout when the CLI is piped.
+const output = process.stderr
+
+const toOptions = <Value>(
+  choices: Array<PromptChoice<Value>>,
+): Array<Option<Value>> =>
+  choices.map(
+    ({ label, value, hint }) =>
+      (hint === undefined
+        ? { label, value }
+        : { label, value, hint }) as Option<Value>,
+  )
+
+export const promptText = async (options: {
+  message: string
+  placeholder?: string
+  defaultValue?: string
+  validate?: (value: string | undefined) => string | undefined
+}): Promise<string> => {
+  ensureInteractive()
+  return unwrap(await text({ ...options, output }))
+}
+
+export const promptNumber = async (options: {
+  message: string
+  validate?: (value: number) => string | undefined
+}): Promise<number> => {
+  ensureInteractive()
+  const value = unwrap(
+    await text({
+      message: options.message,
+      validate: (value) => {
+        if (value == null || value.trim() === '') return 'Enter a number'
+        const parsed = Number(value)
+        if (Number.isNaN(parsed)) return 'Enter a number'
+        return options.validate?.(parsed)
+      },
+      output,
+    }),
+  )
+  return Number(value)
+}
+
+export const promptConfirm = async (options: {
+  message: string
+  initialValue?: boolean
+  active?: string
+  inactive?: string
+}): Promise<boolean> => {
+  ensureInteractive()
+  return unwrap(await confirm({ ...options, output }))
+}
+
+export const promptSelect = async <Value>(options: {
+  message: string
+  choices: Array<PromptChoice<Value>>
+}): Promise<Value> => {
+  ensureInteractive()
+  return unwrap(
+    await select<Value>({
+      message: options.message,
+      options: toOptions(options.choices),
+      output,
+    }),
+  )
+}
+
+export const promptAutocomplete = async <Value>(options: {
+  message: string
+  choices: Array<PromptChoice<Value>>
+}): Promise<Value> => {
+  ensureInteractive()
+  return unwrap(
+    await autocomplete<Value>({
+      message: options.message,
+      options: toOptions(options.choices),
+      // Search a list by any part of a name or hint, rather than only by
+      // the label, which is all clack matches for itself.
+      filter: searchChoices,
+      output,
+    }),
+  )
+}
+
+export const promptAutocompleteMultiselect = async <Value>(options: {
+  message: string
+  choices: Array<PromptChoice<Value>>
+}): Promise<Value[]> => {
+  ensureInteractive()
+  return unwrap(
+    await autocompleteMultiselect<Value>({
+      message: options.message,
+      options: toOptions(options.choices),
+      filter: searchChoices,
+      output,
+    }),
   )
 }
 
 export interface SearchableChoice {
-  title?: string | undefined
-  description?: string | undefined
+  label?: string | undefined
+  hint?: string | undefined
 }
 
 /**
- * Filter choices by every whitespace separated term of the input, matched
- * case insensitively against the title and the description.
+ * Match a choice by every whitespace separated term of the input, matched
+ * case insensitively against the label and the hint.
  */
-export const searchChoices = async <Choice extends SearchableChoice>(
+export const searchChoices = (
   input: string,
-  choices: Choice[],
-): Promise<Choice[]> => {
+  choice: SearchableChoice,
+): boolean => {
   const terms = input
     .toLowerCase()
     .split(/\s+/)
     .filter((term) => term.length > 0)
 
-  if (terms.length === 0) return choices
+  if (terms.length === 0) return true
 
-  return choices.filter((choice) => {
-    const searchable = `${choice.title ?? ''} ${choice.description ?? ''}`
-      .toLowerCase()
-      .trim()
-    return terms.every((term) => searchable.includes(term))
-  })
+  const searchable = `${choice.label ?? ''} ${choice.hint ?? ''}`
+    .toLowerCase()
+    .trim()
+  return terms.every((term) => searchable.includes(term))
 }

@@ -6,7 +6,7 @@ import { assertEnvVarUnset, getTokenFromEnv, tokenEnvVar } from './env.js'
 import { getServer } from './get-server.js'
 import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 import { getOutput } from './output/get-output.js'
-import { prompt } from './util/prompt.js'
+import { promptText } from './util/prompt.js'
 import { withLoading } from './util/with-loading.js'
 import { validateToken } from './validate-token.js'
 
@@ -32,12 +32,10 @@ export const interactForLogin = async () => {
     ),
   )
 
-  const { pat } = await prompt({
-    name: 'pat',
-    type: 'text',
+  const pat = await promptText({
     message: 'Personal Access Token:',
   })
-  const token = pat?.trim()
+  const token = pat.trim()
 
   if (!token) {
     throw new Error('No token provided')

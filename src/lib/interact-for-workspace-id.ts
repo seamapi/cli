@@ -8,7 +8,7 @@ import {
 } from './env.js'
 import { getSeamMultiWorkspace } from './get-seam.js'
 import { getServer } from './get-server.js'
-import { prompt } from './util/prompt.js'
+import { promptAutocomplete } from './util/prompt.js'
 import { withLoading } from './util/with-loading.js'
 
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {
@@ -29,23 +29,17 @@ export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const workspaces = await withLoading('Fetching workspaces...', () =>
     seam.workspaces.list(),
   )
-  const { workspaceId } = await prompt({
-    name: 'workspaceId',
-    // Searchable, as selecting a device or a command is: an account may have
-    // more workspaces than fit on a screen.
-    type: 'autocomplete',
+  // Searchable, as selecting a device or a command is: an account may have
+  // more workspaces than fit on a screen.
+  const workspaceId = await promptAutocomplete<string>({
     message: 'Select a workspace:',
     choices: workspaces.map((workspace: any) => ({
-      title: workspace.name,
+      label: workspace.name,
       value: workspace.workspace_id,
-      description: workspace.workspace_id,
+      hint: workspace.workspace_id,
     })),
   })
 
-  if (workspaceId) {
-    config.set('current_workspace_id', workspaceId)
-    return workspaceId
-  }
-
-  throw new Error('Bailed')
+  config.set('current_workspace_id', workspaceId)
+  return workspaceId
 }

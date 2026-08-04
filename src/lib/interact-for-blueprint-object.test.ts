@@ -5,15 +5,21 @@ import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
 import { createMemoryOutput } from './output/create-memory-output.js'
 import { setOutput } from './output/get-output.js'
 import type { ContextHelpers } from './types.js'
-import { prompt } from './util/prompt.js'
+import { promptAutocomplete } from './util/prompt.js'
 
 vi.mock('./util/prompt.js', () => ({
   canPrompt: vi.fn(() => true),
-  prompt: vi.fn(async () => ({ paramToEdit: 'done' })),
+  PromptCancelledError: class extends Error {},
+  promptText: vi.fn(),
+  promptNumber: vi.fn(),
+  promptConfirm: vi.fn(),
+  promptSelect: vi.fn(),
+  promptAutocomplete: vi.fn(async () => 'done'),
+  promptAutocompleteMultiselect: vi.fn(),
 }))
 
 beforeEach(() => {
-  vi.mocked(prompt).mockClear()
+  vi.mocked(promptAutocomplete).mockClear()
   // Keep the interactive chrome out of the test output.
   setOutput(createMemoryOutput().output)
 })
@@ -36,7 +42,7 @@ test('interactForBlueprintObject: submits without prompting once every required 
   await expect(
     interactForBlueprintObject(args({ device_id: 'device1' }), ctx('auto')),
   ).resolves.toEqual({ device_id: 'device1' })
-  expect(prompt).not.toHaveBeenCalled()
+  expect(promptAutocomplete).not.toHaveBeenCalled()
 })
 
 test('interactForBlueprintObject: prompts to review given parameters when interactive', async () => {
@@ -46,7 +52,7 @@ test('interactForBlueprintObject: prompts to review given parameters when intera
       ctx('interactive'),
     ),
   ).resolves.toEqual({ device_id: 'device1' })
-  expect(prompt).toHaveBeenCalledTimes(1)
+  expect(promptAutocomplete).toHaveBeenCalledTimes(1)
 })
 
 test('interactForBlueprintObject: prefills the prompt with the given parameters', async () => {
@@ -55,11 +61,11 @@ test('interactForBlueprintObject: prefills the prompt with the given parameters'
     ctx('interactive'),
   )
 
-  const { choices } = vi.mocked(prompt).mock.calls[0]?.[0] as {
-    choices: Array<{ value: string; description?: string }>
+  const { choices } = vi.mocked(promptAutocomplete).mock.calls[0]?.[0] as {
+    choices: Array<{ value: string; hint?: string }>
   }
   expect(choices.find(({ value }) => value === 'device_id')).toMatchObject({
-    description: '[device1]',
+    hint: '[device1]',
   })
 })
 
@@ -70,7 +76,7 @@ test('interactForBlueprintObject: submits without prompting when non-interactive
       ctx('non-interactive'),
     ),
   ).resolves.toEqual({ device_id: 'device1' })
-  expect(prompt).not.toHaveBeenCalled()
+  expect(promptAutocomplete).not.toHaveBeenCalled()
 })
 
 test('interactForBlueprintObject: rejects missing required parameters when non-interactive', async () => {
@@ -82,5 +88,5 @@ test('interactForBlueprintObject: rejects missing required parameters when non-i
   ).rejects.toThrowError(
     'Missing required parameter for /devices/get: --device-id',
   )
-  expect(prompt).not.toHaveBeenCalled()
+  expect(promptAutocomplete).not.toHaveBeenCalled()
 })
