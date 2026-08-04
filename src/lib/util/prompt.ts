@@ -1,3 +1,6 @@
+import type { EventEmitter } from 'node:events'
+import type { Key } from 'node:readline'
+
 import {
   autocomplete,
   autocompleteMultiselect,
@@ -40,6 +43,46 @@ const ensureInteractive = (): void => {
       'Cannot prompt without a terminal: pass the missing arguments, or pipe them in as JSON',
     )
   }
+  installArrowKeyAliases()
+}
+
+/**
+ * The arrow keypress an Emacs-style control keypress stands for, or
+ * undefined for any other key: ctrl-p is up and ctrl-n is down.
+ */
+export const arrowKeyFor = (key: Key | undefined): Key | undefined => {
+  if (key?.ctrl !== true || key.meta === true || key.shift === true) {
+    return undefined
+  }
+  const base = { ctrl: false, meta: false, shift: false }
+  if (key.name === 'p') return { ...base, name: 'up', sequence: '\x1B[A' }
+  if (key.name === 'n') return { ...base, name: 'down', sequence: '\x1B[B' }
+  return undefined
+}
+
+/**
+ * Re-emit Emacs-style control keypresses as the arrow keys they stand for.
+ *
+ * Clack navigates on the readline key name, so a synthetic arrow keypress
+ * moves the cursor in every prompt kind. Its own alias table cannot express
+ * this: aliases match bare key names, unaware of ctrl, and are ignored by
+ * prompts that track typed input, such as autocomplete.
+ */
+export const emitArrowKeyAliases = (input: EventEmitter): void => {
+  input.on('keypress', (_char, key: Key | undefined) => {
+    const arrowKey = arrowKeyFor(key)
+    if (arrowKey !== undefined) input.emit('keypress', undefined, arrowKey)
+  })
+}
+
+let arrowKeyAliasesInstalled = false
+
+// Keypress events only flow while a prompt has stdin in raw mode, so the
+// listener is inert the rest of the time and never holds the process open.
+const installArrowKeyAliases = (): void => {
+  if (arrowKeyAliasesInstalled) return
+  arrowKeyAliasesInstalled = true
+  emitArrowKeyAliases(process.stdin)
 }
 
 const unwrap = <Value>(value: Value | symbol): Value => {
