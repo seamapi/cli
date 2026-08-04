@@ -19,7 +19,9 @@ export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   )
   const { workspaceId } = await prompt({
     name: 'workspaceId',
-    type: 'select',
+    // Searchable, as selecting a device or a command is: an account may have
+    // more workspaces than fit on a screen.
+    type: 'autocomplete',
     message: 'Select a workspace:',
     choices: workspaces.map((workspace: any) => ({
       title: workspace.name,

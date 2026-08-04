@@ -14,7 +14,8 @@ export async function interactForServerSelection() {
 
   const { server } = await prompt([
     {
-      type: 'select',
+      // Searchable, as selecting a device or a command is.
+      type: 'autocomplete',
       name: 'server',
       message: 'Select a server:',
       choices: servers.map((server) => ({ title: server, value: server })),
