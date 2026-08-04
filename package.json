@@ -99,7 +99,8 @@
     "minimist": "^1.2.8",
     "nanospinner": "^1.2.2",
     "open": "^11.0.0",
-    "prompts": "^2.4.2"
+    "prompts": "^2.4.2",
+    "tar": "^7.5.22"
   },
   "devDependencies": {
     "@seamapi/types": "1.985.0",

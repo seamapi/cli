@@ -1,10 +1,17 @@
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import {
+  access,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { gunzipSync } from 'node:zlib'
 
 import type { Blueprint, TypesModuleInput } from '@seamapi/blueprint'
 import envPaths from 'env-paths'
+import { extract } from 'tar'
 
 import { withLoading } from './util/with-loading.js'
 import { seamapiBlueprintVersion } from './version.js'
@@ -15,8 +22,6 @@ const registryUrl = 'https://registry.npmjs.org'
 const updateCheckInterval = 24 * 60 * 60 * 1000
 
 const cacheFileName = 'blueprint.json'
-const developmentCacheFileName = 'blueprint-development.json'
-const paths = envPaths('seam', { suffix: '' })
 
 interface BlueprintCache {
   blueprintVersion: string
@@ -32,21 +37,16 @@ interface TypesPackageManifest {
 
 interface GetBlueprintOptions {
   update?: boolean
+  cacheDirectory?: string
 }
 
 const getBlueprint = async (
   options: GetBlueprintOptions = {},
 ): Promise<Blueprint> => {
   const update = options.update ?? false
-
-  // The blueprint version is only injected when the package is packed,
-  // so a development checkout builds the blueprint from the locally
-  // installed @seamapi/types instead of fetching it.
-  if (seamapiBlueprintVersion === '0.0.0') {
-    return await getDevelopmentBlueprint(update)
-  }
-
-  const cacheFile = join(paths.cache, cacheFileName)
+  const cacheDirectory =
+    options.cacheDirectory ?? envPaths('seam', { suffix: '' }).cache
+  const cacheFile = join(cacheDirectory, cacheFileName)
 
   const cache = await readCache(cacheFile)
   const isCacheUsable =
@@ -80,7 +80,7 @@ const getBlueprint = async (
   try {
     blueprint = await withLoading(
       `Downloading Seam API definitions (${typesPackageName}@${manifest.version})`,
-      async () => await generateBlueprint(manifest),
+      async () => await generateBlueprint(manifest, cacheDirectory),
     )
   } catch (error) {
     if (cache != null && !update) return cache.blueprint
@@ -97,67 +97,6 @@ const getBlueprint = async (
   })
 
   return blueprint
-}
-
-const getDevelopmentBlueprint = async (update: boolean): Promise<Blueprint> => {
-  const cacheFile = join(paths.cache, developmentCacheFileName)
-  const versions = await readDevelopmentPackageVersions()
-
-  const cache = await readCache(cacheFile)
-  if (
-    !update &&
-    cache != null &&
-    cache.blueprintVersion === versions.blueprintVersion &&
-    cache.typesVersion === versions.typesVersion
-  ) {
-    return cache.blueprint
-  }
-
-  const [{ createBlueprint }, { openapi }] = await Promise.all([
-    import('@seamapi/blueprint'),
-    import('@seamapi/types/connect'),
-  ])
-  const blueprint = await createBlueprint(
-    { openapi },
-    { omitUndocumented: true },
-  )
-
-  await writeCache(cacheFile, {
-    blueprintVersion: versions.blueprintVersion,
-    typesVersion: versions.typesVersion,
-    checkedAt: new Date().toISOString(),
-    blueprint,
-  })
-
-  return blueprint
-}
-
-// Invalidate the development cache when the versions pinned in
-// package.json change.
-const readDevelopmentPackageVersions = async (): Promise<{
-  blueprintVersion: string
-  typesVersion: string
-}> => {
-  for (const path of ['../../package.json', '../package.json']) {
-    try {
-      const pkg = JSON.parse(
-        await readFile(new URL(path, import.meta.url), 'utf8'),
-      ) as {
-        name?: string
-        dependencies?: Record<string, string>
-        devDependencies?: Record<string, string>
-      }
-      if (pkg.name !== '@seamapi/cli') continue
-      return {
-        blueprintVersion: pkg.dependencies?.['@seamapi/blueprint'] ?? '0.0.0',
-        typesVersion: pkg.devDependencies?.[typesPackageName] ?? '0.0.0',
-      }
-    } catch {
-      continue
-    }
-  }
-
-  return { blueprintVersion: '0.0.0', typesVersion: '0.0.0' }
 }
 
 const isUpdateCheckDue = (checkedAt: string): boolean => {
@@ -187,8 +126,9 @@ const fetchLatestTypesPackageManifest =
 
 const generateBlueprint = async (
   manifest: TypesPackageManifest,
+  cacheDirectory: string,
 ): Promise<Blueprint> => {
-  const openapi = await downloadOpenapi(manifest)
+  const openapi = await downloadOpenapi(manifest, cacheDirectory)
   const { createBlueprint } = await import('@seamapi/blueprint')
   return await createBlueprint({ openapi } as TypesModuleInput, {
     omitUndocumented: true,
@@ -197,6 +137,7 @@ const generateBlueprint = async (
 
 const downloadOpenapi = async (
   manifest: TypesPackageManifest,
+  cacheDirectory: string,
 ): Promise<unknown> => {
   const res = await fetch(manifest.dist.tarball, {
     signal: AbortSignal.timeout(60_000),
@@ -204,15 +145,23 @@ const downloadOpenapi = async (
   if (!res.ok) {
     throw new Error(`npm registry responded with status ${res.status}`)
   }
-  const tarball = gunzipSync(Buffer.from(await res.arrayBuffer()))
-  const openapiModule = extractTarEntry(tarball, openapiTarEntryName)
 
-  // The OpenAPI document is published as a JavaScript module,
-  // so write it to the cache directory and import it.
-  const moduleFile = join(paths.cache, `openapi-${manifest.version}.mjs`)
-  await mkdir(paths.cache, { recursive: true })
-  await writeFile(moduleFile, openapiModule)
+  const extractDirectory = join(cacheDirectory, `types-${manifest.version}`)
+  const tarballFile = join(extractDirectory, 'types.tgz')
+  await rm(extractDirectory, { recursive: true, force: true })
+  await mkdir(extractDirectory, { recursive: true })
   try {
+    await writeFile(tarballFile, Buffer.from(await res.arrayBuffer()))
+    await extract({ file: tarballFile, cwd: extractDirectory }, [
+      openapiTarEntryName,
+    ])
+
+    const moduleFile = join(extractDirectory, openapiTarEntryName)
+    if (!(await exists(moduleFile))) {
+      throw new Error(`Missing ${openapiTarEntryName} in package tarball`)
+    }
+
+    // The OpenAPI document is published as a JavaScript module, so import it.
     const openapiModuleUrl = pathToFileURL(moduleFile).href
     const { default: openapi } = (await import(openapiModuleUrl)) as {
       default: unknown
@@ -222,38 +171,17 @@ const downloadOpenapi = async (
     }
     return openapi
   } finally {
-    await rm(moduleFile, { force: true })
+    await rm(extractDirectory, { recursive: true, force: true })
   }
 }
 
-export const extractTarEntry = (tar: Buffer, entryName: string): Buffer => {
-  let offset = 0
-  while (offset + 512 <= tar.length) {
-    const header = tar.subarray(offset, offset + 512)
-    const name = readTarString(header, 0, 100)
-    if (name === '') break
-    const size = Number.parseInt(readTarString(header, 124, 12), 8)
-    if (Number.isNaN(size)) {
-      throw new Error(`Invalid tar entry size for ${name}`)
-    }
-    const prefix = readTarString(header, 345, 155)
-    const fullName = prefix === '' ? name : `${prefix}/${name}`
-    if (fullName === entryName) {
-      return tar.subarray(offset + 512, offset + 512 + size)
-    }
-    offset += 512 + Math.ceil(size / 512) * 512
+const exists = async (file: string): Promise<boolean> => {
+  try {
+    await access(file)
+    return true
+  } catch {
+    return false
   }
-  throw new Error(`Missing ${entryName} in tar archive`)
-}
-
-const readTarString = (
-  header: Buffer,
-  offset: number,
-  length: number,
-): string => {
-  const field = header.subarray(offset, offset + length)
-  const end = field.indexOf(0)
-  return field.subarray(0, end === -1 ? length : end).toString('utf8')
 }
 
 const readCache = async (file: string): Promise<BlueprintCache | null> => {
@@ -271,7 +199,7 @@ const writeCache = async (
   cache: BlueprintCache,
 ): Promise<void> => {
   const temporaryFile = `${file}.tmp`
-  await mkdir(paths.cache, { recursive: true })
+  await mkdir(dirname(file), { recursive: true })
   await writeFile(temporaryFile, `${JSON.stringify(cache)}\n`, 'utf8')
   await rename(temporaryFile, file)
 }
