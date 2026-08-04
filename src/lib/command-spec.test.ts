@@ -107,7 +107,7 @@ test('command spec: never emits names a shell could read as syntax', () => {
       {
         endpoints: [
           {
-            path: "/devices'; rm -rf /; '/list",
+            path: "/devices'; ls /; '/list",
             title: 'Hostile Path',
             description: '',
             request: { parameters: [] },
@@ -119,7 +119,7 @@ test('command spec: never emits names a shell could read as syntax', () => {
             request: {
               parameters: [
                 {
-                  name: "limit'; rm -rf /; '",
+                  name: "limit'; ls /; '",
                   description: '',
                   format: 'number',
                   isRequired: false,
@@ -140,7 +140,7 @@ test('command spec: never emits names a shell could read as syntax', () => {
 
   const hostileSpec = getCommandSpec(hostile)
   const paths = hostileSpec.commands.map(({ path }) => path.join(' '))
-  expect(paths.filter((path) => path.includes('rm -rf'))).toEqual([])
+  expect(paths.filter((path) => path.includes('ls /'))).toEqual([])
   expect(paths).toContain('devices list')
   expect(
     findCommand(hostileSpec, ['devices', 'list'])?.flags.map(
