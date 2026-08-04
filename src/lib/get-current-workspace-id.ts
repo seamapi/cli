@@ -1,4 +1,4 @@
-import { getConfigStore } from './get-config-store.js'
+import { getConfigStore } from './config/index.js'
 import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 
 export const getCurrentWorkspaceId = async (): Promise<string> => {
