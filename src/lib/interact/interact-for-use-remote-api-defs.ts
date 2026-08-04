@@ -1,4 +1,4 @@
-import { getConfigStore } from '../config/index.js'
+import { setUseRemoteApiDefs } from '../auth/operations.js'
 import { getOutput } from '../output/get-output.js'
 import { promptSelect } from './prompt.js'
 
@@ -17,7 +17,6 @@ export async function interactForUseRemoteApiDefs() {
     ],
   })
 
-  const config = getConfigStore()
-  config.set('use_remote_api_defs', useRemoteApiDefs)
+  setUseRemoteApiDefs(useRemoteApiDefs)
   getOutput().info(`Use remote API Definitions: ${useRemoteApiDefs}`)
 }

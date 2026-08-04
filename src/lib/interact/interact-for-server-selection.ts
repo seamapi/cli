@@ -1,18 +1,18 @@
 import { randomBytes } from 'node:crypto'
 
-import { getConfigStore } from '../config/index.js'
 import {
-  assertEnvVarUnset,
-  endpointEnvVar,
-  getEndpointFromEnv,
-  getTokenFromEnv,
-  tokenEnvVar,
-} from '../env.js'
+  assertMutable,
+  selectFakeServer,
+  selectServer,
+} from '../auth/operations.js'
+import { getConfigStore } from '../config/index.js'
+import { resolveAuth } from '../context.js'
 import { getOutput } from '../output/get-output.js'
 import { promptAutocomplete, promptText } from './prompt.js'
 
 export async function interactForServerSelection() {
-  assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
+  const config = getConfigStore()
+  assertMutable(resolveAuth(config), 'server', 'select a server')
 
   const servers = [
     'http://localhost:3020',
@@ -26,7 +26,6 @@ export async function interactForServerSelection() {
     choices: servers.map((server) => ({ label: server, value: server })),
   })
 
-  const config = getConfigStore()
   const output = getOutput()
   if (server === servers[2]) {
     let userUrlSeed = await promptText({
@@ -37,14 +36,10 @@ export async function interactForServerSelection() {
     if (userUrlSeed.trim().length === 0) {
       userUrlSeed = randomBytes(5).toString('hex')
     }
-    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
-    const fakeServerUrl = `https://${userUrlSeed}.fakeseamconnect.seam.vc`
-    config.set('server', fakeServerUrl)
-    config.set(`${fakeServerUrl}.pat`, `seam_apikey1_token`)
+    selectFakeServer(userUrlSeed, config)
     output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
   } else {
-    config.set('server', server)
+    selectServer(server, config)
   }
-  config.delete('current_workspace_id')
   output.info(`Server set to ${server}`)
 }

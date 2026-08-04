@@ -1,10 +1,10 @@
 import { isApiKey, isPersonalAccessToken } from '@seamapi/http/connect'
 import chalk from 'chalk'
 
+import { assertMutable, storeToken } from '../auth/operations.js'
 import { validateToken } from '../auth/validate-token.js'
 import { getConfigStore } from '../config/index.js'
 import { resolveAuth } from '../context.js'
-import { assertEnvVarUnset, getTokenFromEnv, tokenEnvVar } from '../env.js'
 import { getOutput } from '../output/get-output.js'
 import { promptText } from './prompt.js'
 import { withLoading } from '../output/with-loading.js'
@@ -13,13 +13,14 @@ import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 export const interactForLogin = async () => {
   const config = getConfigStore()
   const output = getOutput()
-  const { server } = resolveAuth(config)
+  const auth = resolveAuth(config)
 
-  assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
+  // Refuse before prompting: nothing typed here could be stored.
+  assertMutable(auth, 'token', 'log in')
 
-  if (server.includes('localhost')) {
+  if (auth.server.includes('localhost')) {
     output.info(
-      `You're using a local Seam Connect instance, you can enter the API Key to your local user, you can create a new user from:\n\n${server}/admin/create_user_with_api_key`,
+      `You're using a local Seam Connect instance, you can enter the API Key to your local user, you can create a new user from:\n\n${auth.server}/admin/create_user_with_api_key`,
     )
   } else {
     output.info(
@@ -52,6 +53,6 @@ export const interactForLogin = async () => {
     )
   }
 
-  config.set(`${server}.pat`, token)
+  storeToken(token, config)
   output.info(`Token saved! You may begin using the CLI!`)
 }

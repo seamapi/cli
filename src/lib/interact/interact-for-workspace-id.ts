@@ -1,12 +1,8 @@
 import { SeamHttpWithoutWorkspace } from '@seamapi/http/connect'
 
+import { assertMutable, selectWorkspace } from '../auth/operations.js'
 import { getConfigStore } from '../config/index.js'
 import { resolveAuth } from '../context.js'
-import {
-  assertEnvVarUnset,
-  getWorkspaceIdFromEnv,
-  workspaceIdEnvVar,
-} from '../env.js'
 import { withLoading } from '../output/with-loading.js'
 import { getSeamMultiWorkspace } from '../seam/client.js'
 import { promptAutocomplete } from './prompt.js'
@@ -14,11 +10,8 @@ import { promptAutocomplete } from './prompt.js'
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const config = getConfigStore()
 
-  assertEnvVarUnset(
-    workspaceIdEnvVar,
-    getWorkspaceIdFromEnv(),
-    'select a workspace',
-  )
+  // Refuse before prompting: nothing selected here could be stored.
+  assertMutable(resolveAuth(config), 'workspaceId', 'select a workspace')
 
   const seam = personalAccessToken
     ? SeamHttpWithoutWorkspace.fromPersonalAccessToken(personalAccessToken, {
@@ -40,6 +33,6 @@ export const interactForWorkspaceId = async (personalAccessToken?: string) => {
     })),
   })
 
-  config.set('current_workspace_id', workspaceId)
+  selectWorkspace(workspaceId, config)
   return workspaceId
 }

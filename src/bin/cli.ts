@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { randomBytes } from 'node:crypto'
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import chalk from 'chalk'
@@ -15,7 +14,13 @@ import {
   toParameterName,
   UsageError,
 } from 'lib/args/parse.js'
-import { validateToken } from 'lib/auth/validate-token.js'
+import {
+  assertMutable,
+  login,
+  logout,
+  selectFakeServer,
+  selectServer,
+} from 'lib/auth/operations.js'
 import {
   getCommandBlueprintDef,
   getResponseKey,
@@ -25,15 +30,9 @@ import { findLocalCommand, getCommandSpec } from 'lib/command-spec.js'
 import { getConfigStore } from 'lib/config/index.js'
 import { type CliContext, resolveAuth } from 'lib/context.js'
 import {
-  assertEnvVarUnset,
-  endpointEnvVar,
   EnvVarOverrideError,
-  getEndpointFromEnv,
-  getTokenFromEnv,
-  getWorkspaceIdFromEnv,
   isInsideWebBrowser,
   tokenEnvVar,
-  workspaceIdEnvVar,
 } from 'lib/env.js'
 import { interactForActionAttemptPoll } from 'lib/interact/interact-for-action-attempt-poll.js'
 import { interactForCommandParams } from 'lib/interact/interact-for-command-params.js'
@@ -145,16 +144,8 @@ async function cli(args: ParsedArgs) {
     args._[1] === 'set' &&
     args._[2] === 'fake-server'
   ) {
-    assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
-    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
-
-    const randomstring = randomBytes(5).toString('hex')
-    const fakeApiUrl = `https://${randomstring}.fakeseamconnect.seam.vc`
-
-    config.set('server', fakeApiUrl)
+    const { server: fakeApiUrl } = selectFakeServer(undefined, config)
     output.info(`Server URL set to ${fakeApiUrl}`)
-
-    config.set(`${fakeApiUrl}.pat`, `seam_apikey1_token`)
     output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
     return
   }
@@ -206,37 +197,18 @@ async function cli(args: ParsedArgs) {
   assertKnownArgs(argParams, selectedCommand, ctx)
 
   if (isEqual(selectedCommand, ['login'])) {
-    // Nothing is stored while the environment overrides it, so refuse before
-    // storing anything rather than part way through.
-    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
-    if (args['server']) {
-      assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
-    }
-    if (args['workspace_id']) {
-      assertEnvVarUnset(
-        workspaceIdEnvVar,
-        getWorkspaceIdFromEnv(),
-        'select a workspace',
-      )
-    }
-    if (args['server']) {
-      config.set('server', args['server'])
-      config.delete('current_workspace_id')
-    }
-    if (args['token']) {
-      const token = String(args['token']).trim()
-      await validateToken(token, args['workspace_id'])
-      // Resolve after any --server write above so the token is stored
-      // under the server it was validated against.
-      config.set(`${resolveAuth(config).server}.pat`, token)
-      config.delete('current_workspace_id')
-    }
-    if (args['workspace_id']) {
-      config.set(`current_workspace_id`, args['workspace_id'])
-    }
     if (args['token'] || args['workspace_id'] || args['server']) {
+      await login(
+        {
+          server: args['server'] ? args['server'] : undefined,
+          token: args['token'] ? String(args['token']).trim() : undefined,
+          workspaceId: args['workspace_id'] ? args['workspace_id'] : undefined,
+        },
+        config,
+      )
       return
     }
+    assertMutable(ctx.auth, 'token', 'log in')
     if (isNonInteractive) {
       throw new NonInteractiveError(
         'Missing required parameter for login: --token',
@@ -245,12 +217,7 @@ async function cli(args: ParsedArgs) {
     await interactForLogin()
     return
   } else if (isEqual(selectedCommand, ['logout'])) {
-    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log out')
-    config.delete(`${resolveAuth(config).server}.pat`)
-    // Configs written before tokens were stored per server may still hold an
-    // un-namespaced token, so drop that too.
-    config.delete('pat')
-    config.delete('current_workspace_id')
+    logout(config)
     output.info('Logged out!')
     return
   } else if (isEqual(selectedCommand, ['config', 'reveal-location'])) {
@@ -265,11 +232,7 @@ async function cli(args: ParsedArgs) {
     await interactForUseRemoteApiDefs()
     return
   } else if (isEqual(selectedCommand, ['select', 'workspace'])) {
-    assertEnvVarUnset(
-      workspaceIdEnvVar,
-      getWorkspaceIdFromEnv(),
-      'select a workspace',
-    )
+    assertMutable(ctx.auth, 'workspaceId', 'select a workspace')
     if (isNonInteractive) {
       throw new NonInteractiveError(
         'Cannot select a workspace in non-interactive mode: pass --workspace-id to "seam login"',
@@ -284,10 +247,9 @@ async function cli(args: ParsedArgs) {
       commandParams['since'] = date.toISOString()
     }
   } else if (isEqual(selectedCommand, ['select', 'server'])) {
-    assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
+    assertMutable(ctx.auth, 'server', 'select a server')
     if (args['server']) {
-      config.set('server', args['server'])
-      config.delete('current_workspace_id')
+      selectServer(args['server'], config)
       return
     }
     if (isNonInteractive) {
