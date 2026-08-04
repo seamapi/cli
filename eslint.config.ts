@@ -17,13 +17,6 @@ export default [
     },
   },
   {
-    files: ['src/bin/**/*.ts', 'src/lib/**/*.ts'],
-    rules: {
-      // TODO: Replace the console calls with a logger wrapper.
-      'no-console': 'off',
-    },
-  },
-  {
     files,
     plugins: {
       'unused-imports': unusedImports,

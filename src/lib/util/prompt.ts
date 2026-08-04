@@ -124,6 +124,9 @@ export const promptAutocomplete = async <Value>(options: {
     await autocomplete<Value>({
       message: options.message,
       options: toOptions(options.choices),
+      // Search a list by any part of a name or hint, rather than only by
+      // the label, which is all clack matches for itself.
+      filter: searchChoices,
       output,
     }),
   )
@@ -138,7 +141,34 @@ export const promptAutocompleteMultiselect = async <Value>(options: {
     await autocompleteMultiselect<Value>({
       message: options.message,
       options: toOptions(options.choices),
+      filter: searchChoices,
       output,
     }),
   )
+}
+
+export interface SearchableChoice {
+  label?: string | undefined
+  hint?: string | undefined
+}
+
+/**
+ * Match a choice by every whitespace separated term of the input, matched
+ * case insensitively against the label and the hint.
+ */
+export const searchChoices = (
+  input: string,
+  choice: SearchableChoice,
+): boolean => {
+  const terms = input
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((term) => term.length > 0)
+
+  if (terms.length === 0) return true
+
+  const searchable = `${choice.label ?? ''} ${choice.hint ?? ''}`
+    .toLowerCase()
+    .trim()
+  return terms.every((term) => searchable.includes(term))
 }

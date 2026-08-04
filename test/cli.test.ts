@@ -22,9 +22,16 @@ const errorResponse = {
 }
 
 let server: Server
+let endpoint: string
 let stateHome: string
 let configHome: string
-let requests: Array<{ path: string; body: unknown }> = []
+let loggedOutStateHome: string
+let otherServerConfigHome: string
+let requests: Array<{
+  path: string
+  body: unknown
+  headers: Record<string, string | string[] | undefined>
+}> = []
 let failNextRequest = false
 
 beforeAll(async () => {
@@ -32,7 +39,11 @@ beforeAll(async () => {
     let body = ''
     req.on('data', (chunk) => (body += chunk))
     req.on('end', () => {
-      requests.push({ path: req.url ?? '', body: JSON.parse(body || '{}') })
+      requests.push({
+        path: req.url ?? '',
+        body: JSON.parse(body || '{}'),
+        headers: req.headers,
+      })
 
       if (failNextRequest) {
         failNextRequest = false
@@ -53,7 +64,7 @@ beforeAll(async () => {
     throw new Error('Could not determine the test server address')
   }
   // A host without dots: configstore reads nested keys by dot path.
-  const endpoint = `http://localhost:${address.port}`
+  endpoint = `http://localhost:${address.port}`
 
   // Settings live under the config dir, auth state under the state dir.
   const home = await mkdtemp(join(tmpdir(), 'seam-cli-test-'))
@@ -69,6 +80,18 @@ beforeAll(async () => {
     join(stateHome, 'seam', 'cli.json'),
     JSON.stringify({ [endpoint]: { pat: 'seam_apikey1_token' } }),
   )
+
+  // The same settings without a stored token, i.e., not logged in.
+  loggedOutStateHome = join(home, 'logged-out-state')
+  await mkdir(join(loggedOutStateHome, 'seam'), { recursive: true })
+
+  // Settings pointing at a server nothing is listening on.
+  otherServerConfigHome = join(home, 'other-server-config')
+  await mkdir(join(otherServerConfigHome, 'seam'), { recursive: true })
+  await writeFile(
+    join(otherServerConfigHome, 'seam', 'cli.json'),
+    JSON.stringify({ server: 'http://localhost:1' }),
+  )
 })
 
 afterAll(async () => {
@@ -83,7 +106,17 @@ interface CliResult {
 
 const runCli = async (
   args: string[],
-  { input }: { input?: string } = {},
+  {
+    input,
+    env,
+    configHome: configHomeOverride,
+    stateHome: stateHomeOverride,
+  }: {
+    input?: string
+    env?: Record<string, string>
+    configHome?: string
+    stateHome?: string
+  } = {},
 ): Promise<CliResult> => {
   const { stdout, stderr, exitCode } = await execa(
     'node',
@@ -91,9 +124,14 @@ const runCli = async (
     {
       cwd: projectRoot,
       env: {
-        XDG_CONFIG_HOME: configHome,
-        XDG_STATE_HOME: stateHome,
+        XDG_CONFIG_HOME: configHomeOverride ?? configHome,
+        XDG_STATE_HOME: stateHomeOverride ?? stateHome,
         FORCE_COLOR: '0',
+        // Never inherit credentials from the environment running the tests.
+        SEAM_CLI_TOKEN: undefined,
+        SEAM_CLI_WORKSPACE_ID: undefined,
+        SEAM_CLI_ENDPOINT: undefined,
+        ...env,
       },
       input: input ?? '',
       reject: false,
@@ -313,6 +351,147 @@ test('cli: pretty prints the response with --no-json', async () => {
   expect(exitCode).toBe(0)
   expect(stdout).toContain("device_id: 'device1'")
   expect(stdout).not.toContain('"device_id"')
+})
+
+test('cli: SEAM_CLI_TOKEN wins over the stored token', async () => {
+  requests = []
+  const { exitCode } = await runCli(['devices', 'list'], {
+    env: { SEAM_CLI_TOKEN: 'seam_apikey1_from_env' },
+  })
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.headers['authorization']).toBe(
+    'Bearer seam_apikey1_from_env',
+  )
+})
+
+test('cli: SEAM_CLI_TOKEN authenticates without logging in', async () => {
+  requests = []
+  const { exitCode, stderr } = await runCli(['devices', 'list'], {
+    env: { SEAM_CLI_TOKEN: 'seam_apikey1_from_env' },
+    stateHome: loggedOutStateHome,
+  })
+
+  expect(exitCode).toBe(0)
+  expect(stderr).not.toContain('Not logged in')
+  expect(requests[0]?.headers['authorization']).toBe(
+    'Bearer seam_apikey1_from_env',
+  )
+})
+
+test('cli: reports not being logged in without SEAM_CLI_TOKEN', async () => {
+  const { stdout, stderr, exitCode } = await runCli(['devices', 'list'], {
+    stateHome: loggedOutStateHome,
+  })
+
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain('Not logged in')
+  expect(stderr).toContain('SEAM_CLI_TOKEN')
+})
+
+test('cli: SEAM_CLI_WORKSPACE_ID sets the workspace for the request', async () => {
+  requests = []
+  const { exitCode } = await runCli(['devices', 'list'], {
+    env: {
+      SEAM_CLI_TOKEN: 'seam_at1_from_env',
+      SEAM_CLI_WORKSPACE_ID: 'workspace_from_env',
+    },
+  })
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.headers['authorization']).toBe('Bearer seam_at1_from_env')
+  expect(requests[0]?.headers['seam-workspace']).toBe('workspace_from_env')
+})
+
+test('cli: SEAM_CLI_ENDPOINT wins over the stored server', async () => {
+  requests = []
+  const { exitCode } = await runCli(['devices', 'list'], {
+    configHome: otherServerConfigHome,
+    env: { SEAM_CLI_ENDPOINT: endpoint },
+  })
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.path).toBe('/devices/list')
+})
+
+test('cli: uses the stored server without SEAM_CLI_ENDPOINT', async () => {
+  requests = []
+  const { exitCode } = await runCli(['devices', 'list'], {
+    configHome: otherServerConfigHome,
+  })
+
+  expect(exitCode).toBe(1)
+  expect(requests).toHaveLength(0)
+})
+
+test('cli: refuses to log in while SEAM_CLI_TOKEN is set', async () => {
+  const { stdout, stderr, exitCode } = await runCli(
+    ['login', '--token', 'seam_apikey1_stored'],
+    { env: { SEAM_CLI_TOKEN: 'seam_apikey1_from_env' } },
+  )
+
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain('Cannot log in while SEAM_CLI_TOKEN is set')
+  expect(stderr).not.toContain('CLI Error')
+})
+
+test('cli: refuses to select a workspace while SEAM_CLI_WORKSPACE_ID is set', async () => {
+  const { stdout, stderr, exitCode } = await runCli(['select', 'workspace'], {
+    env: { SEAM_CLI_WORKSPACE_ID: 'workspace_from_env' },
+  })
+
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain(
+    'Cannot select a workspace while SEAM_CLI_WORKSPACE_ID is set',
+  )
+})
+
+test('cli: refuses to log in with a workspace while SEAM_CLI_WORKSPACE_ID is set', async () => {
+  const { stderr, exitCode } = await runCli(
+    ['login', '--token', 'seam_apikey1_stored', '--workspace-id', 'workspace1'],
+    { env: { SEAM_CLI_WORKSPACE_ID: 'workspace_from_env' } },
+  )
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain(
+    'Cannot select a workspace while SEAM_CLI_WORKSPACE_ID is set',
+  )
+})
+
+test('cli: refuses to select a server while SEAM_CLI_ENDPOINT is set', async () => {
+  const { stdout, stderr, exitCode } = await runCli(
+    ['select', 'server', '--server', 'https://connect.example.com'],
+    { env: { SEAM_CLI_ENDPOINT: endpoint } },
+  )
+
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain(
+    'Cannot select a server while SEAM_CLI_ENDPOINT is set',
+  )
+})
+
+test('cli: refuses to log out while SEAM_CLI_TOKEN is set', async () => {
+  const { stderr, exitCode } = await runCli(['logout'], {
+    env: { SEAM_CLI_TOKEN: 'seam_apikey1_from_env' },
+  })
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Cannot log out while SEAM_CLI_TOKEN is set')
+})
+
+test('cli: reports no workspace for a personal access token without one', async () => {
+  const { stdout, stderr, exitCode } = await runCli(['devices', 'list'], {
+    env: { SEAM_CLI_TOKEN: 'seam_at1_from_env' },
+  })
+
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain('No workspace selected')
+  expect(stderr).toContain('SEAM_CLI_WORKSPACE_ID')
 })
 
 test('cli: reports a failed request on stdout and exits non-zero', async () => {

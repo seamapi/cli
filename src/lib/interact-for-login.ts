@@ -2,6 +2,7 @@ import { isApiKey, isPersonalAccessToken } from '@seamapi/http/connect'
 import chalk from 'chalk'
 
 import { getConfigStore } from './config/index.js'
+import { assertEnvVarUnset, getTokenFromEnv, tokenEnvVar } from './env.js'
 import { getServer } from './get-server.js'
 import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 import { getOutput } from './output/get-output.js'
@@ -12,6 +13,8 @@ import { validateToken } from './validate-token.js'
 export const interactForLogin = async () => {
   const config = await getConfigStore()
   const output = getOutput()
+
+  assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
 
   if (getServer().includes('localhost')) {
     output.info(

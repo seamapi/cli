@@ -1,18 +1,28 @@
 import { randomBytes } from 'node:crypto'
 
 import { getConfigStore } from './config/index.js'
+import {
+  assertEnvVarUnset,
+  endpointEnvVar,
+  getEndpointFromEnv,
+  getTokenFromEnv,
+  tokenEnvVar,
+} from './env.js'
 import { getServer } from './get-server.js'
 import { getOutput } from './output/get-output.js'
-import { promptSelect, promptText } from './util/prompt.js'
+import { promptAutocomplete, promptText } from './util/prompt.js'
 
 export async function interactForServerSelection() {
+  assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
+
   const servers = [
     'http://localhost:3020',
     'https://connect.getseam.com',
     'https://fakeseamconnect.seam.vc',
   ]
 
-  const server = await promptSelect({
+  // Searchable, as selecting a device or a command is.
+  const server = await promptAutocomplete({
     message: 'Select a server:',
     choices: servers.map((server) => ({ label: server, value: server })),
   })
@@ -28,6 +38,7 @@ export async function interactForServerSelection() {
     if (userUrlSeed.trim().length === 0) {
       userUrlSeed = randomBytes(5).toString('hex')
     }
+    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
     config.set('server', `https://${userUrlSeed}.fakeseamconnect.seam.vc`)
     config.set(`${getServer()}.pat`, `seam_apikey1_token`)
     output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)

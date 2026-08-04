@@ -179,6 +179,46 @@ Missing required parameter for /locks/unlock_door: --device-id
 An error exits non-zero. A request that fails reports its `error` on stdout,
 so it can be inspected from a pipe; anything else is written to stderr only.
 
+### Environment variables
+
+Everything `seam login`, `seam select workspace`, and `seam select server`
+store may be given in the environment instead:
+
+- `SEAM_CLI_TOKEN`: a Personal Access Token or API Key,
+- `SEAM_CLI_WORKSPACE_ID`: the workspace requests are made against,
+- `SEAM_CLI_ENDPOINT`: the Seam API server requests are made to.
+
+Any of them, all of them, or none of them may be set. Each one wins over the
+corresponding stored value, which makes them useful for CI, for a single
+command, or for working against another workspace in one shell.
+
+```bash
+# One command against another workspace
+SEAM_CLI_WORKSPACE_ID=$OTHER_WORKSPACE seam devices list
+
+# No login needed: authenticate from the environment
+export SEAM_CLI_TOKEN=$SEAM_API_KEY
+seam devices list
+
+# Work against a local Seam Connect instance
+SEAM_CLI_ENDPOINT=http://localhost:3020 seam devices list
+```
+
+An API Key is scoped to a single workspace, so it needs no workspace id. A
+Personal Access Token works across workspaces, so it needs one from either
+`SEAM_CLI_WORKSPACE_ID` or `seam select workspace`.
+
+The command that would store an overridden value fails rather than storing
+something the environment ignores: `seam login` and `seam logout` while
+`SEAM_CLI_TOKEN` is set, `seam select workspace` while
+`SEAM_CLI_WORKSPACE_ID` is set, and `seam select server` while
+`SEAM_CLI_ENDPOINT` is set. Unset the variable to use those commands.
+
+```bash
+$ SEAM_CLI_TOKEN=$SEAM_API_KEY seam login
+Cannot log in while SEAM_CLI_TOKEN is set: it overrides what would be stored. Unset SEAM_CLI_TOKEN to log in.
+```
+
 ## Help
 
 Pass `--help` to any command to see what it accepts. Without a command, it

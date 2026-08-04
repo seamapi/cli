@@ -12,8 +12,19 @@ import {
   renderCompletion,
 } from 'lib/completion/index.js'
 import { getConfigStore } from 'lib/config/index.js'
+import {
+  assertEnvVarUnset,
+  endpointEnvVar,
+  EnvVarOverrideError,
+  getEndpointFromEnv,
+  getTokenFromEnv,
+  getWorkspaceIdFromEnv,
+  tokenEnvVar,
+  workspaceIdEnvVar,
+} from 'lib/env.js'
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
 import { getCommandBlueprintDef } from 'lib/get-command-blueprint-def.js'
+import { getToken } from 'lib/get-credentials.js'
 import { getResponseKey } from 'lib/get-response-key.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
@@ -133,6 +144,9 @@ async function cli(args: ParsedArgs) {
     args._[1] === 'set' &&
     args._[2] === 'fake-server'
   ) {
+    assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
+    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
+
     const randomstring = randomBytes(5).toString('hex')
     const fakeApiUrl = `https://${randomstring}.fakeseamconnect.seam.vc`
 
@@ -145,11 +159,11 @@ async function cli(args: ParsedArgs) {
   }
 
   if (
-    !config.get(`${getServer()}.pat`) &&
+    getToken() == null &&
     args._[0] !== 'login' &&
     !isEqual(args._, ['select', 'server'])
   ) {
-    output.error(`Not logged in. Please run "seam login"`)
+    output.error(`Not logged in. Please run "seam login" or set ${tokenEnvVar}`)
     process.exitCode = 1
     return
   }
@@ -189,6 +203,19 @@ async function cli(args: ParsedArgs) {
   assertKnownArgs(argParams, selectedCommand, ctx)
 
   if (isEqual(selectedCommand, ['login'])) {
+    // Nothing is stored while the environment overrides it, so refuse before
+    // storing anything rather than part way through.
+    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
+    if (args['server']) {
+      assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
+    }
+    if (args['workspace_id']) {
+      assertEnvVarUnset(
+        workspaceIdEnvVar,
+        getWorkspaceIdFromEnv(),
+        'select a workspace',
+      )
+    }
     if (args['server']) {
       config.set('server', args['server'])
       config.delete('current_workspace_id')
@@ -213,6 +240,7 @@ async function cli(args: ParsedArgs) {
     await interactForLogin()
     return
   } else if (isEqual(selectedCommand, ['logout'])) {
+    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log out')
     config.delete('pat')
     output.info('Logged out!')
     return
@@ -228,6 +256,11 @@ async function cli(args: ParsedArgs) {
     await interactForUseRemoteApiDefs()
     return
   } else if (isEqual(selectedCommand, ['select', 'workspace'])) {
+    assertEnvVarUnset(
+      workspaceIdEnvVar,
+      getWorkspaceIdFromEnv(),
+      'select a workspace',
+    )
     if (isNonInteractive) {
       throw new NonInteractiveError(
         'Cannot select a workspace in non-interactive mode: pass --workspace-id to "seam login"',
@@ -242,6 +275,7 @@ async function cli(args: ParsedArgs) {
       commandParams['since'] = date.toISOString()
     }
   } else if (isEqual(selectedCommand, ['select', 'server'])) {
+    assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
     if (args['server']) {
       config.set('server', args['server'])
       config.delete('current_workspace_id')
@@ -422,7 +456,7 @@ run(process.argv.slice(2)).catch((e: unknown) => {
     return
   }
 
-  if (e instanceof NonInteractiveError) {
+  if (e instanceof NonInteractiveError || e instanceof EnvVarOverrideError) {
     output.error(chalk.red(e.message))
     return
   }
