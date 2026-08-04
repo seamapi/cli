@@ -3,9 +3,14 @@ import { randomBytes } from 'node:crypto'
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import chalk from 'chalk'
-import commandLineUsage from 'command-line-usage'
 import type { ParsedArgs } from 'minimist'
 
+import { getCommandSpec } from 'lib/command-spec.js'
+import {
+  completionShells,
+  isCompletionShell,
+  renderCompletion,
+} from 'lib/completion/index.js'
 import { getConfigStore } from 'lib/config/index.js'
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
 import { getResponseKey } from 'lib/get-response-key.js'
@@ -20,6 +25,7 @@ import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
 import { createOutput } from 'lib/output/create-output.js'
 import { getOutput, setOutput } from 'lib/output/get-output.js'
 import { resolveOutputFormat } from 'lib/output/resolve-output-format.js'
+import { renderHelp } from 'lib/render-help.js'
 import type { ContextHelpers } from 'lib/types.js'
 import {
   cliFlags,
@@ -34,114 +40,58 @@ import { RequestSeamApi } from 'lib/util/request-seam-api.js'
 import { validateToken } from 'lib/validate-token.js'
 import seamapiCliVersion from 'lib/version.js'
 
-const sections = [
-  {
-    header: 'Seam CLI',
-    content:
-      'Every seam command runs as soon as every required property is given, and otherwise prompts you for what is missing with helpful suggestions. Pass -i to always review properties first, or -y to never be prompted. ',
-  },
-  {
-    header: 'Options',
-    optionList: [
-      {
-        name: 'help',
-        description: 'Display this help guide.',
-        alias: 'h',
-        type: Boolean,
-      },
-      {
-        name: 'interactive',
-        description:
-          'Always prompt to review and edit properties, prefilled with the given arguments.',
-        alias: 'i',
-        type: Boolean,
-      },
-      {
-        name: 'non-interactive',
-        description:
-          'Never prompt: exit with an error if the command or any required property is missing.',
-        alias: 'y',
-        type: Boolean,
-      },
-      {
-        name: 'json',
-        description:
-          'Write the response to stdout as JSON. Enabled automatically when stdout is not a terminal, disable with {bold --no-json}.',
-        type: Boolean,
-      },
-      {
-        name: 'update',
-        description: 'Force an update of the cached Seam API definitions.',
-        type: Boolean,
-      },
-    ],
-  },
-  {
-    header: 'Output',
-    content: [
-      'Only the response is written to stdout, so it is safe to pipe. Prompts, progress, and other information are written to stderr.',
-      'The response is trimmed to the response key and pagination.',
-      'Request params may be piped or redirected in as a JSON object. Params given as arguments win over params read from stdin.',
-    ],
-  },
-  {
-    header: 'Command List Examples',
-    content: [
-      { name: 'seam', summary: 'Interactively select commands to execute.' },
-      { name: 'seam login', summary: 'Login to Seam.' },
-      {
-        name: 'seam wizard',
-        summary: 'Set up Seam in the current project.',
-      },
-      { name: 'seam select workspace', summary: 'Select your workspace.' },
-      {
-        name: 'seam connect-webviews create',
-        summary: 'Create a connect webview to connect devices.',
-      },
-      { name: 'seam devices list', summary: 'List devices in your workspace.' },
-      {
-        name: 'seam devices list {bold --interactive}',
-        summary: 'Review and edit filters before listing devices.',
-      },
-      {
-        name: 'seam devices list {bold --non-interactive}',
-        summary: 'List devices, failing instead of prompting.',
-      },
-      {
-        name: 'seam locks unlock-door {bold --device-id} $MY_DOOR',
-        summary: 'Unlock a lock.',
-      },
-      {
-        name: "seam access-codes create {bold --code} '1234' {bold --name} 'My Code'",
-        summary: 'Create an access code.',
-      },
-      {
-        name: 'seam access-codes list {bold --device-id} $MY_DOOR',
-        summary: 'List you access codes.',
-      },
-      {
-        name: 'seam devices list > devices.json',
-        summary: 'Write the response to a file as JSON.',
-      },
-      {
-        name: 'cat params.json | seam locks unlock-door',
-        summary: 'Pipe request params in as JSON.',
-      },
-    ],
-  },
-]
-
 async function cli(args: ParsedArgs) {
   const config = getConfigStore()
   const output = getOutput()
 
-  if (args['help'] || args['h']) {
-    output.text(commandLineUsage(sections))
+  const update = args['update'] === true
+
+  const helpFlag = args['help'] ?? args['h']
+  if (helpFlag != null) {
+    // Help comes from the cached API definitions so that it works without
+    // logging in, and offline once the cache is warm.
+    const spec = getCommandSpec(await getApiBlueprint(false, { update }))
+
+    // minimist reads the word after --help as its value, so 'seam --help
+    // devices' asks about devices just as 'seam devices --help' does.
+    const commandPath = [
+      ...args._,
+      ...(typeof helpFlag === 'string' ? [helpFlag] : []),
+    ].map(toCommandWord)
+
+    const help = renderHelp(commandPath, spec)
+
+    if (help == null) {
+      output.error(chalk.red(`Unknown command: seam ${commandPath.join(' ')}`))
+      output.error(`Run 'seam --help' to see the available commands.`)
+      process.exitCode = 1
+      return
+    }
+
+    output.text(help)
     return
   }
 
   if (args['version']) {
     output.text(seamapiCliVersion)
+    return
+  }
+
+  if (args._[0] === 'completion') {
+    const shell = args._[1]
+
+    if (!isCompletionShell(shell)) {
+      output.error(`Usage: seam completion <${completionShells.join('|')}>`)
+      process.exitCode = 1
+      return
+    }
+
+    // Completions always come from the cached API definitions so that they
+    // can be generated without logging in. They may lag the definitions
+    // served by Seam when config use-remote-api-defs is enabled.
+    output.text(
+      renderCompletion(shell, await getApiBlueprint(false, { update })),
+    )
     return
   }
 
@@ -171,16 +121,13 @@ async function cli(args: ParsedArgs) {
     return
   }
 
-  args._ = args._.map((arg) => arg.toLowerCase().replace(/_/g, '-'))
+  args._ = args._.map(toCommandWord)
   for (const k in args) {
     args[k.toLowerCase().replace(/-/g, '_')] = args[k]
   }
 
   const use_remote_api_defs =
     args['remote_api_defs'] ?? config.get('use_remote_api_defs')
-
-  const update = args['update'] === true
-  delete args['update']
 
   const blueprint = await getApiBlueprint(use_remote_api_defs ?? false, {
     update,
@@ -335,6 +282,9 @@ async function cli(args: ParsedArgs) {
     await interactForActionAttemptPoll(response.data.action_attempt)
   }
 }
+
+const toCommandWord = (arg: string): string =>
+  arg.toLowerCase().replace(/_/g, '-')
 
 const handleConnectWebviewResponse = async (
   connect_webview: any,

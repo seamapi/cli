@@ -155,6 +155,66 @@ Missing required parameter for /locks/unlock_door: --device-id
 An error exits non-zero. A request that fails reports its `error` on stdout,
 so it can be inspected from a pipe; anything else is written to stderr only.
 
+## Help
+
+Pass `--help` to any command to see what it accepts. Without a command, it
+lists every top level command; with an incomplete command, it lists the
+subcommands under it; with a full command, it documents that command's
+options, marking the required ones.
+
+```bash
+# Every top level command
+seam --help
+
+# The commands under seam devices
+seam devices --help
+
+# The options accepted by seam devices list
+seam devices list --help
+```
+
+## Shell completion
+
+The CLI can print a completion script for bash, fish, and zsh that completes
+commands, flags, and flag values such as device types.
+
+Load completions into the current shell with
+
+```bash
+# bash
+source <(seam completion bash)
+
+# zsh
+source <(seam completion zsh)
+```
+
+Install them for every shell with
+
+```bash
+# bash
+seam completion bash > /usr/share/bash-completion/completions/seam
+
+# fish
+seam completion fish > ~/.config/fish/completions/seam.fish
+
+# zsh
+seam completion zsh > "${fpath[1]}/_seam"
+```
+
+System packages install completion loaders instead: small scripts packaged
+under `completions/` in the published package and attached to each
+[GitHub release]. A loader runs `seam completion` the first time the shell
+completes a seam command, so installed completions always match the CLI's
+current Seam API definitions and never go stale between package updates. The
+`seam-bin` AUR package installs the loaders for all three shells.
+
+Completions are generated from the cached Seam API definitions, so they may
+briefly lag a newly released API. Pass `--update` to refresh the cache first,
+e.g., `seam completion bash --update`. They do not reflect definitions served
+by another Seam API server when `seam config use-remote-api-defs` is enabled.
+
+[GitHub release]: https://github.com/seamapi/cli/releases/latest
+
 ## Development and Testing
 
 ### Quickstart
