@@ -1,6 +1,6 @@
 import { existsSync, rmSync } from 'node:fs'
 
-import Configstore from 'configstore'
+import type Configstore from 'configstore'
 
 import { mergeConfig, splitConfig } from './config-store.js'
 
