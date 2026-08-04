@@ -1,29 +1,21 @@
 import { existsSync, rmSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 
 import Configstore from 'configstore'
+import envPaths from 'env-paths'
 
 const configFileName = 'cli.json'
-const configDirectoryName = 'seam'
 const legacyConfigStoreId = 'seam-cli'
 const currentWorkspaceIdKey = 'current_workspace_id'
 const patKey = 'pat'
+const paths = envPaths('seam', { suffix: '' })
 
 const getConfigPath = (): string => {
-  return join(
-    process.env['XDG_CONFIG_HOME'] ?? join(homedir(), '.config'),
-    configDirectoryName,
-    configFileName,
-  )
+  return join(paths.config, configFileName)
 }
 
 const getStateConfigPath = (): string => {
-  return join(
-    process.env['XDG_STATE_HOME'] ?? join(homedir(), '.local', 'state'),
-    configDirectoryName,
-    configFileName,
-  )
+  return join(paths.log, configFileName)
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
