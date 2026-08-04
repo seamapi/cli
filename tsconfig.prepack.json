@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.build.json",
-  "files": ["src/lib/blueprint.ts", "src/lib/version.ts"],
+  "files": ["src/lib/version.ts"],
   "exclude": ["**/*"]
 }

@@ -12,8 +12,9 @@ import { interactForTimestamp } from './interact-for-timestamp.js'
 import { interactForUserIdentity } from './interact-for-user-identity.js'
 import { getOutput } from './output/get-output.js'
 import type { ContextHelpers } from './types.js'
+import { NonInteractiveError, toArgName } from './util/cli-args.js'
 import { ellipsis } from './util/ellipsis.js'
-import { canPrompt, prompt } from './util/prompt.js'
+import { prompt } from './util/prompt.js'
 
 const ergonomicPropOrder = [
   'name',
@@ -48,18 +49,25 @@ export const interactForBlueprintObject = async (
 
   const haveAllRequiredParams = required.every((k) => args.params[k])
 
+  const cmdPath = `/${args.command.join('/').replace(/-/g, '_')}`
+
   const should_auto_submit =
-    !ctx.is_interactive && haveAllRequiredParams && !args.isSubProperty
+    ctx.interactivity !== 'interactive' &&
+    haveAllRequiredParams &&
+    !args.isSubProperty
   if (should_auto_submit) {
     return args.params
   }
 
-  if (!canPrompt()) {
-    if (haveAllRequiredParams) return args.params
-
+  if (ctx.interactivity === 'non-interactive') {
     const missing = required.filter((k) => !args.params[k])
-    throw new Error(
-      `Missing required param${missing.length === 1 ? '' : 's'} ${missing.join(', ')} for /${args.command.join('/').replace(/-/g, '_')}: pass as flags or pipe them in as JSON`,
+    const target = args.isSubProperty ? `"${args.subPropertyPath}"` : cmdPath
+    throw new NonInteractiveError(
+      missing.length > 0
+        ? `Missing required ${
+            missing.length === 1 ? 'parameter' : 'parameters'
+          } for ${target}: ${missing.map(toArgName).join(' ')}`
+        : `Cannot prompt for ${target} in non-interactive mode`,
     )
   }
 
@@ -71,7 +79,6 @@ export const interactForBlueprintObject = async (
     return ergonomicPropOrder.indexOf(prop)
   }
 
-  const cmdPath = `/${args.command.join('/').replace(/-/g, '_')}`
   const parameterSelectionMessage = args.isSubProperty
     ? `Editing "${args.subPropertyPath}"`
     : `[${cmdPath}] Parameters`

@@ -1,7 +1,8 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import type { ContextHelpers } from './types.js'
-import { canPrompt, prompt } from './util/prompt.js'
+import { NonInteractiveError } from './util/cli-args.js'
+import { prompt } from './util/prompt.js'
 
 const uniqBy = <T>(items: T[], keyOf: (item: T) => unknown): T[] => {
   const seen = new Set<unknown>()
@@ -63,6 +64,26 @@ export async function interactForCommandSelection(
     return commandPath
   }
 
+  if (helpers.interactivity === 'non-interactive') {
+    // The command path is itself a command, so call it directly rather than
+    // prompting to select one of its sub-commands.
+    if (possibleCommands.some((cmd) => cmd.length === commandPath.length)) {
+      return commandPath
+    }
+
+    const subcommands = possibleCommands
+      .map((cmd) => cmd[commandPath.length])
+      .filter((subcommand) => subcommand != null)
+      .sort(ergonomicSort)
+    throw new NonInteractiveError(
+      `${
+        commandPath.length === 0
+          ? 'Missing command'
+          : `Incomplete command "seam ${commandPath.join(' ')}"`
+      }: expected one of ${subcommands.join(', ')}`,
+    )
+  }
+
   // Add dynamic 'back' command for sub-commands to allow returning
   // to previous level.
   if (commandPath.length > 0) {
@@ -70,12 +91,6 @@ export async function interactForCommandSelection(
   }
 
   const commandPathStr = commandPath.join('/').replace(/-/g, '_')
-
-  if (!canPrompt()) {
-    throw new Error(
-      `Ambiguous command "/${commandPathStr}": specify a full command, e.g., "seam devices list"`,
-    )
-  }
 
   const res = await prompt({
     name: 'Command',

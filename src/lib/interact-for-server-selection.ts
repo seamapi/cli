@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
-import { getConfigStore } from './get-config-store.js'
+import { getConfigStore } from './config/index.js'
 import { getServer } from './get-server.js'
 import { getOutput } from './output/get-output.js'
 import { prompt } from './util/prompt.js'

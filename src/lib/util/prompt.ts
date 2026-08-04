@@ -1,12 +1,17 @@
 import prompts, { type Answers, type Options, type PromptObject } from 'prompts'
 
+import { NonInteractiveError } from './cli-args.js'
+
 /**
  * Whether the CLI can ask the user a question.
  *
- * Prompts read raw keypresses, so they need a terminal on stdin:
- * when stdin is a pipe or a file it holds request params, not answers.
+ * Prompts read raw keypresses and render an interface, so they need a
+ * terminal on both ends: when stdin is a pipe or a file it holds request
+ * params, not answers, and when stderr is redirected nobody sees the
+ * question.
  */
-export const canPrompt = (): boolean => process.stdin.isTTY === true
+export const canPrompt = (): boolean =>
+  process.stdin.isTTY === true && process.stderr.isTTY === true
 
 /**
  * Ask the user a question.
@@ -19,8 +24,8 @@ export const prompt = async <T extends string = string>(
   options?: Options,
 ): Promise<Answers<T>> => {
   if (!canPrompt()) {
-    throw new Error(
-      'Cannot prompt because stdin is not a terminal. Pass params as flags or pipe them in as JSON.',
+    throw new NonInteractiveError(
+      'Cannot prompt without a terminal: pass the missing arguments, or pipe them in as JSON',
     )
   }
 

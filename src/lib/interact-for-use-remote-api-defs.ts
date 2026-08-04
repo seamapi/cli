@@ -1,4 +1,4 @@
-import { getConfigStore } from './get-config-store.js'
+import { getConfigStore } from './config/index.js'
 import { getOutput } from './output/get-output.js'
 import { prompt } from './util/prompt.js'
 

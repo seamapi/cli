@@ -22,6 +22,7 @@ const errorResponse = {
 }
 
 let server: Server
+let stateHome: string
 let configHome: string
 let requests: Array<{ path: string; body: unknown }> = []
 let failNextRequest = false
@@ -54,15 +55,19 @@ beforeAll(async () => {
   // A host without dots: configstore reads nested keys by dot path.
   const endpoint = `http://localhost:${address.port}`
 
-  configHome = await mkdtemp(join(tmpdir(), 'seam-cli-test-'))
-  // Configstore keeps its config under $XDG_CONFIG_HOME/configstore.
-  await mkdir(join(configHome, 'configstore'))
+  // Settings live under the config dir, auth state under the state dir.
+  const home = await mkdtemp(join(tmpdir(), 'seam-cli-test-'))
+  configHome = join(home, 'config')
+  stateHome = join(home, 'state')
+  await mkdir(join(configHome, 'seam'), { recursive: true })
+  await mkdir(join(stateHome, 'seam'), { recursive: true })
   await writeFile(
-    join(configHome, 'configstore', 'seam-cli.json'),
-    JSON.stringify({
-      server: endpoint,
-      [endpoint]: { pat: 'seam_apikey1_token' },
-    }),
+    join(configHome, 'seam', 'cli.json'),
+    JSON.stringify({ server: endpoint }),
+  )
+  await writeFile(
+    join(stateHome, 'seam', 'cli.json'),
+    JSON.stringify({ [endpoint]: { pat: 'seam_apikey1_token' } }),
   )
 })
 
@@ -85,7 +90,11 @@ const runCli = async (
     ['--import', 'tsx', entrypoint, ...args],
     {
       cwd: projectRoot,
-      env: { XDG_CONFIG_HOME: configHome, FORCE_COLOR: '0' },
+      env: {
+        XDG_CONFIG_HOME: configHome,
+        XDG_STATE_HOME: stateHome,
+        FORCE_COLOR: '0',
+      },
       input: input ?? '',
       reject: false,
     },
@@ -160,25 +169,32 @@ test('cli: reports invalid json params without writing to stdout', async () => {
   expect(stderr).toContain('Could not parse JSON from stdin')
 })
 
-test('cli: reports an ambiguous command without writing to stdout', async () => {
+test('cli: reports an incomplete command without writing to stdout', async () => {
   const { stdout, stderr, exitCode } = await runCli(['devices'])
 
   expect(exitCode).toBe(1)
   expect(stdout).toBe('')
-  expect(stderr).toContain('Ambiguous command "/devices"')
+  expect(stderr).toContain('Incomplete command "seam devices"')
 })
 
-test('cli: reads request params given inline as json', async () => {
+test('cli: reports missing required params rather than prompting', async () => {
+  const { stdout, stderr, exitCode } = await runCli(['locks', 'unlock-door'])
+
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain(
+    'Missing required parameter for /locks/unlock_door: --device-id',
+  )
+})
+
+test('cli: takes --json in any position without consuming an argument', async () => {
   requests = []
-  const { exitCode } = await runCli([
-    'devices',
-    'list',
-    '--json',
-    '{"limit": 3}',
-  ])
+  const { stdout, exitCode } = await runCli(['--json', 'devices', 'list'])
 
   expect(exitCode).toBe(0)
-  expect(requests[0]?.body).toEqual({ limit: 3 })
+  expect(requests[0]?.path).toBe('/devices/list')
+  expect(requests[0]?.body).toEqual({})
+  expect(JSON.parse(stdout).devices).toHaveLength(2)
 })
 
 test('cli: pretty prints the response with --no-json', async () => {

@@ -1,6 +1,6 @@
 import { SeamHttpWithoutWorkspace } from '@seamapi/http/connect'
 
-import { getConfigStore } from './get-config-store.js'
+import { getConfigStore } from './config/index.js'
 import { getSeamMultiWorkspace } from './get-seam.js'
 import { getServer } from './get-server.js'
 import { prompt } from './util/prompt.js'

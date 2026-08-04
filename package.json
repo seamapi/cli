@@ -1,6 +1,6 @@
 {
   "name": "@seamapi/cli",
-  "version": "0.5.0",
+  "version": "0.10.0",
   "description": "A command line interface (CLI) for interacting with the Seam API.",
   "type": "module",
   "main": "index.js",
@@ -10,6 +10,12 @@
       "import": {
         "types": "./index.d.ts",
         "default": "./index.js"
+      }
+    },
+    "./cli": {
+      "import": {
+        "types": "./bin/cli.d.ts",
+        "default": "./bin/cli.js"
       }
     }
   },
@@ -83,18 +89,21 @@
     }
   },
   "dependencies": {
-    "@seamapi/blueprint": "^1.1.0",
-    "@seamapi/http": "^2.2.0",
+    "@seamapi/blueprint": "1.2.0",
+    "@seamapi/http": "2.2.0",
+    "@seamapi/wizard": "0.5.2",
     "chalk": "^6.0.0",
     "command-line-usage": "^7.0.4",
     "configstore": "^8.0.0",
+    "env-paths": "^4.0.0",
     "minimist": "^1.2.8",
     "nanospinner": "^1.2.2",
     "open": "^11.0.0",
-    "prompts": "^2.4.2"
+    "prompts": "^2.4.2",
+    "tar": "^7.5.22"
   },
   "devDependencies": {
-    "@seamapi/types": "^1.983.0",
+    "@seamapi/types": "1.985.0",
     "@types/command-line-usage": "^5.0.4",
     "@types/minimist": "^1.2.5",
     "@types/node": "^24.10.9",
@@ -110,6 +119,7 @@
     "jiti": "^2.4.2",
     "neostandard": "^0.13.0",
     "prettier": "^3.0.0",
+    "react-devtools-core": "^7.0.1",
     "tsc-alias": "^1.8.2",
     "tsx": "^4.6.2",
     "typescript": "^6.0.3",
