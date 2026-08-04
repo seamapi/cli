@@ -7,7 +7,7 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import type { Blueprint, TypesModuleInput } from '@seamapi/blueprint'
 import envPaths from 'env-paths'
@@ -47,10 +47,11 @@ const getBlueprint = async (
   const cacheDirectory =
     options.cacheDirectory ?? envPaths('seam', { suffix: '' }).cache
   const cacheFile = join(cacheDirectory, cacheFileName)
+  const blueprintVersion = await getBlueprintVersion()
 
   const cache = await readCache(cacheFile)
   const isCacheUsable =
-    cache != null && cache.blueprintVersion === seamapiBlueprintVersion
+    cache != null && cache.blueprintVersion === blueprintVersion
 
   if (!update && isCacheUsable && !isUpdateCheckDue(cache.checkedAt)) {
     return cache.blueprint
@@ -90,13 +91,42 @@ const getBlueprint = async (
   }
 
   await writeCache(cacheFile, {
-    blueprintVersion: seamapiBlueprintVersion,
+    blueprintVersion,
     typesVersion: manifest.version,
     checkedAt: new Date().toISOString(),
     blueprint,
   })
 
   return blueprint
+}
+
+const getBlueprintVersion = async (): Promise<string> => {
+  if (seamapiBlueprintVersion !== '0.0.0') return seamapiBlueprintVersion
+
+  // The version is only injected when the package is packed, so a
+  // development checkout reads the pinned version from package.json
+  // to keep invalidating the cache on version changes as expected.
+  const pkg = await findOwnPackageJson()
+  return pkg?.dependencies?.['@seamapi/blueprint'] ?? seamapiBlueprintVersion
+}
+
+const findOwnPackageJson = async (): Promise<{
+  dependencies?: Record<string, string>
+} | null> => {
+  let directory = dirname(fileURLToPath(import.meta.url))
+  while (true) {
+    try {
+      const pkg = JSON.parse(
+        await readFile(join(directory, 'package.json'), 'utf8'),
+      ) as { name?: string; dependencies?: Record<string, string> }
+      if (pkg.name === '@seamapi/cli') return pkg
+    } catch {
+      // Keep walking up until a package.json for this package is found.
+    }
+    const parent = dirname(directory)
+    if (parent === directory) return null
+    directory = parent
+  }
 }
 
 const isUpdateCheckDue = (checkedAt: string): boolean => {

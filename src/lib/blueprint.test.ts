@@ -17,7 +17,6 @@ import {
 } from 'vitest'
 
 import getBlueprint from './blueprint.js'
-import { seamapiBlueprintVersion } from './version.js'
 
 const typesVersion = '1.985.0'
 const manifestUrl = 'https://registry.npmjs.org/@seamapi/types/latest'
@@ -25,6 +24,7 @@ const tarballUrl = `https://registry.npmjs.org/@seamapi/types/-/types-${typesVer
 const openapiTarEntryName = 'package/lib/seam/connect/openapi.js'
 
 let tarball: Buffer
+let pinnedBlueprintVersion: string
 let seedCacheState: {
   blueprintVersion: string
   typesVersion: string
@@ -79,6 +79,11 @@ const hoursAgo = (hours: number): string =>
   new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
 
 beforeAll(async () => {
+  const pkg = JSON.parse(
+    await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
+  ) as { dependencies: Record<string, string> }
+  pinnedBlueprintVersion = pkg.dependencies['@seamapi/blueprint'] ?? ''
+
   // Build a @seamapi/types package tarball from the locally installed
   // package so tests never use the network.
   const fixtureDirectory = await mkdtemp(join(tmpdir(), 'seam-cli-types-'))
@@ -132,7 +137,7 @@ describe('getBlueprint', () => {
     expect(blueprint.routes.length).toBeGreaterThan(0)
     expect(fetchMock).toHaveBeenCalledTimes(2)
     const cache = await readCache()
-    expect(cache.blueprintVersion).toBe(seamapiBlueprintVersion)
+    expect(cache.blueprintVersion).toBe(pinnedBlueprintVersion)
     expect(cache.typesVersion).toBe(typesVersion)
     expect(Date.parse(cache.checkedAt)).not.toBeNaN()
   })
@@ -179,7 +184,7 @@ describe('getBlueprint', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     const cache = await readCache()
-    expect(cache.blueprintVersion).toBe(seamapiBlueprintVersion)
+    expect(cache.blueprintVersion).toBe(pinnedBlueprintVersion)
   })
 
   it('forces an update with the update option', async () => {
