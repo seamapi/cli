@@ -5,7 +5,12 @@ import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
 import { createMemoryOutput } from './output/create-memory-output.js'
 import { setOutput } from './output/get-output.js'
 import type { ContextHelpers } from './types.js'
-import { promptAutocomplete, promptSelect } from './util/prompt.js'
+import {
+  promptAutocomplete,
+  PromptCancelledError,
+  promptSelect,
+  promptText,
+} from './util/prompt.js'
 
 vi.mock('./util/prompt.js', () => ({
   canPrompt: vi.fn(() => true),
@@ -20,6 +25,8 @@ vi.mock('./util/prompt.js', () => ({
 
 beforeEach(() => {
   vi.mocked(promptAutocomplete).mockClear()
+  vi.mocked(promptAutocomplete).mockImplementation(async () => 'done')
+  vi.mocked(promptText).mockReset()
   // Keep the interactive chrome out of the test output.
   setOutput(createMemoryOutput().output)
 })
@@ -174,3 +181,47 @@ test.for(['custom_metadata', 'custom_metadata_has'] as const)(
     ).resolves.toEqual({ [name]: {} })
   },
 )
+
+test('interactForBlueprintObject: dismissing the parameter menu leaves the command', async () => {
+  vi.mocked(promptAutocomplete).mockRejectedValueOnce(
+    new PromptCancelledError(),
+  )
+
+  await expect(
+    interactForBlueprintObject(
+      args({ device_id: 'device1' }),
+      ctx('interactive'),
+    ),
+  ).resolves.toBe('[Back]')
+})
+
+test('interactForBlueprintObject: dismissing a value prompt returns to the menu', async () => {
+  vi.mocked(promptAutocomplete)
+    .mockImplementationOnce(async () => 'name')
+    .mockImplementationOnce(async () => 'done')
+  vi.mocked(promptText).mockRejectedValueOnce(new PromptCancelledError())
+
+  // The parameter is left unset and the command still runs, rather than the
+  // dismissal ending the whole command.
+  await expect(
+    interactForBlueprintObject(
+      args({ device_id: 'device1' }),
+      ctx('interactive'),
+    ),
+  ).resolves.toEqual({ device_id: 'device1' })
+  expect(promptAutocomplete).toHaveBeenCalledTimes(2)
+})
+
+test('interactForBlueprintObject: dismissing a value prompt keeps an earlier value', async () => {
+  vi.mocked(promptAutocomplete)
+    .mockImplementationOnce(async () => 'name')
+    .mockImplementationOnce(async () => 'done')
+  vi.mocked(promptText).mockRejectedValueOnce(new PromptCancelledError())
+
+  await expect(
+    interactForBlueprintObject(
+      args({ device_id: 'device1', name: 'Front Door' }),
+      ctx('interactive'),
+    ),
+  ).resolves.toEqual({ device_id: 'device1', name: 'Front Door' })
+})
