@@ -97,6 +97,64 @@ seam access-codes create --code "1234" --name "My Code"
 seam access-codes list --device-id $MY_DOOR
 ```
 
+### Output
+
+Only the response is written to stdout, so any command may be piped or
+redirected. Prompts, progress, and other information are written to stderr.
+
+The response is trimmed to the response key and pagination: no other top level
+fields are reported.
+
+```bash
+# The response, and nothing else, ends up in the file
+seam devices list > devices.json
+
+# Prompts and progress still show up in the terminal
+seam devices list | jq '.devices[].device_id'
+```
+
+### JSON
+
+Request params may be piped or redirected in as a JSON object. Params given as
+arguments win over params read from stdin.
+
+```bash
+# Read params from a file
+seam locks unlock-door < params.json
+
+# Or from another program
+echo '{"device_id": "'"$MY_DOOR"'"}' | seam locks unlock-door
+
+# --device-id wins over any device_id in params.json
+seam devices list --limit 5 < params.json
+```
+
+Pass `--json` to write the response as JSON. It is enabled automatically
+whenever stdout is not a terminal, so piping and redirecting produce JSON
+without passing anything. Pass `--no-json` to opt out and get the pretty
+format instead.
+
+```bash
+# Both write JSON
+seam devices list --json
+seam devices list | jq
+
+# Pretty printed, even though it is piped
+seam devices list --no-json | less
+```
+
+Without a terminal to prompt on, the CLI behaves as though
+`--non-interactive` was given: rather than waiting for an answer nobody can
+give, it exits with an error naming what is missing.
+
+```bash
+$ echo '{}' | seam locks unlock-door
+Missing required parameter for /locks/unlock_door: --device-id
+```
+
+An error exits non-zero. A request that fails reports its `error` on stdout,
+so it can be inspected from a pipe; anything else is written to stderr only.
+
 ## Development and Testing
 
 ### Quickstart

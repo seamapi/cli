@@ -55,3 +55,15 @@ test('toArgName: renders a parameter as its argument', () => {
   expect(toArgName('device_id')).toBe('--device-id')
   expect(toArgName('code')).toBe('--code')
 })
+
+test('getInteractivity: never prompts without a terminal', () => {
+  expect(
+    getInteractivity(parse(['devices', 'list']), { canPrompt: false }),
+  ).toBe('non-interactive')
+})
+
+test('getInteractivity: an explicit --interactive still prompts', () => {
+  expect(
+    getInteractivity(parse(['devices', 'list', '-i']), { canPrompt: false }),
+  ).toBe('interactive')
+})

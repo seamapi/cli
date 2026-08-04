@@ -1,16 +1,21 @@
 import type { Parameter } from '@seamapi/blueprint'
-import prompts from 'prompts'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
+import { createMemoryOutput } from './output/create-memory-output.js'
+import { setOutput } from './output/get-output.js'
 import type { ContextHelpers } from './types.js'
+import { prompt } from './util/prompt.js'
 
-vi.mock('prompts', () => ({
-  default: vi.fn(async () => ({ paramToEdit: 'done' })),
+vi.mock('./util/prompt.js', () => ({
+  canPrompt: vi.fn(() => true),
+  prompt: vi.fn(async () => ({ paramToEdit: 'done' })),
 }))
 
 beforeEach(() => {
-  vi.mocked(prompts).mockClear()
+  vi.mocked(prompt).mockClear()
+  // Keep the interactive chrome out of the test output.
+  setOutput(createMemoryOutput().output)
 })
 
 const parameters = [
@@ -31,7 +36,7 @@ test('interactForBlueprintObject: submits without prompting once every required 
   await expect(
     interactForBlueprintObject(args({ device_id: 'device1' }), ctx('auto')),
   ).resolves.toEqual({ device_id: 'device1' })
-  expect(prompts).not.toHaveBeenCalled()
+  expect(prompt).not.toHaveBeenCalled()
 })
 
 test('interactForBlueprintObject: prompts to review given parameters when interactive', async () => {
@@ -41,7 +46,7 @@ test('interactForBlueprintObject: prompts to review given parameters when intera
       ctx('interactive'),
     ),
   ).resolves.toEqual({ device_id: 'device1' })
-  expect(prompts).toHaveBeenCalledTimes(1)
+  expect(prompt).toHaveBeenCalledTimes(1)
 })
 
 test('interactForBlueprintObject: prefills the prompt with the given parameters', async () => {
@@ -50,7 +55,7 @@ test('interactForBlueprintObject: prefills the prompt with the given parameters'
     ctx('interactive'),
   )
 
-  const { choices } = vi.mocked(prompts).mock.calls[0]?.[0] as {
+  const { choices } = vi.mocked(prompt).mock.calls[0]?.[0] as {
     choices: Array<{ value: string; description?: string }>
   }
   expect(choices.find(({ value }) => value === 'device_id')).toMatchObject({
@@ -65,7 +70,7 @@ test('interactForBlueprintObject: submits without prompting when non-interactive
       ctx('non-interactive'),
     ),
   ).resolves.toEqual({ device_id: 'device1' })
-  expect(prompts).not.toHaveBeenCalled()
+  expect(prompt).not.toHaveBeenCalled()
 })
 
 test('interactForBlueprintObject: rejects missing required parameters when non-interactive', async () => {
@@ -77,5 +82,5 @@ test('interactForBlueprintObject: rejects missing required parameters when non-i
   ).rejects.toThrowError(
     'Missing required parameter for /devices/get: --device-id',
   )
-  expect(prompts).not.toHaveBeenCalled()
+  expect(prompt).not.toHaveBeenCalled()
 })

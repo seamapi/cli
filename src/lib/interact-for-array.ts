@@ -1,19 +1,21 @@
-import prompts from 'prompts'
+import { getOutput } from './output/get-output.js'
+import { prompt } from './util/prompt.js'
 
 export const interactForArray = async (
   array: string[],
   message: string,
 ): Promise<string[]> => {
   const updatedArray = [...array]
+  const output = getOutput()
 
   const displayList = () => {
-    console.log(`${message} Current list:`)
+    output.info(`${message} Current list:`)
     if (updatedArray.length > 0) {
       updatedArray.forEach((item, index) => {
-        console.log(`${index + 1}: ${item}`)
+        output.info(`${index + 1}: ${item}`)
       })
     } else {
-      console.log('The list is currently empty.')
+      output.info('The list is currently empty.')
     }
   }
 
@@ -21,7 +23,7 @@ export const interactForArray = async (
   do {
     displayList()
 
-    const response = await prompts({
+    const response = await prompt({
       type: 'select',
       name: 'action',
       message: 'Choose an action:',
@@ -35,7 +37,7 @@ export const interactForArray = async (
     action = response.action
 
     if (action === 'add') {
-      const { newItem } = await prompts({
+      const { newItem } = await prompt({
         type: 'text',
         name: 'newItem',
         message: 'Enter the new item:',
@@ -44,7 +46,7 @@ export const interactForArray = async (
         updatedArray.push(newItem)
       }
     } else if (action === 'remove') {
-      const { index } = await prompts({
+      const { index } = await prompt({
         type: 'number',
         name: 'index',
         message: 'Enter the index of the item to remove:',

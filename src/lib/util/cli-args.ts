@@ -24,6 +24,20 @@ export const interactivityFlags: string[] = [
 ]
 
 /**
+ * Argument keys that configure the CLI itself
+ * and are therefore never sent as command parameters.
+ */
+export const cliFlags: string[] = [
+  ...interactivityFlags,
+  'h',
+  'help',
+  'json',
+  'remote_api_defs',
+  'update',
+  'version',
+]
+
+/**
  * Thrown when the CLI needs input it cannot prompt for.
  */
 export class NonInteractiveError extends Error {
@@ -33,13 +47,27 @@ export class NonInteractiveError extends Error {
 export const parseCliArgs = (argv: string[]): ParsedArgs =>
   parseArgs(argv, {
     string: ['code'],
-    boolean: ['non-interactive', 'interactive'],
+    boolean: ['non-interactive', 'interactive', 'json'],
     // Deliberately not aliased to -n, which is reserved for a future
     // --dry-run flag.
     alias: { 'non-interactive': 'y', interactive: 'i' },
   })
 
-export const getInteractivity = (args: ParsedArgs): Interactivity => {
+export interface GetInteractivityOptions {
+  /**
+   * Whether there is a terminal to prompt on.
+   *
+   * When there is not, the CLI cannot ask for anything, so it behaves as
+   * though `--non-interactive` was given rather than waiting on a prompt
+   * nobody can answer.
+   */
+  canPrompt?: boolean
+}
+
+export const getInteractivity = (
+  args: ParsedArgs,
+  { canPrompt = true }: GetInteractivityOptions = {},
+): Interactivity => {
   const isNonInteractive =
     args['non_interactive'] === true || args['y'] === true
   const isInteractive = args['interactive'] === true || args['i'] === true
@@ -50,7 +78,9 @@ export const getInteractivity = (args: ParsedArgs): Interactivity => {
     )
   }
   if (isNonInteractive) return 'non-interactive'
+  // An explicit --interactive still asks, and fails loudly if it cannot.
   if (isInteractive) return 'interactive'
+  if (!canPrompt) return 'non-interactive'
   return 'auto'
 }
 

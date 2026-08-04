@@ -1,9 +1,8 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
-import prompts from 'prompts'
-
 import type { ContextHelpers } from './types.js'
 import { NonInteractiveError } from './util/cli-args.js'
+import { prompt } from './util/prompt.js'
 
 const uniqBy = <T>(items: T[], keyOf: (item: T) => unknown): T[] => {
   const seen = new Set<unknown>()
@@ -93,7 +92,7 @@ export async function interactForCommandSelection(
 
   const commandPathStr = commandPath.join('/').replace(/-/g, '_')
 
-  const res = await prompts({
+  const res = await prompt({
     name: 'Command',
     type: 'autocomplete',
     choices: [

@@ -1,4 +1,5 @@
-import prompts from 'prompts'
+import { getOutput } from './output/get-output.js'
+import { prompt } from './util/prompt.js'
 
 // Structurally the CustomMetadata of @seamapi/types, spelled out here so the
 // published declarations do not depend on a development-only package.
@@ -12,15 +13,16 @@ export const interactForCustomMetadata = async (
   custom_metadata: CustomMetadata,
 ) => {
   const updated_custom_metadata: UpdatedCustomMetadata = { ...custom_metadata }
+  const output = getOutput()
 
   const displayCurrentCustomMetadata = () => {
-    console.log('custom_metadata:')
+    output.info('custom_metadata:')
     if (Object.keys(updated_custom_metadata).length > 0) {
       Object.keys(updated_custom_metadata).forEach((key, index) => {
-        console.log(`${index + 1}: ${key}: ${updated_custom_metadata[key]}`)
+        output.info(`${index + 1}: ${key}: ${updated_custom_metadata[key]}`)
       })
     } else {
-      console.log('The custom metadata param is empty.')
+      output.info('The custom metadata param is empty.')
     }
   }
 
@@ -29,7 +31,7 @@ export const interactForCustomMetadata = async (
   do {
     displayCurrentCustomMetadata()
 
-    const response = await prompts({
+    const response = await prompt({
       type: 'select',
       name: 'action',
       message: 'Choose an action:',
@@ -43,13 +45,13 @@ export const interactForCustomMetadata = async (
     action = response.action
 
     if (action === 'add') {
-      const { newKey } = await prompts({
+      const { newKey } = await prompt({
         type: 'text',
         name: 'newKey',
         message: 'Enter a key to add or edit:',
       })
 
-      let { newValue } = await prompts({
+      let { newValue } = await prompt({
         type: 'text',
         name: 'newValue',
         message: 'Enter the new value to add or edit (or null to delete):',
@@ -65,7 +67,7 @@ export const interactForCustomMetadata = async (
         }
       }
     } else if (action === 'remove') {
-      const { custom_key_to_remove } = await prompts({
+      const { custom_key_to_remove } = await prompt({
         type: 'select',
         name: 'custom_key_to_remove',
         message: 'Choose a key-value pair to remove from params:',

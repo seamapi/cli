@@ -5,10 +5,10 @@ import { isDeepStrictEqual as isEqual } from 'node:util'
 import chalk from 'chalk'
 import commandLineUsage from 'command-line-usage'
 import type { ParsedArgs } from 'minimist'
-import prompts from 'prompts'
 
 import { getConfigStore } from 'lib/config/index.js'
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
+import { getResponseKey } from 'lib/get-response-key.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
 import { interactForCommandParams } from 'lib/interact-for-command-params.js'
@@ -17,14 +17,19 @@ import { interactForLogin } from 'lib/interact-for-login.js'
 import { interactForServerSelection } from 'lib/interact-for-server-selection.js'
 import { interactForUseRemoteApiDefs } from 'lib/interact-for-use-remote-api-defs.js'
 import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
+import { createOutput } from 'lib/output/create-output.js'
+import { getOutput, setOutput } from 'lib/output/get-output.js'
+import { resolveOutputFormat } from 'lib/output/resolve-output-format.js'
 import type { ContextHelpers } from 'lib/types.js'
 import {
+  cliFlags,
   getInteractivity,
   type Interactivity,
-  interactivityFlags,
   NonInteractiveError,
   parseCliArgs,
 } from 'lib/util/cli-args.js'
+import { canPrompt, prompt } from 'lib/util/prompt.js'
+import { readStdinJson } from 'lib/util/read-stdin-json.js'
 import { RequestSeamApi } from 'lib/util/request-seam-api.js'
 import { validateToken } from 'lib/validate-token.js'
 import seamapiCliVersion from 'lib/version.js'
@@ -59,10 +64,24 @@ const sections = [
         type: Boolean,
       },
       {
+        name: 'json',
+        description:
+          'Write the response to stdout as JSON. Enabled automatically when stdout is not a terminal, disable with {bold --no-json}.',
+        type: Boolean,
+      },
+      {
         name: 'update',
         description: 'Force an update of the cached Seam API definitions.',
         type: Boolean,
       },
+    ],
+  },
+  {
+    header: 'Output',
+    content: [
+      'Only the response is written to stdout, so it is safe to pipe. Prompts, progress, and other information are written to stderr.',
+      'The response is trimmed to the response key and pagination.',
+      'Request params may be piped or redirected in as a JSON object. Params given as arguments win over params read from stdin.',
     ],
   },
   {
@@ -100,22 +119,30 @@ const sections = [
         name: 'seam access-codes list {bold --device-id} $MY_DOOR',
         summary: 'List you access codes.',
       },
+      {
+        name: 'seam devices list > devices.json',
+        summary: 'Write the response to a file as JSON.',
+      },
+      {
+        name: 'cat params.json | seam locks unlock-door',
+        summary: 'Pipe request params in as JSON.',
+      },
     ],
   },
 ]
 
 async function cli(args: ParsedArgs) {
   const config = getConfigStore()
+  const output = getOutput()
 
   if (args['help'] || args['h']) {
-    const usage = commandLineUsage(sections)
-    console.log(usage)
+    output.text(commandLineUsage(sections))
     return
   }
 
   if (args['version']) {
-    console.log(seamapiCliVersion)
-    process.exit(0)
+    output.text(seamapiCliVersion)
+    return
   }
 
   if (
@@ -127,10 +154,10 @@ async function cli(args: ParsedArgs) {
     const fakeApiUrl = `https://${randomstring}.fakeseamconnect.seam.vc`
 
     config.set('server', fakeApiUrl)
-    console.log(`Server URL set to ${fakeApiUrl}`)
+    output.info(`Server URL set to ${fakeApiUrl}`)
 
     config.set(`${getServer()}.pat`, `seam_apikey1_token`)
-    console.log(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
+    output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
     return
   }
 
@@ -139,8 +166,9 @@ async function cli(args: ParsedArgs) {
     args._[0] !== 'login' &&
     !isEqual(args._, ['select', 'server'])
   ) {
-    console.log(`Not logged in. Please run "seam login"`)
-    process.exit(1)
+    output.error(`Not logged in. Please run "seam login"`)
+    process.exitCode = 1
+    return
   }
 
   args._ = args._.map((arg) => arg.toLowerCase().replace(/_/g, '-'))
@@ -158,11 +186,13 @@ async function cli(args: ParsedArgs) {
     update,
   })
 
-  const commandParams: Record<string, any> = {}
+  // Params piped or redirected in, e.g., `seam devices list < params.json`.
+  // Params given as arguments take precedence over these.
+  const commandParams: Record<string, any> = { ...(await readStdinJson()) }
 
   const ctx: ContextHelpers = {
     blueprint,
-    interactivity: getInteractivity(args),
+    interactivity: getInteractivity(args, { canPrompt: canPrompt() }),
   }
 
   const isNonInteractive = ctx.interactivity === 'non-interactive'
@@ -173,7 +203,7 @@ async function cli(args: ParsedArgs) {
     delete args[k]
     const key = k.replace(/-/g, '_')
     args[key] = v
-    if (interactivityFlags.includes(key)) continue
+    if (cliFlags.includes(key)) continue
     commandParams[key] = v
   }
 
@@ -204,10 +234,10 @@ async function cli(args: ParsedArgs) {
     return
   } else if (isEqual(selectedCommand, ['logout'])) {
     config.delete('pat')
-    console.log('Logged out!')
+    output.info('Logged out!')
     return
   } else if (isEqual(selectedCommand, ['config', 'reveal-location'])) {
-    console.log(config.path)
+    output.text(config.path)
     return
   } else if (isEqual(selectedCommand, ['config', 'use-remote-api-defs'])) {
     if (isNonInteractive) {
@@ -291,6 +321,7 @@ async function cli(args: ParsedArgs) {
   const response = await RequestSeamApi({
     path: apiPath,
     params,
+    responseKey: getResponseKey(selectedCommand, ctx),
   })
 
   if (response.data?.connect_webview) {
@@ -301,7 +332,7 @@ async function cli(args: ParsedArgs) {
   }
 
   if (response.data?.action_attempt && !isNonInteractive) {
-    interactForActionAttemptPoll(response.data.action_attempt)
+    await interactForActionAttemptPoll(response.data.action_attempt)
   }
 }
 
@@ -315,7 +346,7 @@ const handleConnectWebviewResponse = async (
     interactivity !== 'non-interactive' &&
     process.env['INSIDE_WEB_BROWSER'] !== '1'
   ) {
-    const { action } = await prompts({
+    const { action } = await prompt({
       type: 'confirm',
       name: 'action',
       message: 'Would you like to open the webview in your browser?',
@@ -338,17 +369,30 @@ const run = async (argv: string[]) => {
     return
   }
 
-  await cli(parseCliArgs(argv))
+  const args = parseCliArgs(argv)
+
+  const isTty = process.stdout.isTTY === true
+
+  setOutput(
+    createOutput({
+      format: resolveOutputFormat(argv, { isTty }),
+      colors: isTty,
+    }),
+  )
+
+  await cli(args)
 }
 
-run(process.argv.slice(2)).catch((e) => {
+run(process.argv.slice(2)).catch((e: unknown) => {
+  const output = getOutput()
+  process.exitCode = 1
+
   if (e instanceof NonInteractiveError) {
-    console.log(chalk.red(e.message))
-    process.exit(1)
+    output.error(chalk.red(e.message))
+    return
   }
 
-  console.log(chalk.red(`CLI Error: ${e.toString()}\n${e.stack}`))
-  if (e.toString().includes('object Object')) {
-    console.log(e)
-  }
+  const error = e instanceof Error ? e : new Error(String(e))
+  output.error(chalk.red(`CLI Error: ${error.message}`))
+  if (error.stack != null) output.error(chalk.gray(error.stack))
 })
