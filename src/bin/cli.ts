@@ -241,7 +241,8 @@ async function cli(args: ParsedArgs) {
     return
   } else if (isEqual(selectedCommand, ['logout'])) {
     assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log out')
-    config.delete('pat')
+    config.delete(`${getServer()}.pat`)
+    config.delete('current_workspace_id')
     output.info('Logged out!')
     return
   } else if (isEqual(selectedCommand, ['config', 'reveal-location'])) {

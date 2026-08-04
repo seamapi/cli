@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -503,4 +503,61 @@ test('cli: reports a failed request on stdout and exits non-zero', async () => {
     error: { type: 'invalid_input', message: 'Bad request' },
   })
   expect(stderr).toContain('[400]')
+})
+
+// Logout gets its own state, since logging out of the shared one would
+// unauthenticate every other test in this file.
+const createLoggedInStateHome = async (): Promise<string> => {
+  const home = await mkdtemp(join(tmpdir(), 'seam-cli-logout-'))
+  await mkdir(join(home, 'seam'), { recursive: true })
+  await writeFile(
+    join(home, 'seam', 'cli.json'),
+    JSON.stringify({
+      [endpoint]: { pat: 'seam_apikey1_token' },
+      current_workspace_id: 'workspace1',
+    }),
+  )
+  return home
+}
+
+const readStoredState = async (home: string): Promise<unknown> =>
+  JSON.parse(await readFile(join(home, 'seam', 'cli.json'), 'utf8'))
+
+test('cli: logout removes the stored token', async () => {
+  const home = await createLoggedInStateHome()
+
+  const { exitCode } = await runCli(['logout'], { stateHome: home })
+
+  expect(exitCode).toBe(0)
+  expect(await readStoredState(home)).toEqual({ [endpoint]: {} })
+})
+
+test('cli: logout leaves the cli unauthenticated', async () => {
+  const home = await createLoggedInStateHome()
+
+  await runCli(['logout'], { stateHome: home })
+  const { stderr, exitCode } = await runCli(['devices', 'list'], {
+    stateHome: home,
+  })
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Not logged in')
+})
+
+test('cli: logout keeps a token stored for another server', async () => {
+  const home = await createLoggedInStateHome()
+  await writeFile(
+    join(home, 'seam', 'cli.json'),
+    JSON.stringify({
+      [endpoint]: { pat: 'seam_apikey1_token' },
+      'http://localhost:1': { pat: 'seam_apikey1_other' },
+    }),
+  )
+
+  await runCli(['logout'], { stateHome: home })
+
+  expect(await readStoredState(home)).toEqual({
+    [endpoint]: {},
+    'http://localhost:1': { pat: 'seam_apikey1_other' },
+  })
 })

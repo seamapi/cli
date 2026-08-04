@@ -50,7 +50,7 @@ export const interactForCustomMetadata = async (
       })
       if (newKey) {
         if (newValue === 'false' || newValue === 'true') {
-          newValue = Boolean(newValue)
+          newValue = newValue === 'true'
         }
         if (newValue === 'null') {
           updatedCustomMetadata[newKey] = null
@@ -69,7 +69,7 @@ export const interactForCustomMetadata = async (
         }),
       })
 
-      delete customMetadata[customKeyToRemove]
+      delete updatedCustomMetadata[customKeyToRemove]
     }
   } while (action !== 'done')
 
