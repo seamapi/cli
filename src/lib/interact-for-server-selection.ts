@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { getConfigStore } from './config/index.js'
 import { getServer } from './get-server.js'
 import { getOutput } from './output/get-output.js'
-import { prompt } from './util/prompt.js'
+import { promptSelect, promptText } from './util/prompt.js'
 
 export async function interactForServerSelection() {
   const servers = [
@@ -12,26 +12,18 @@ export async function interactForServerSelection() {
     'https://fakeseamconnect.seam.vc',
   ]
 
-  const { server } = await prompt([
-    {
-      type: 'select',
-      name: 'server',
-      message: 'Select a server:',
-      choices: servers.map((server) => ({ title: server, value: server })),
-    },
-  ])
+  const server = await promptSelect({
+    message: 'Select a server:',
+    choices: servers.map((server) => ({ label: server, value: server })),
+  })
 
   const config = getConfigStore()
   const output = getOutput()
   if (server === servers[2]) {
-    let { userUrlSeed } = await prompt([
-      {
-        type: 'text',
-        name: 'userUrlSeed',
-        message:
-          'You can input a custom server URL or leave this field empty to use a new fakeserver.',
-      },
-    ])
+    let userUrlSeed = await promptText({
+      message:
+        'You can input a custom server URL or leave this field empty to use a new fakeserver.',
+    })
 
     if (userUrlSeed.trim().length === 0) {
       userUrlSeed = randomBytes(5).toString('hex')

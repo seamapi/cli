@@ -92,6 +92,7 @@
     }
   },
   "dependencies": {
+    "@clack/prompts": "^1.7.0",
     "@seamapi/blueprint": "1.2.0",
     "@seamapi/http": "2.2.0",
     "@seamapi/wizard": "0.5.2",
@@ -102,7 +103,6 @@
     "minimist": "^1.2.8",
     "nanospinner": "^1.2.2",
     "open": "^11.0.0",
-    "prompts": "^2.4.2",
     "tar": "^7.5.22"
   },
   "devDependencies": {
@@ -110,7 +110,6 @@
     "@types/command-line-usage": "^5.0.4",
     "@types/minimist": "^1.2.5",
     "@types/node": "^24.10.9",
-    "@types/prompts": "^2.4.9",
     "@vitest/coverage-v8": "^4.1.10",
     "concurrently": "^10.0.4",
     "del-cli": "^7.0.0",

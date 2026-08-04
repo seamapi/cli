@@ -1,4 +1,4 @@
-import { prompt } from './util/prompt.js'
+import { promptAutocomplete } from './util/prompt.js'
 import { withLoading } from './util/with-loading.js'
 
 export interface ResourceChoice {
@@ -22,12 +22,11 @@ export const interactForResource = async <Resource>({
     `Fetching ${resourceName.replace(/_/g, ' ')}s...`,
     fetchResources,
   )
-  const { resourceId } = await prompt({
-    name: 'resourceId',
-    type: 'autocomplete',
+  return await promptAutocomplete({
     message,
-    choices: resources.map(toChoice),
+    choices: resources.map((resource) => {
+      const { title, value, description } = toChoice(resource)
+      return { label: title, value, hint: description }
+    }),
   })
-
-  return resourceId as string
 }

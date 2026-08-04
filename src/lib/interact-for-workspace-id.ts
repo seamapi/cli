@@ -3,7 +3,7 @@ import { SeamHttpWithoutWorkspace } from '@seamapi/http/connect'
 import { getConfigStore } from './config/index.js'
 import { getSeamMultiWorkspace } from './get-seam.js'
 import { getServer } from './get-server.js'
-import { prompt } from './util/prompt.js'
+import { promptSelect } from './util/prompt.js'
 import { withLoading } from './util/with-loading.js'
 
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {
@@ -17,21 +17,15 @@ export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const workspaces = await withLoading('Fetching workspaces...', () =>
     seam.workspaces.list(),
   )
-  const { workspaceId } = await prompt({
-    name: 'workspaceId',
-    type: 'select',
+  const workspaceId = await promptSelect<string>({
     message: 'Select a workspace:',
     choices: workspaces.map((workspace: any) => ({
-      title: workspace.name,
+      label: workspace.name,
       value: workspace.workspace_id,
-      description: workspace.workspace_id,
+      hint: workspace.workspace_id,
     })),
   })
 
-  if (workspaceId) {
-    config.set('current_workspace_id', workspaceId)
-    return workspaceId
-  }
-
-  throw new Error('Bailed')
+  config.set('current_workspace_id', workspaceId)
+  return workspaceId
 }

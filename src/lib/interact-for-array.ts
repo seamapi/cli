@@ -1,5 +1,5 @@
 import { getOutput } from './output/get-output.js'
-import { prompt } from './util/prompt.js'
+import { promptNumber, promptSelect, promptText } from './util/prompt.js'
 
 export const interactForArray = async (
   array: string[],
@@ -23,39 +23,31 @@ export const interactForArray = async (
   do {
     displayList()
 
-    const response = await prompt({
-      type: 'select',
-      name: 'action',
+    action = await promptSelect({
       message: 'Choose an action:',
       choices: [
-        { title: 'Add an item', value: 'add' },
-        { title: 'Remove an item', value: 'remove' },
-        { title: 'Finish editing', value: 'done' },
+        { label: 'Add an item', value: 'add' },
+        { label: 'Remove an item', value: 'remove' },
+        { label: 'Finish editing', value: 'done' },
       ],
     })
 
-    action = response.action
-
     if (action === 'add') {
-      const { newItem } = await prompt({
-        type: 'text',
-        name: 'newItem',
+      const newItem = await promptText({
         message: 'Enter the new item:',
       })
       if (newItem) {
         updatedArray.push(newItem)
       }
     } else if (action === 'remove') {
-      const { index } = await prompt({
-        type: 'number',
-        name: 'index',
+      const index = await promptNumber({
         message: 'Enter the index of the item to remove:',
         validate: (value) =>
-          value > 0 && value <= updatedArray.length ? true : 'Invalid index',
+          value > 0 && value <= updatedArray.length
+            ? undefined
+            : 'Invalid index',
       })
-      if (index) {
-        updatedArray.splice(index - 1, 1)
-      }
+      updatedArray.splice(index - 1, 1)
     }
   } while (action !== 'done')
 

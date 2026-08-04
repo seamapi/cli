@@ -1,5 +1,5 @@
 import { getOutput } from './output/get-output.js'
-import { prompt } from './util/prompt.js'
+import { promptSelect, promptText } from './util/prompt.js'
 
 // Structurally the CustomMetadata of @seamapi/types, spelled out here so the
 // published declarations do not depend on a development-only package.
@@ -31,29 +31,21 @@ export const interactForCustomMetadata = async (
   do {
     displayCurrentCustomMetadata()
 
-    const response = await prompt({
-      type: 'select',
-      name: 'action',
+    action = await promptSelect({
       message: 'Choose an action:',
       choices: [
-        { title: 'Add an item to params', value: 'add' },
-        { title: 'Remove an item from params', value: 'remove' },
-        { title: 'Finish editing params', value: 'done' },
+        { label: 'Add an item to params', value: 'add' },
+        { label: 'Remove an item from params', value: 'remove' },
+        { label: 'Finish editing params', value: 'done' },
       ],
     })
 
-    action = response.action
-
     if (action === 'add') {
-      const { newKey } = await prompt({
-        type: 'text',
-        name: 'newKey',
+      const newKey = await promptText({
         message: 'Enter a key to add or edit:',
       })
 
-      let { newValue } = await prompt({
-        type: 'text',
-        name: 'newValue',
+      let newValue: string | boolean = await promptText({
         message: 'Enter the new value to add or edit (or null to delete):',
       })
       if (newKey) {
@@ -67,21 +59,17 @@ export const interactForCustomMetadata = async (
         }
       }
     } else if (action === 'remove') {
-      const { customKeyToRemove } = await prompt({
-        type: 'select',
-        name: 'customKeyToRemove',
+      const customKeyToRemove = await promptSelect({
         message: 'Choose a key-value pair to remove from params:',
         choices: Object.keys(updatedCustomMetadata).map((customMetadataKey) => {
           return {
-            title: `${customMetadataKey}: ${updatedCustomMetadata[customMetadataKey]}`,
+            label: `${customMetadataKey}: ${updatedCustomMetadata[customMetadataKey]}`,
             value: customMetadataKey,
           }
         }),
       })
 
-      if (customKeyToRemove) {
-        delete customMetadata[customKeyToRemove]
-      }
+      delete customMetadata[customKeyToRemove]
     }
   } while (action !== 'done')
 

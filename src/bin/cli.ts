@@ -38,7 +38,11 @@ import {
   toParameterName,
   UsageError,
 } from 'lib/util/cli-args.js'
-import { canPrompt, prompt } from 'lib/util/prompt.js'
+import {
+  canPrompt,
+  PromptCancelledError,
+  promptConfirm,
+} from 'lib/util/prompt.js'
 import { readStdinJson } from 'lib/util/read-stdin-json.js'
 import { RequestSeamApi } from 'lib/util/request-seam-api.js'
 import { validateToken } from 'lib/validate-token.js'
@@ -372,10 +376,9 @@ const handleConnectWebviewResponse = async (
     interactivity !== 'non-interactive' &&
     process.env['INSIDE_WEB_BROWSER'] !== '1'
   ) {
-    const { action } = await prompt({
-      type: 'confirm',
-      name: 'action',
+    const action = await promptConfirm({
       message: 'Would you like to open the webview in your browser?',
+      initialValue: false,
     })
 
     if (action) {
@@ -421,6 +424,11 @@ run(process.argv.slice(2)).catch((e: unknown) => {
 
   if (e instanceof NonInteractiveError) {
     output.error(chalk.red(e.message))
+    return
+  }
+
+  if (e instanceof PromptCancelledError) {
+    output.error(chalk.gray(e.message))
     return
   }
 
