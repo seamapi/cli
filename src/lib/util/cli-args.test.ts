@@ -34,7 +34,9 @@ test('getInteractivity: --non-interactive and -y never prompt', () => {
 })
 
 test('getInteractivity: --interactive and --non-interactive cannot be combined', () => {
-  expect(() => getInteractivity(parse(['devices', 'list', '-i', '-y']))).toThrow(
+  expect(() =>
+    getInteractivity(parse(['devices', 'list', '-i', '-y'])),
+  ).toThrow(
     'The --interactive and --non-interactive flags cannot be used together',
   )
 })
