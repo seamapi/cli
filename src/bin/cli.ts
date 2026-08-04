@@ -37,6 +37,11 @@ const sections = [
         alias: 'h',
         type: Boolean,
       },
+      {
+        name: 'update',
+        description: 'Force an update of the cached Seam API definitions.',
+        type: Boolean,
+      },
     ],
   },
   {
@@ -117,7 +122,12 @@ async function cli(args: ParsedArgs) {
   const use_remote_api_defs =
     args['remote_api_defs'] ?? config.get('use_remote_api_defs')
 
-  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false)
+  const update = args['update'] === true
+  delete args['update']
+
+  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false, {
+    update,
+  })
 
   const commandParams: Record<string, any> = {}
 
