@@ -2,8 +2,8 @@ import type { ActionAttemptsGetResponse } from '@seamapi/http/connect'
 
 import { getSeam } from '../seam/client.js'
 import { getOutput } from '../output/get-output.js'
-import { promptConfirm } from '../util/prompt.js'
-import { withLoading } from '../util/with-loading.js'
+import { promptConfirm } from './prompt.js'
+import { withLoading } from '../output/with-loading.js'
 
 export const interactForActionAttemptPoll = async (
   actionAttempt: ActionAttemptsGetResponse['action_attempt'],

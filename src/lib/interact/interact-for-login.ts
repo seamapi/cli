@@ -6,8 +6,8 @@ import { getConfigStore } from '../config/index.js'
 import { assertEnvVarUnset, getTokenFromEnv, tokenEnvVar } from '../env.js'
 import { getServer } from '../get-server.js'
 import { getOutput } from '../output/get-output.js'
-import { promptText } from '../util/prompt.js'
-import { withLoading } from '../util/with-loading.js'
+import { promptText } from './prompt.js'
+import { withLoading } from '../output/with-loading.js'
 import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 
 export const interactForLogin = async () => {

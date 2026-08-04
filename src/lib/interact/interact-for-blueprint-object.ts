@@ -2,8 +2,8 @@ import type { Parameter } from '@seamapi/blueprint'
 
 import { NonInteractiveError, toArgName } from '../args/parse.js'
 import { getOutput } from '../output/get-output.js'
+import { ellipsis } from '../render/text.js'
 import type { ContextHelpers } from '../types.js'
-import { ellipsis } from '../util/ellipsis.js'
 import { interactForAccessCode } from './interact-for-access-code.js'
 import { interactForAcsEntrance } from './interact-for-acs-entrance.js'
 import { interactForAcsSystem } from './interact-for-acs-system.js'
@@ -23,7 +23,7 @@ import {
   promptSelect,
   promptText,
   withBackHint,
-} from '../util/prompt.js'
+} from './prompt.js'
 
 const ergonomicPropOrder = [
   'name',

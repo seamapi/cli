@@ -1,4 +1,4 @@
-import { promptText, withBackHint } from '../util/prompt.js'
+import { promptText, withBackHint } from './prompt.js'
 
 export const interactForTimestamp = async () => {
   const now = new Date().toISOString()

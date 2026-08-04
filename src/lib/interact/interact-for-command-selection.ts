@@ -6,7 +6,7 @@ import {
   promptAutocomplete,
   PromptCancelledError,
   withBackHint,
-} from '../util/prompt.js'
+} from './prompt.js'
 
 const uniqBy = <T>(items: T[], keyOf: (item: T) => unknown): T[] => {
   const seen = new Set<unknown>()

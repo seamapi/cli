@@ -1,6 +1,6 @@
 import { createSpinner } from 'nanospinner'
 
-import { getOutput } from 'lib/output/get-output.js'
+import { getOutput } from './get-output.js'
 
 export const withLoading = async <T>(
   message: string,

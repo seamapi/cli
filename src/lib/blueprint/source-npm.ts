@@ -6,7 +6,7 @@ import type { Blueprint, TypesModuleInput } from '@seamapi/blueprint'
 import envPaths from 'env-paths'
 import { extract } from 'tar'
 
-import { withLoading } from '../util/with-loading.js'
+import { withLoading } from '../output/with-loading.js'
 import {
   getBlueprintVersion,
   getCacheFile,

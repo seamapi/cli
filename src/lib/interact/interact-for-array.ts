@@ -5,7 +5,7 @@ import {
   promptSelect,
   promptText,
   withBackHint,
-} from '../util/prompt.js'
+} from './prompt.js'
 
 export const interactForArray = async (
   array: string[],

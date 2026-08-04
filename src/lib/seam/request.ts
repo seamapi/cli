@@ -4,7 +4,7 @@ import { getOutput } from 'lib/output/get-output.js'
 import { selectResponsePayload } from 'lib/output/select-response-payload.js'
 import { getSeam } from 'lib/seam/client.js'
 
-import { withLoading } from '../util/with-loading.js'
+import { withLoading } from '../output/with-loading.js'
 
 export interface RequestSeamApiOptions {
   path: string

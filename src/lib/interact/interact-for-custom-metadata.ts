@@ -4,7 +4,7 @@ import {
   promptSelect,
   promptText,
   withBackHint,
-} from '../util/prompt.js'
+} from './prompt.js'
 
 // Structurally the CustomMetadata of @seamapi/types, spelled out here so the
 // published declarations do not depend on a development-only package.

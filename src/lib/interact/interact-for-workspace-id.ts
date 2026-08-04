@@ -8,8 +8,8 @@ import {
 } from '../env.js'
 import { getSeamMultiWorkspace } from '../seam/client.js'
 import { getServer } from '../get-server.js'
-import { promptAutocomplete } from '../util/prompt.js'
-import { withLoading } from '../util/with-loading.js'
+import { promptAutocomplete } from './prompt.js'
+import { withLoading } from '../output/with-loading.js'
 
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const config = getConfigStore()

@@ -43,6 +43,11 @@ import { interactForLogin } from 'lib/interact/interact-for-login.js'
 import { interactForServerSelection } from 'lib/interact/interact-for-server-selection.js'
 import { interactForUseRemoteApiDefs } from 'lib/interact/interact-for-use-remote-api-defs.js'
 import { interactForWorkspaceId } from 'lib/interact/interact-for-workspace-id.js'
+import {
+  canPrompt,
+  PromptCancelledError,
+  promptConfirm,
+} from 'lib/interact/prompt.js'
 import { createOutput } from 'lib/output/create-output.js'
 import { getOutput, setOutput } from 'lib/output/get-output.js'
 import { readStdinJson } from 'lib/output/read-stdin-json.js'
@@ -55,11 +60,6 @@ import {
 import { renderHelp } from 'lib/render/help.js'
 import { RequestSeamApi } from 'lib/seam/request.js'
 import type { ContextHelpers } from 'lib/types.js'
-import {
-  canPrompt,
-  PromptCancelledError,
-  promptConfirm,
-} from 'lib/util/prompt.js'
 import seamapiCliVersion from 'lib/version.js'
 
 async function cli(args: ParsedArgs) {

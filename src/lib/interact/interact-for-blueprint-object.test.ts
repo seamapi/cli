@@ -5,18 +5,18 @@ import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
 import { createMemoryOutput } from '../output/create-memory-output.js'
 import { setOutput } from '../output/get-output.js'
 import type { ContextHelpers } from '../types.js'
-import type * as PromptModule from '../util/prompt.js'
+import type * as PromptModule from './prompt.js'
 import {
   promptAutocomplete,
   PromptCancelledError,
   promptSelect,
   promptText,
   withBackHint,
-} from '../util/prompt.js'
+} from './prompt.js'
 
 // Only the prompts themselves are replaced, so the real PromptCancelledError
 // and withBackHint are used, as they are in production.
-vi.mock('../util/prompt.js', async (importOriginal) => ({
+vi.mock('./prompt.js', async (importOriginal) => ({
   ...(await importOriginal<typeof PromptModule>()),
   promptText: vi.fn(),
   promptNumber: vi.fn(),

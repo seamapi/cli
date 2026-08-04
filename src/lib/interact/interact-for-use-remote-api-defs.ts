@@ -1,6 +1,6 @@
 import { getConfigStore } from '../config/index.js'
 import { getOutput } from '../output/get-output.js'
-import { promptSelect } from '../util/prompt.js'
+import { promptSelect } from './prompt.js'
 
 export async function interactForUseRemoteApiDefs() {
   const useRemoteApiDefs = await promptSelect({

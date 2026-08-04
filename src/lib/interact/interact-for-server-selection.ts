@@ -10,7 +10,7 @@ import {
 } from '../env.js'
 import { getServer } from '../get-server.js'
 import { getOutput } from '../output/get-output.js'
-import { promptAutocomplete, promptText } from '../util/prompt.js'
+import { promptAutocomplete, promptText } from './prompt.js'
 
 export async function interactForServerSelection() {
   assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')

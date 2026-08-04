@@ -2,10 +2,10 @@ import { beforeEach, expect, test, vi } from 'vitest'
 
 import { interactForCommandSelection } from './interact-for-command-selection.js'
 import type { ContextHelpers } from '../types.js'
-import type * as PromptModule from '../util/prompt.js'
-import { promptAutocomplete, withBackHint } from '../util/prompt.js'
+import type * as PromptModule from './prompt.js'
+import { promptAutocomplete, withBackHint } from './prompt.js'
 
-vi.mock('../util/prompt.js', async (importOriginal) => ({
+vi.mock('./prompt.js', async (importOriginal) => ({
   ...(await importOriginal<typeof PromptModule>()),
   promptAutocomplete: vi.fn(),
 }))
