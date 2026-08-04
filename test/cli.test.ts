@@ -152,6 +152,27 @@ test('cli: params given as flags win over params piped in', async () => {
   expect(requests[0]?.body).toEqual({ limit: 5 })
 })
 
+test('cli: sends a page cursor as the opaque string it is', async () => {
+  requests = []
+  const { exitCode } = await runCli([
+    'devices',
+    'list',
+    '--page-cursor',
+    '0755',
+  ])
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.path).toBe('/devices/list')
+  expect(requests[0]?.body).toEqual({ page_cursor: '0755' })
+})
+
+test('cli: documents --page-cursor for a paginated command', async () => {
+  const { stdout, exitCode } = await runCli(['devices', 'list', '--help'])
+
+  expect(exitCode).toBe(0)
+  expect(stdout).toContain('--page-cursor')
+})
+
 test('cli: does not send cli flags as request params', async () => {
   requests = []
   await runCli(['devices', 'list', '--json', '-y'])

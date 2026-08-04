@@ -51,6 +51,22 @@ test('parseCliArgs: interactivity flags do not consume the next argument', () =>
   expect(args._).toEqual(['devices', 'get'])
 })
 
+test('parseCliArgs: reads a page cursor exactly as given', () => {
+  // Cursors are opaque, so anything that looks like a number must survive.
+  expect(
+    parse(['devices', 'list', '--page-cursor', '0755'])['page_cursor'],
+  ).toBe('0755')
+  expect(
+    parse(['devices', 'list', '--page-cursor', '1e5'])['page_cursor'],
+  ).toBe('1e5')
+  expect(
+    parse(['devices', 'list', '--page-cursor=eyJrIjoxfQ=='])['page_cursor'],
+  ).toBe('eyJrIjoxfQ==')
+  expect(
+    parse(['devices', 'list', '--page_cursor', '0755'])['page_cursor'],
+  ).toBe('0755')
+})
+
 test('toArgName: renders a parameter as its argument', () => {
   expect(toArgName('device_id')).toBe('--device-id')
   expect(toArgName('code')).toBe('--code')

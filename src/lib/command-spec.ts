@@ -1,5 +1,7 @@
 import type { Blueprint } from '@seamapi/blueprint'
 
+import { getRequestParameters } from './get-request-parameters.js'
+
 type Endpoint = Blueprint['routes'][number]['endpoints'][number]
 type Parameter = Endpoint['request']['parameters'][number]
 
@@ -266,7 +268,7 @@ const toCommandDefinition = (endpoint: Endpoint): CommandDefinition => {
         ? firstSentence(description)
         : toPlainText(endpoint.title),
     description,
-    flags: [...endpoint.request.parameters]
+    flags: getRequestParameters(endpoint)
       .map(toCommandFlag)
       .filter((flag) => flag.long == null || isSafeToken(flag.long))
       .sort((a, b) => compare(a.long ?? a.short, b.long ?? b.short)),

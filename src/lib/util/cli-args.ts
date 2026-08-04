@@ -46,7 +46,10 @@ export class NonInteractiveError extends Error {
 
 export const parseCliArgs = (argv: string[]): ParsedArgs =>
   parseArgs(argv, {
-    string: ['code'],
+    // A page cursor is opaque, so keep it exactly as given: read as a number
+    // it would lose leading zeroes and turn exponent notation into a digit
+    // string, naming a page the API never issued.
+    string: ['code', 'page-cursor', 'page_cursor'],
     boolean: ['non-interactive', 'interactive', 'json'],
     // Deliberately not aliased to -n, which is reserved for a future
     // --dry-run flag.

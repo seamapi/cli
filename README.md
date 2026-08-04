@@ -113,6 +113,23 @@ seam devices list > devices.json
 seam devices list | jq '.devices[].device_id'
 ```
 
+### Pagination
+
+Every command that paginates accepts `--page-cursor` to select a page of
+results, alongside `--limit` for the size of that page. Each response reports
+its `pagination`, whose `next_page_cursor` is the cursor for the page after it.
+
+```bash
+# The first page, and the cursor for the next one
+seam devices list --limit 2 | jq '.pagination.next_page_cursor'
+
+# The page after it
+seam devices list --limit 2 --page-cursor "$CURSOR"
+```
+
+A cursor is opaque: pass it back exactly as it was reported, and do not build
+one yourself. Run `seam <command> --help` to see whether a command paginates.
+
 ### JSON
 
 Request params may be piped or redirected in as a JSON object. Params given as
