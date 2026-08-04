@@ -5,12 +5,18 @@ import { isDeepStrictEqual as isEqual } from 'node:util'
 import chalk from 'chalk'
 import type { ParsedArgs } from 'minimist'
 
-import { findLocalCommand, getCommandSpec } from 'lib/command-spec.js'
 import {
-  completionShells,
-  isCompletionShell,
-  renderCompletion,
-} from 'lib/completion/index.js'
+  cliFlags,
+  getInteractivity,
+  type Interactivity,
+  NonInteractiveError,
+  parseCliArgs,
+  toGivenArgName,
+  toParameterName,
+  UsageError,
+} from 'lib/args/parse.js'
+import { validateToken } from 'lib/auth/validate-token.js'
+import { findLocalCommand, getCommandSpec } from 'lib/command-spec.js'
 import { getConfigStore } from 'lib/config/index.js'
 import {
   assertEnvVarUnset,
@@ -28,36 +34,30 @@ import { getCommandBlueprintDef } from 'lib/get-command-blueprint-def.js'
 import { getToken } from 'lib/get-credentials.js'
 import { getResponseKey } from 'lib/get-response-key.js'
 import { getServer } from 'lib/get-server.js'
-import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
-import { interactForCommandParams } from 'lib/interact-for-command-params.js'
-import { interactForCommandSelection } from 'lib/interact-for-command-selection.js'
-import { interactForLogin } from 'lib/interact-for-login.js'
-import { interactForServerSelection } from 'lib/interact-for-server-selection.js'
-import { interactForUseRemoteApiDefs } from 'lib/interact-for-use-remote-api-defs.js'
-import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
+import { interactForActionAttemptPoll } from 'lib/interact/interact-for-action-attempt-poll.js'
+import { interactForCommandParams } from 'lib/interact/interact-for-command-params.js'
+import { interactForCommandSelection } from 'lib/interact/interact-for-command-selection.js'
+import { interactForLogin } from 'lib/interact/interact-for-login.js'
+import { interactForServerSelection } from 'lib/interact/interact-for-server-selection.js'
+import { interactForUseRemoteApiDefs } from 'lib/interact/interact-for-use-remote-api-defs.js'
+import { interactForWorkspaceId } from 'lib/interact/interact-for-workspace-id.js'
 import { createOutput } from 'lib/output/create-output.js'
 import { getOutput, setOutput } from 'lib/output/get-output.js'
+import { readStdinJson } from 'lib/output/read-stdin-json.js'
 import { resolveOutputFormat } from 'lib/output/resolve-output-format.js'
-import { renderHelp } from 'lib/render-help.js'
-import type { ContextHelpers } from 'lib/types.js'
 import {
-  cliFlags,
-  getInteractivity,
-  type Interactivity,
-  NonInteractiveError,
-  parseCliArgs,
-  toGivenArgName,
-  toParameterName,
-  UsageError,
-} from 'lib/util/cli-args.js'
+  completionShells,
+  isCompletionShell,
+  renderCompletion,
+} from 'lib/render/completion/index.js'
+import { renderHelp } from 'lib/render/help.js'
+import { RequestSeamApi } from 'lib/seam/request.js'
+import type { ContextHelpers } from 'lib/types.js'
 import {
   canPrompt,
   PromptCancelledError,
   promptConfirm,
 } from 'lib/util/prompt.js'
-import { readStdinJson } from 'lib/util/read-stdin-json.js'
-import { RequestSeamApi } from 'lib/util/request-seam-api.js'
-import { validateToken } from 'lib/validate-token.js'
 import seamapiCliVersion from 'lib/version.js'
 
 async function cli(args: ParsedArgs) {

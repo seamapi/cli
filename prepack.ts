@@ -8,7 +8,7 @@ import {
   completionFileNames,
   completionShells,
   renderCompletionStub,
-} from './src/lib/completion/index.js'
+} from './src/lib/render/completion/index.js'
 
 const versionFile = './src/lib/version.ts'
 const completionsDirectory = './completions'

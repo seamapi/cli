@@ -12,7 +12,7 @@ import {
 } from '@clack/prompts'
 import chalk from 'chalk'
 
-import { NonInteractiveError } from './cli-args.js'
+import { NonInteractiveError } from '../args/parse.js'
 
 /**
  * Whether the CLI can ask the user a question.
