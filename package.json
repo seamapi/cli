@@ -1,7 +1,7 @@
 {
   "name": "@seamapi/cli",
   "version": "0.13.0",
-  "description": "A command line interface (CLI) for interacting with the Seam API.",
+  "description": "A command-line interface (CLI) for interacting with the Seam API.",
   "type": "module",
   "main": "index.js",
   "types": "index.d.ts",
