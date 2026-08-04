@@ -3,22 +3,20 @@ import { fileURLToPath } from 'node:url'
 
 import { $ } from 'execa'
 
-import getBlueprint from './src/lib/blueprint.js'
-
 const versionFile = './src/lib/version.ts'
-const blueprintFile = './src/lib/blueprint.ts'
 
 const main = async (): Promise<void> => {
   const version = await injectVersion(resolveFile(versionFile))
   // eslint-disable-next-line no-console
   console.log(`✓ Version ${version} injected into ${versionFile}`)
 
-  await injectBlueprint(
-    resolveFile(blueprintFile),
-    await getBlueprint({ regenerate: true }),
+  const blueprintVersion = await injectBlueprintVersion(
+    resolveFile(versionFile),
   )
   // eslint-disable-next-line no-console
-  console.log(`✓ Blueprint injected into ${blueprintFile}`)
+  console.log(
+    `✓ Blueprint version ${blueprintVersion} injected into ${versionFile}`,
+  )
 
   const { command } = await $`tsc --project tsconfig.prepack.json`
   // eslint-disable-next-line no-console
@@ -41,15 +39,27 @@ const injectVersion = async (path: string): Promise<string> => {
   return version
 }
 
-const injectBlueprint = async (
-  path: string,
-  blueprint: unknown,
-): Promise<void> => {
+const injectBlueprintVersion = async (path: string): Promise<string> => {
+  const { dependencies } = await readPackageJson()
+  const version = dependencies?.['@seamapi/blueprint']
+
+  if (version == null) {
+    throw new Error('Missing @seamapi/blueprint in package.json dependencies')
+  }
+
+  if (!/^\d+\.\d+\.\d+$/.test(version)) {
+    throw new Error(
+      `The @seamapi/blueprint dependency must be pinned to an exact version in package.json, got '${version}'`,
+    )
+  }
+
   await replaceInFile(
     path,
-    'const seamapiBlueprint: Blueprint | null = null',
-    `const seamapiBlueprint: Blueprint | null = ${JSON.stringify(blueprint)} as unknown as Blueprint`,
+    "const seamapiBlueprintVersion = '0.0.0'",
+    `const seamapiBlueprintVersion = '${version}'`,
   )
+
+  return version
 }
 
 const replaceInFile = async (
@@ -69,9 +79,13 @@ const replaceInFile = async (
 const resolveFile = (path: string): string =>
   fileURLToPath(new URL(path, import.meta.url))
 
-const readPackageJson = async (): Promise<{ version?: string }> =>
+const readPackageJson = async (): Promise<{
+  version?: string
+  dependencies?: Record<string, string>
+}> =>
   JSON.parse(await readFile(resolveFile('package.json'), 'utf8')) as {
     version?: string
+    dependencies?: Record<string, string>
   }
 
 await main()

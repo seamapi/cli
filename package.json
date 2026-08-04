@@ -89,7 +89,7 @@
     }
   },
   "dependencies": {
-    "@seamapi/blueprint": "^1.1.0",
+    "@seamapi/blueprint": "1.2.0",
     "@seamapi/http": "2.2.0",
     "@seamapi/wizard": "0.5.2",
     "chalk": "^6.0.0",
@@ -99,7 +99,8 @@
     "minimist": "^1.2.8",
     "nanospinner": "^1.2.2",
     "open": "^11.0.0",
-    "prompts": "^2.4.2"
+    "prompts": "^2.4.2",
+    "tar": "^7.5.22"
   },
   "devDependencies": {
     "@seamapi/types": "1.985.0",
