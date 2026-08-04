@@ -82,11 +82,13 @@
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "^24.11.0 || ^22.11.0"
+      "version": "^24.11.0 || ^22.11.0",
+      "onFail": "warn"
     },
     "packageManager": {
       "name": "npm",
-      "version": "^11.0.0 || ^10.0.0"
+      "version": "^11.0.0 || ^10.0.0",
+      "onFail": "warn"
     }
   },
   "dependencies": {
