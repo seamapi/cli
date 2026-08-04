@@ -54,7 +54,9 @@ export const interactForBlueprintObject = async (
     .filter((parameter) => parameter.isRequired)
     .map((parameter) => parameter.name)
 
-  const haveAllRequiredParams = required.every((k) => args.params[k])
+  const isSupplied = (k: string): boolean => args.params[k] !== undefined
+
+  const haveAllRequiredParams = required.every(isSupplied)
 
   const cmdPath = `/${args.command.join('/').replace(/-/g, '_')}`
 
@@ -67,7 +69,7 @@ export const interactForBlueprintObject = async (
   }
 
   if (ctx.interactivity === 'non-interactive') {
-    const missing = required.filter((k) => !args.params[k])
+    const missing = required.filter((k) => !isSupplied(k))
     const target = args.isSubProperty ? `"${args.subPropertyPath}"` : cmdPath
     throw new NonInteractiveError(
       missing.length > 0
@@ -193,7 +195,10 @@ export const interactForBlueprintObject = async (
   ) {
     args.params[paramToEdit] = await interactForTimestamp()
     return interactForBlueprintObject(args, ctx)
-  } else if (paramToEdit === 'custom_metadata') {
+  } else if (
+    paramToEdit === 'custom_metadata' ||
+    paramToEdit === 'custom_metadata_has'
+  ) {
     args.params[paramToEdit] = await interactForCustomMetadata(
       args.params[paramToEdit] || {},
     )
