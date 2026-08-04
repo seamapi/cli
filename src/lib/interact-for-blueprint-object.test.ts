@@ -5,16 +5,11 @@ import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
 import { createMemoryOutput } from './output/create-memory-output.js'
 import { setOutput } from './output/get-output.js'
 import type { ContextHelpers } from './types.js'
-import {
-  promptAutocomplete,
-  PromptBackError,
-  promptText,
-} from './util/prompt.js'
+import { promptAutocomplete } from './util/prompt.js'
 
 vi.mock('./util/prompt.js', () => ({
   canPrompt: vi.fn(() => true),
   PromptCancelledError: class extends Error {},
-  PromptBackError: class extends Error {},
   promptText: vi.fn(),
   promptNumber: vi.fn(),
   promptConfirm: vi.fn(),
@@ -25,8 +20,6 @@ vi.mock('./util/prompt.js', () => ({
 
 beforeEach(() => {
   vi.mocked(promptAutocomplete).mockClear()
-  vi.mocked(promptAutocomplete).mockImplementation(async () => 'done')
-  vi.mocked(promptText).mockReset()
   // Keep the interactive chrome out of the test output.
   setOutput(createMemoryOutput().output)
 })
@@ -84,43 +77,6 @@ test('interactForBlueprintObject: submits without prompting when non-interactive
     ),
   ).resolves.toEqual({ device_id: 'device1' })
   expect(promptAutocomplete).not.toHaveBeenCalled()
-})
-
-test('interactForBlueprintObject: offers the parameter menu with a way back', async () => {
-  await interactForBlueprintObject(
-    args({ device_id: 'device1' }),
-    ctx('interactive'),
-  )
-
-  expect(vi.mocked(promptAutocomplete).mock.calls[0]?.[0]).toMatchObject({
-    allowBack: true,
-  })
-})
-
-test('interactForBlueprintObject: going back at the menu leaves the command', async () => {
-  vi.mocked(promptAutocomplete).mockRejectedValueOnce(new PromptBackError())
-
-  await expect(
-    interactForBlueprintObject(
-      args({ device_id: 'device1' }),
-      ctx('interactive'),
-    ),
-  ).resolves.toBe('[Back]')
-})
-
-test('interactForBlueprintObject: going back at a value prompt returns to the menu unset', async () => {
-  vi.mocked(promptAutocomplete)
-    .mockImplementationOnce(async () => 'name')
-    .mockImplementationOnce(async () => 'done')
-  vi.mocked(promptText).mockRejectedValueOnce(new PromptBackError())
-
-  await expect(
-    interactForBlueprintObject(
-      args({ device_id: 'device1' }),
-      ctx('interactive'),
-    ),
-  ).resolves.toEqual({ device_id: 'device1' })
-  expect(promptAutocomplete).toHaveBeenCalledTimes(2)
 })
 
 test('interactForBlueprintObject: rejects missing required parameters when non-interactive', async () => {

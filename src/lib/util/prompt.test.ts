@@ -1,16 +1,13 @@
-import { PassThrough } from 'node:stream'
+import { EventEmitter } from 'node:events'
+import type { Key } from 'node:readline'
 
-import { afterEach, expect, test } from 'vitest'
+import { expect, test } from 'vitest'
 
 import {
-  promptAutocomplete,
-  PromptBackError,
-  PromptCancelledError,
-  promptSelect,
-  promptText,
+  arrowKeyFor,
+  emitArrowKeyAliases,
   type SearchableChoice,
   searchChoices,
-  setPromptIoForTesting,
 } from './prompt.js'
 
 const workspaces = [
@@ -45,126 +42,53 @@ test('searchChoices: offers every choice until something is typed', () => {
   expect(search('  ', workspaces)).toEqual(workspaces)
 })
 
-// The tests below drive real clack prompts over fake terminal streams,
-// writing the bytes a terminal in raw mode would send.
-
-const fakeTerminal = (): PassThrough & {
-  isTTY: boolean
-  setRawMode: () => void
-} => {
-  const stdin = Object.assign(new PassThrough(), {
-    isTTY: true,
-    setRawMode: () => {},
-  })
-  const output = Object.assign(new PassThrough(), { isTTY: true })
-  output.on('data', () => {})
-  setPromptIoForTesting({ stdin, output })
-  return stdin
-}
-
-afterEach(() => {
-  setPromptIoForTesting({ stdin: process.stdin, output: process.stderr })
+const ctrl = (name: string): Key => ({
+  name,
+  ctrl: true,
+  meta: false,
+  shift: false,
+  sequence: String.fromCharCode(name.charCodeAt(0) - 96),
 })
 
-const choices = [
-  { label: 'alpha', value: 'alpha' },
-  { label: 'beta', value: 'beta' },
-  { label: 'gamma', value: 'gamma' },
-  { label: 'delta', value: 'delta' },
-]
-
-test('promptSelect: ctrl-n, ctrl-j, ctrl-p, and ctrl-k move the cursor', async () => {
-  const stdin = fakeTerminal()
-  const answer = promptSelect({ message: 'pick', choices })
-  stdin.write('\x0E') // ctrl-n: beta
-  stdin.write('\x0A') // ctrl-j: gamma
-  stdin.write('\x0E') // ctrl-n: delta
-  stdin.write('\x10') // ctrl-p: gamma
-  stdin.write('\x0B') // ctrl-k: beta
-  stdin.write('\r')
-  expect(await answer).toBe('beta')
+test('arrowKeyFor: maps ctrl-p and ctrl-n to the arrow keys', () => {
+  expect(arrowKeyFor(ctrl('p'))?.name).toBe('up')
+  expect(arrowKeyFor(ctrl('n'))?.name).toBe('down')
 })
 
-test('promptSelect: the right arrow submits the focused choice', async () => {
-  const stdin = fakeTerminal()
-  const answer = promptSelect({ message: 'pick', choices })
-  stdin.write('\x0E')
-  stdin.write('\x1B[C')
-  expect(await answer).toBe('beta')
+test('arrowKeyFor: leaves every other key alone', () => {
+  expect(arrowKeyFor(undefined)).toBeUndefined()
+  expect(arrowKeyFor(ctrl('c'))).toBeUndefined()
+  expect(arrowKeyFor({ name: 'p', sequence: 'p' })).toBeUndefined()
+  expect(arrowKeyFor({ name: 'n', sequence: 'n' })).toBeUndefined()
+  expect(arrowKeyFor({ ...ctrl('p'), meta: true })).toBeUndefined()
+  expect(arrowKeyFor({ ...ctrl('n'), shift: true })).toBeUndefined()
+  expect(arrowKeyFor({ name: 'up', sequence: '\x1B[A' })).toBeUndefined()
 })
 
-test('promptSelect: the left arrow goes back when allowed', async () => {
-  const stdin = fakeTerminal()
-  const answer = promptSelect({ message: 'pick', choices, allowBack: true })
-  stdin.write('\x1B[D')
-  await expect(answer).rejects.toBeInstanceOf(PromptBackError)
-})
+test('emitArrowKeyAliases: re-emits control keypresses as arrow keys', () => {
+  const input = new EventEmitter()
+  emitArrowKeyAliases(input)
 
-test('promptSelect: the left arrow does nothing without back support', async () => {
-  const stdin = fakeTerminal()
-  const answer = promptSelect({ message: 'pick', choices })
-  stdin.write('\x1B[D')
-  stdin.write('\r')
-  expect(await answer).toBe('alpha')
-})
+  const keypresses: Array<[string | undefined, Key | undefined]> = []
+  input.on('keypress', (char, key) => keypresses.push([char, key]))
 
-test('promptSelect: escape still cancels', async () => {
-  const stdin = fakeTerminal()
-  const answer = promptSelect({ message: 'pick', choices })
-  stdin.write('\x1B')
-  await expect(answer).rejects.toBeInstanceOf(PromptCancelledError)
-})
+  input.emit('keypress', '\x10', ctrl('p'))
+  input.emit('keypress', 'a', { name: 'a', sequence: 'a' })
 
-test('promptAutocomplete: ctrl-j navigates the matches without clearing the filter', async () => {
-  const stdin = fakeTerminal()
-  const answer = promptAutocomplete({ message: 'pick', choices })
-  stdin.write('e') // filters to beta, delta
-  stdin.write('\x0A') // ctrl-j: delta (gamma when the filter is lost)
-  stdin.write('\r')
-  expect(await answer).toBe('delta')
-})
-
-test('promptAutocomplete: the left arrow only goes back until a filter is typed', async () => {
-  const stdin = fakeTerminal()
-  const answer = promptAutocomplete({
-    message: 'pick',
-    choices,
-    allowBack: true,
-  })
-  stdin.write('e')
-  stdin.write('\x1B[D') // moves the caret instead of going back
-  stdin.write('\x7F') // erase the filter
-  stdin.write('\x1B[D')
-  await expect(answer).rejects.toBeInstanceOf(PromptBackError)
-})
-
-test('promptText: left and right move the caret in typed text', async () => {
-  const stdin = fakeTerminal()
-  const answer = promptText({ message: 'value', allowBack: true })
-  stdin.write('ac')
-  stdin.write('\x1B[D')
-  stdin.write('b')
-  stdin.write('\r')
-  expect(await answer).toBe('abc')
-})
-
-test('promptText: the left arrow goes back while nothing is typed', async () => {
-  const stdin = fakeTerminal()
-  const answer = promptText({ message: 'value', allowBack: true })
-  stdin.write('\x1B[D')
-  await expect(answer).rejects.toBeInstanceOf(PromptBackError)
-})
-
-test('prompts: sequential prompts each read the terminal in turn', async () => {
-  const stdin = fakeTerminal()
-
-  const first = promptSelect({ message: 'pick', choices })
-  stdin.write('\x0E')
-  stdin.write('\r')
-  expect(await first).toBe('beta')
-
-  const second = promptText({ message: 'value' })
-  stdin.write('hello')
-  stdin.write('\r')
-  expect(await second).toBe('hello')
+  // The synthetic arrow key arrives first: the re-emit is synchronous,
+  // and the alias listener runs before any listener attached after it.
+  expect(keypresses).toEqual([
+    [
+      undefined,
+      {
+        name: 'up',
+        ctrl: false,
+        meta: false,
+        shift: false,
+        sequence: '\x1B[A',
+      },
+    ],
+    ['\x10', ctrl('p')],
+    ['a', { name: 'a', sequence: 'a' }],
+  ])
 })

@@ -1,10 +1,5 @@
 import { getOutput } from './output/get-output.js'
-import {
-  PromptBackError,
-  promptNumber,
-  promptSelect,
-  promptText,
-} from './util/prompt.js'
+import { promptNumber, promptSelect, promptText } from './util/prompt.js'
 
 export const interactForArray = async (
   array: string[],
@@ -28,45 +23,31 @@ export const interactForArray = async (
   do {
     displayList()
 
-    try {
-      action = await promptSelect({
-        message: 'Choose an action:',
-        choices: [
-          { label: 'Add an item', value: 'add' },
-          { label: 'Remove an item', value: 'remove' },
-          { label: 'Finish editing', value: 'done' },
-        ],
-        allowBack: true,
-      })
-    } catch (error) {
-      if (!(error instanceof PromptBackError)) throw error
-      // Going back at the action menu finishes editing, keeping changes.
-      break
-    }
+    action = await promptSelect({
+      message: 'Choose an action:',
+      choices: [
+        { label: 'Add an item', value: 'add' },
+        { label: 'Remove an item', value: 'remove' },
+        { label: 'Finish editing', value: 'done' },
+      ],
+    })
 
-    try {
-      if (action === 'add') {
-        const newItem = await promptText({
-          message: 'Enter the new item:',
-          allowBack: true,
-        })
-        if (newItem) {
-          updatedArray.push(newItem)
-        }
-      } else if (action === 'remove') {
-        const index = await promptNumber({
-          message: 'Enter the index of the item to remove:',
-          validate: (value) =>
-            value > 0 && value <= updatedArray.length
-              ? undefined
-              : 'Invalid index',
-          allowBack: true,
-        })
-        updatedArray.splice(index - 1, 1)
+    if (action === 'add') {
+      const newItem = await promptText({
+        message: 'Enter the new item:',
+      })
+      if (newItem) {
+        updatedArray.push(newItem)
       }
-    } catch (error) {
-      if (!(error instanceof PromptBackError)) throw error
-      // Going back at an inner prompt returns to the action menu.
+    } else if (action === 'remove') {
+      const index = await promptNumber({
+        message: 'Enter the index of the item to remove:',
+        validate: (value) =>
+          value > 0 && value <= updatedArray.length
+            ? undefined
+            : 'Invalid index',
+      })
+      updatedArray.splice(index - 1, 1)
     }
   } while (action !== 'done')
 
