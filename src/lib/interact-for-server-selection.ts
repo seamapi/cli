@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto'
 
-import prompts from 'prompts'
-
 import { getConfigStore } from './config/index.js'
 import { getServer } from './get-server.js'
+import { getOutput } from './output/get-output.js'
+import { prompt } from './util/prompt.js'
 
 export async function interactForServerSelection() {
   const servers = [
@@ -12,7 +12,7 @@ export async function interactForServerSelection() {
     'https://fakeseamconnect.seam.vc',
   ]
 
-  const { server } = await prompts([
+  const { server } = await prompt([
     {
       type: 'select',
       name: 'server',
@@ -22,8 +22,9 @@ export async function interactForServerSelection() {
   ])
 
   const config = getConfigStore()
+  const output = getOutput()
   if (server === servers[2]) {
-    let { userUrlSeed } = await prompts([
+    let { userUrlSeed } = await prompt([
       {
         type: 'text',
         name: 'userUrlSeed',
@@ -37,10 +38,10 @@ export async function interactForServerSelection() {
     }
     config.set('server', `https://${userUrlSeed}.fakeseamconnect.seam.vc`)
     config.set(`${getServer()}.pat`, `seam_apikey1_token`)
-    console.log(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
+    output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
   } else {
     config.set('server', server)
   }
   config.delete('current_workspace_id')
-  console.log(`Server set to ${server}`)
+  output.info(`Server set to ${server}`)
 }

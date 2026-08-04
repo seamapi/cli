@@ -1,14 +1,15 @@
 import type { ActionAttemptsGetResponse } from '@seamapi/http/connect'
-import prompts from 'prompts'
 
 import { getSeam } from './get-seam.js'
+import { getOutput } from './output/get-output.js'
+import { prompt } from './util/prompt.js'
 import { withLoading } from './util/with-loading.js'
 
 export const interactForActionAttemptPoll = async (
   action_attempt: ActionAttemptsGetResponse['action_attempt'],
 ) => {
   if (action_attempt.status === 'pending') {
-    const { poll_for_action_attempt } = await prompts({
+    const { poll_for_action_attempt } = await prompt({
       name: 'poll_for_action_attempt',
       message: "Would you like to poll the action attempt until it's ready?",
       type: 'toggle',
@@ -29,7 +30,7 @@ export const interactForActionAttemptPoll = async (
             { waitForActionAttempt: { pollingInterval: 240, timeout: 10_000 } },
           ),
       )
-      console.dir(updated_action_attempt, { depth: null })
+      getOutput().data({ action_attempt: updated_action_attempt })
     }
   }
 }

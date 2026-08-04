@@ -1,19 +1,29 @@
 import chalk from 'chalk'
 
 import { getSeam } from 'lib/get-seam.js'
+import { getOutput } from 'lib/output/get-output.js'
+import { selectResponsePayload } from 'lib/output/select-response-payload.js'
 
 import { withLoading } from './with-loading.js'
+
+export interface RequestSeamApiOptions {
+  path: string
+  params: Record<string, any>
+  /** Response key for the endpoint, used to trim the reported payload. */
+  responseKey?: string | null | undefined
+}
 
 export const RequestSeamApi = async ({
   path,
   params,
-}: {
-  path: string
-  params: Record<string, any>
-}) => {
+  responseKey,
+}: RequestSeamApiOptions) => {
   const seam = await getSeam()
+  const output = getOutput()
 
-  logRequest(path, params)
+  output.info(`\n${chalk.green(path)}`)
+  output.info(`Request Params:`)
+  output.info(formatParams(params))
 
   const response = await withLoading('Making request...', () =>
     seam.client.post(path, params, {
@@ -21,23 +31,17 @@ export const RequestSeamApi = async ({
     }),
   )
 
-  logResponse(response)
+  if (response.status >= 400) {
+    output.warn(chalk.red(`[${response.status}]`))
+    process.exitCode = 1
+  } else {
+    output.info(chalk.green(`[${response.status}]`))
+  }
+
+  output.data(selectResponsePayload(response.data, { responseKey }))
 
   return response
 }
 
-const logResponse = (response: { status: number; data: unknown }) => {
-  if (response.status >= 400) {
-    console.log(chalk.red(`\n\n[${response.status}]\n`))
-  } else {
-    console.log(chalk.green(`\n\n[${response.status}]`))
-  }
-  console.dir(response.data, { depth: null })
-  console.log('\n')
-}
-
-const logRequest = (apiPath: string, params: Record<string, any>) => {
-  console.log(`\n\n${chalk.green(apiPath)}`)
-  console.log(`Request Params:`)
-  console.log(params)
-}
+const formatParams = (params: Record<string, any>): string =>
+  JSON.stringify(params, null, 2)

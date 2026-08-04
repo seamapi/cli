@@ -9,9 +9,9 @@ A command line interface (CLI) for interacting with the Seam API.
 
 ## Description
 
-Every command is interactive: the CLI prompts for any missing required
-parameter with suggestions pulled from your workspace. Pass `-y` to take the
-first suggestion instead of being asked.
+Commands run as soon as every required parameter is given. Anything missing is
+prompted for, with suggestions pulled from your workspace. Pass
+`--non-interactive` (or `-y`) to never be prompted: the command fails instead.
 
 ## Installation
 
@@ -37,9 +37,19 @@ $ paru -S seam-bin
 
 ## Usage
 
-Every `seam` command is interactive and will prompt you for any missing
-required properties with helpful suggestions. To avoid automatic behavior,
-pass `-y`.
+Every `seam` command makes its request as soon as every required property is
+given. When something is missing, the CLI prompts you for it with helpful
+suggestions.
+
+Pass `--interactive` (or `-i`) to always be prompted to review and edit
+properties before the request is made. The prompt is prefilled with whatever
+you passed as arguments, so this is the way to add optional properties, or to
+check a request before making it.
+
+For scripts and CI, pass `--non-interactive` (or `-y`) to never be prompted.
+The command must then be complete: if the command itself is ambiguous, or any
+required property is missing, the CLI exits with an error naming what is
+missing instead of asking for it.
 
 To take a project from zero to a working Seam integration, run the
 [Seam Wizard] from the project's root:
@@ -66,6 +76,15 @@ seam connect-webviews create
 # List devices in your workspace
 seam devices list
 
+# Review and edit filters before listing devices
+seam devices list --interactive
+
+# List devices, failing instead of prompting
+seam devices list --non-interactive
+
+# Fails with: Missing required parameter for /locks/unlock_door: --device-id
+seam locks unlock-door --non-interactive
+
 MY_DOOR=$(seam devices get --name "Front Door" --id-only)
 
 # Unlock a lock
@@ -77,6 +96,64 @@ seam access-codes create --code "1234" --name "My Code"
 # List your access codes
 seam access-codes list --device-id $MY_DOOR
 ```
+
+### Output
+
+Only the response is written to stdout, so any command may be piped or
+redirected. Prompts, progress, and other information are written to stderr.
+
+The response is trimmed to the response key and pagination: no other top level
+fields are reported.
+
+```bash
+# The response, and nothing else, ends up in the file
+seam devices list > devices.json
+
+# Prompts and progress still show up in the terminal
+seam devices list | jq '.devices[].device_id'
+```
+
+### JSON
+
+Request params may be piped or redirected in as a JSON object. Params given as
+arguments win over params read from stdin.
+
+```bash
+# Read params from a file
+seam locks unlock-door < params.json
+
+# Or from another program
+echo '{"device_id": "'"$MY_DOOR"'"}' | seam locks unlock-door
+
+# --device-id wins over any device_id in params.json
+seam devices list --limit 5 < params.json
+```
+
+Pass `--json` to write the response as JSON. It is enabled automatically
+whenever stdout is not a terminal, so piping and redirecting produce JSON
+without passing anything. Pass `--no-json` to opt out and get the pretty
+format instead.
+
+```bash
+# Both write JSON
+seam devices list --json
+seam devices list | jq
+
+# Pretty printed, even though it is piped
+seam devices list --no-json | less
+```
+
+Without a terminal to prompt on, the CLI behaves as though
+`--non-interactive` was given: rather than waiting for an answer nobody can
+give, it exits with an error naming what is missing.
+
+```bash
+$ echo '{}' | seam locks unlock-door
+Missing required parameter for /locks/unlock_door: --device-id
+```
+
+An error exits non-zero. A request that fails reports its `error` on stdout,
+so it can be inspected from a pipe; anything else is written to stderr only.
 
 ## Help
 

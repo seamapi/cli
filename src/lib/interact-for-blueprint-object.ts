@@ -1,5 +1,4 @@
 import type { Parameter } from '@seamapi/blueprint'
-import prompts from 'prompts'
 
 import { interactForAccessCode } from './interact-for-access-code.js'
 import { interactForAcsEntrance } from './interact-for-acs-entrance.js'
@@ -11,8 +10,11 @@ import { interactForCustomMetadata } from './interact-for-custom-metadata.js'
 import { interactForDevice } from './interact-for-device.js'
 import { interactForTimestamp } from './interact-for-timestamp.js'
 import { interactForUserIdentity } from './interact-for-user-identity.js'
+import { getOutput } from './output/get-output.js'
 import type { ContextHelpers } from './types.js'
+import { NonInteractiveError, toArgName } from './util/cli-args.js'
 import { ellipsis } from './util/ellipsis.js'
+import { prompt } from './util/prompt.js'
 
 const ergonomicPropOrder = [
   'name',
@@ -47,10 +49,26 @@ export const interactForBlueprintObject = async (
 
   const haveAllRequiredParams = required.every((k) => args.params[k])
 
+  const cmdPath = `/${args.command.join('/').replace(/-/g, '_')}`
+
   const should_auto_submit =
-    !ctx.is_interactive && haveAllRequiredParams && !args.isSubProperty
+    ctx.interactivity !== 'interactive' &&
+    haveAllRequiredParams &&
+    !args.isSubProperty
   if (should_auto_submit) {
     return args.params
+  }
+
+  if (ctx.interactivity === 'non-interactive') {
+    const missing = required.filter((k) => !args.params[k])
+    const target = args.isSubProperty ? `"${args.subPropertyPath}"` : cmdPath
+    throw new NonInteractiveError(
+      missing.length > 0
+        ? `Missing required ${
+            missing.length === 1 ? 'parameter' : 'parameters'
+          } for ${target}: ${missing.map(toArgName).join(' ')}`
+        : `Cannot prompt for ${target} in non-interactive mode`,
+    )
   }
 
   const propSortScore = (prop: string) => {
@@ -61,13 +79,12 @@ export const interactForBlueprintObject = async (
     return ergonomicPropOrder.indexOf(prop)
   }
 
-  const cmdPath = `/${args.command.join('/').replace(/-/g, '_')}`
   const parameterSelectionMessage = args.isSubProperty
     ? `Editing "${args.subPropertyPath}"`
     : `[${cmdPath}] Parameters`
 
-  console.log('')
-  const { paramToEdit } = await prompts({
+  getOutput().info()
+  const { paramToEdit } = await prompt({
     name: 'paramToEdit',
     message: parameterSelectionMessage,
     type: 'autocomplete',
@@ -187,7 +204,7 @@ export const interactForBlueprintObject = async (
         value = await interactForTimestamp()
       } else {
         value = (
-          await prompts({
+          await prompt({
             name: 'value',
             message: `${paramToEdit}:`,
             type: 'text',
@@ -198,7 +215,7 @@ export const interactForBlueprintObject = async (
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'enum') {
       const value = (
-        await prompts({
+        await prompt({
           name: 'value',
           message: `${paramToEdit}:`,
           type: 'select',
@@ -211,7 +228,7 @@ export const interactForBlueprintObject = async (
       args.params[paramToEdit] = value
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'boolean') {
-      const { value } = await prompts({
+      const { value } = await prompt({
         name: 'value',
         message: `${paramToEdit}:`,
         type: 'toggle',
@@ -225,7 +242,7 @@ export const interactForBlueprintObject = async (
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'list' && prop.itemFormat === 'enum') {
       const value = (
-        await prompts({
+        await prompt({
           name: 'value',
           message: `${paramToEdit}:`,
           type: 'autocompleteMultiselect',
@@ -256,7 +273,7 @@ export const interactForBlueprintObject = async (
       )
       return interactForBlueprintObject(args, ctx)
     } else if (prop.format === 'number') {
-      const { value } = await prompts({
+      const { value } = await prompt({
         name: 'value',
         message: `${paramToEdit}:`,
         type: 'number',

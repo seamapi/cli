@@ -63,6 +63,33 @@ export const globalFlags: CommandFlag[] = [
     isRequired: false,
   },
   {
+    long: 'interactive',
+    short: 'i',
+    description:
+      'Always prompt to review and edit properties, prefilled with the given arguments.',
+    values: [],
+    takesValue: false,
+    isRequired: false,
+  },
+  {
+    long: 'json',
+    short: null,
+    description:
+      'Write the response to stdout as JSON. Enabled automatically when stdout is not a terminal, disable with --no-json.',
+    values: [],
+    takesValue: false,
+    isRequired: false,
+  },
+  {
+    long: 'non-interactive',
+    short: 'y',
+    description:
+      'Never prompt: exit with an error if the command or any required property is missing.',
+    values: [],
+    takesValue: false,
+    isRequired: false,
+  },
+  {
     long: 'remote-api-defs',
     short: null,
     description: 'Use the API definitions served by the Seam API.',
@@ -82,14 +109,6 @@ export const globalFlags: CommandFlag[] = [
     long: 'version',
     short: null,
     description: 'Print the CLI version.',
-    values: [],
-    takesValue: false,
-    isRequired: false,
-  },
-  {
-    long: null,
-    short: 'y',
-    description: 'Take the first suggestion instead of prompting.',
     values: [],
     takesValue: false,
     isRequired: false,

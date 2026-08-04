@@ -29,7 +29,16 @@ export const renderHelp = (
 }
 
 const overview =
-  'Every seam command is interactive and will prompt you for any missing required properties with helpful suggestions. To avoid automatic behavior, pass -y'
+  'Every seam command runs as soon as every required property is given, and otherwise prompts you for what is missing with helpful suggestions. Pass -i to always review properties first, or -y to never be prompted.'
+
+const outputSection = {
+  header: 'Output',
+  content: [
+    'Only the response is written to stdout, so it is safe to pipe. Prompts, progress, and other information are written to stderr.',
+    'The response is trimmed to the response key and pagination.',
+    'Request params may be piped or redirected in as a JSON object. Params given as arguments win over params read from stdin.',
+  ],
+}
 
 const examples = [
   { name: 'seam', summary: 'Interactively select commands to execute.' },
@@ -42,12 +51,28 @@ const examples = [
   },
   { name: 'seam devices list', summary: 'List devices in your workspace.' },
   {
+    name: 'seam devices list {bold --interactive}',
+    summary: 'Review and edit filters before listing devices.',
+  },
+  {
+    name: 'seam devices list {bold --non-interactive}',
+    summary: 'List devices, failing instead of prompting.',
+  },
+  {
     name: 'seam locks unlock-door {bold --device-id} $MY_DOOR',
     summary: 'Unlock a lock.',
   },
   {
     name: "seam access-codes create {bold --code} '1234' {bold --name} 'My Code'",
     summary: 'Create an access code.',
+  },
+  {
+    name: 'seam devices list > devices.json',
+    summary: 'Write the response to a file as JSON.',
+  },
+  {
+    name: 'cat params.json | seam locks unlock-door',
+    summary: 'Pipe request params in as JSON.',
   },
   {
     name: 'seam completion bash',
@@ -66,7 +91,9 @@ const groupSections = (group: CommandGroup, spec: CommandSpec): Section[] => {
     { header: 'Usage', content: `${name} <command> [options]` },
     ...commandSectionsForGroup(group, isRoot),
     optionSection(spec.globalFlags),
-    ...(isRoot ? [{ header: 'Command List Examples', content: examples }] : []),
+    ...(isRoot
+      ? [outputSection, { header: 'Command List Examples', content: examples }]
+      : []),
     { content: `Run '${name} <command> --help' to see a command in detail.` },
   ]
 }
