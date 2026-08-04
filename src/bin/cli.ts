@@ -126,10 +126,10 @@ async function cli(args: ParsedArgs) {
     args[k.toLowerCase().replace(/-/g, '_')] = args[k]
   }
 
-  const use_remote_api_defs =
+  const useRemoteApiDefs =
     args['remote_api_defs'] ?? config.get('use_remote_api_defs')
 
-  const blueprint = await getApiBlueprint(use_remote_api_defs ?? false, {
+  const blueprint = await getApiBlueprint(useRemoteApiDefs ?? false, {
     update,
   })
 
@@ -287,10 +287,10 @@ const toCommandWord = (arg: string): string =>
   arg.toLowerCase().replace(/_/g, '-')
 
 const handleConnectWebviewResponse = async (
-  connect_webview: any,
+  connectWebview: any,
   interactivity: Interactivity,
 ) => {
-  const url = connect_webview.url
+  const url = connectWebview.url
 
   if (
     interactivity !== 'non-interactive' &&
