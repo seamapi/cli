@@ -1,10 +1,10 @@
 import type { Parameter } from '@seamapi/blueprint'
 import { beforeEach, expect, test, vi } from 'vitest'
 
-import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
+import type { CliContext } from '../context.js'
 import { createMemoryOutput } from '../output/create-memory-output.js'
 import { setOutput } from '../output/get-output.js'
-import type { ContextHelpers } from '../types.js'
+import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
 import type * as PromptModule from './prompt.js'
 import {
   promptAutocomplete,
@@ -39,8 +39,8 @@ const parameters = [
   { name: 'name', isRequired: false, format: 'string' },
 ] as unknown as Parameter[]
 
-const ctx = (interactivity: ContextHelpers['interactivity']): ContextHelpers =>
-  ({ interactivity, blueprint: {} }) as unknown as ContextHelpers
+const ctx = (interactivity: CliContext['interactivity']): CliContext =>
+  ({ interactivity, blueprint: {} }) as unknown as CliContext
 
 const args = (params: Record<string, any>) => ({
   command: ['devices', 'get'],

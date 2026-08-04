@@ -3,8 +3,8 @@ import chalk from 'chalk'
 
 import { validateToken } from '../auth/validate-token.js'
 import { getConfigStore } from '../config/index.js'
+import { resolveAuth } from '../context.js'
 import { assertEnvVarUnset, getTokenFromEnv, tokenEnvVar } from '../env.js'
-import { getServer } from '../get-server.js'
 import { getOutput } from '../output/get-output.js'
 import { promptText } from './prompt.js'
 import { withLoading } from '../output/with-loading.js'
@@ -13,12 +13,13 @@ import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 export const interactForLogin = async () => {
   const config = getConfigStore()
   const output = getOutput()
+  const { server } = resolveAuth(config)
 
   assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
 
-  if (getServer().includes('localhost')) {
+  if (server.includes('localhost')) {
     output.info(
-      `You're using a local Seam Connect instance, you can enter the API Key to your local user, you can create a new user from:\n\n${getServer()}/admin/create_user_with_api_key`,
+      `You're using a local Seam Connect instance, you can enter the API Key to your local user, you can create a new user from:\n\n${server}/admin/create_user_with_api_key`,
     )
   } else {
     output.info(
@@ -51,6 +52,6 @@ export const interactForLogin = async () => {
     )
   }
 
-  config.set(`${getServer()}.pat`, token)
+  config.set(`${server}.pat`, token)
   output.info(`Token saved! You may begin using the CLI!`)
 }

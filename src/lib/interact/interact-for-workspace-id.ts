@@ -1,15 +1,15 @@
 import { SeamHttpWithoutWorkspace } from '@seamapi/http/connect'
 
 import { getConfigStore } from '../config/index.js'
+import { resolveAuth } from '../context.js'
 import {
   assertEnvVarUnset,
   getWorkspaceIdFromEnv,
   workspaceIdEnvVar,
 } from '../env.js'
-import { getSeamMultiWorkspace } from '../seam/client.js'
-import { getServer } from '../get-server.js'
-import { promptAutocomplete } from './prompt.js'
 import { withLoading } from '../output/with-loading.js'
+import { getSeamMultiWorkspace } from '../seam/client.js'
+import { promptAutocomplete } from './prompt.js'
 
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const config = getConfigStore()
@@ -22,7 +22,7 @@ export const interactForWorkspaceId = async (personalAccessToken?: string) => {
 
   const seam = personalAccessToken
     ? SeamHttpWithoutWorkspace.fromPersonalAccessToken(personalAccessToken, {
-        endpoint: getServer(),
+        endpoint: resolveAuth(config).server,
       })
     : await getSeamMultiWorkspace()
 

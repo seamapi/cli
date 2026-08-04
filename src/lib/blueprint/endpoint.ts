@@ -1,8 +1,8 @@
-import type { ContextHelpers } from '../types.js'
+import type { ApiBlueprint } from './index.js'
 
 export const getCommandBlueprintDef = (
   cmd: string[],
-  helpers: ContextHelpers,
+  helpers: { blueprint: ApiBlueprint },
 ) => {
   const path = `/${cmd.join('/').replace(/-/g, '_')}`
   const def = helpers.blueprint.routes
@@ -24,7 +24,7 @@ export const getCommandBlueprintDef = (
  */
 export const getResponseKey = (
   command: string[],
-  ctx: ContextHelpers,
+  ctx: { blueprint: ApiBlueprint },
 ): string | null => {
   let endpoint
   try {

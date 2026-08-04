@@ -8,7 +8,6 @@ import {
   getTokenFromEnv,
   tokenEnvVar,
 } from '../env.js'
-import { getServer } from '../get-server.js'
 import { getOutput } from '../output/get-output.js'
 import { promptAutocomplete, promptText } from './prompt.js'
 
@@ -39,8 +38,9 @@ export async function interactForServerSelection() {
       userUrlSeed = randomBytes(5).toString('hex')
     }
     assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
-    config.set('server', `https://${userUrlSeed}.fakeseamconnect.seam.vc`)
-    config.set(`${getServer()}.pat`, `seam_apikey1_token`)
+    const fakeServerUrl = `https://${userUrlSeed}.fakeseamconnect.seam.vc`
+    config.set('server', fakeServerUrl)
+    config.set(`${fakeServerUrl}.pat`, `seam_apikey1_token`)
     output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
   } else {
     config.set('server', server)

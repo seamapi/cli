@@ -5,19 +5,20 @@ import {
   SeamHttpWithoutWorkspace,
 } from '@seamapi/http/connect'
 
+import { type AuthContext, resolveAuth } from '../context.js'
 import { tokenEnvVar, workspaceIdEnvVar } from '../env.js'
-import { getToken, getWorkspaceId } from '../get-credentials.js'
-import { getServer } from '../get-server.js'
 
-export const getSeam = async (): Promise<SeamHttp> => {
-  const token = getRequiredToken()
+export const getSeam = async (
+  auth: AuthContext = resolveAuth(),
+): Promise<SeamHttp> => {
+  const token = getRequiredToken(auth)
 
-  const options = { endpoint: getServer() }
+  const options = { endpoint: auth.server }
 
   if (isPersonalAccessToken(token)) {
     return SeamHttp.fromPersonalAccessToken(
       token,
-      getRequiredWorkspaceId(),
+      getRequiredWorkspaceId(auth),
       options,
     )
   }
@@ -25,7 +26,7 @@ export const getSeam = async (): Promise<SeamHttp> => {
   if (isConsoleSessionToken(token)) {
     return SeamHttp.fromConsoleSessionToken(
       token,
-      getRequiredWorkspaceId(),
+      getRequiredWorkspaceId(auth),
       options,
     )
   }
@@ -33,21 +34,21 @@ export const getSeam = async (): Promise<SeamHttp> => {
   return SeamHttp.fromApiKey(token, options)
 }
 
-export const getSeamMultiWorkspace = async (): Promise<
-  SeamHttpWithoutWorkspace | SeamHttp
-> => {
-  const token = getRequiredToken()
-  const options = { endpoint: getServer() }
+export const getSeamMultiWorkspace = async (
+  auth: AuthContext = resolveAuth(),
+): Promise<SeamHttpWithoutWorkspace | SeamHttp> => {
+  const token = getRequiredToken(auth)
+  const options = { endpoint: auth.server }
 
   if (isPersonalAccessToken(token)) {
     return SeamHttpWithoutWorkspace.fromPersonalAccessToken(token, options)
   }
 
-  return await getSeam()
+  return await getSeam(auth)
 }
 
-const getRequiredToken = (): string => {
-  const token = getToken()
+const getRequiredToken = (auth: AuthContext): string => {
+  const { token } = auth
 
   if (token == null) {
     throw new Error(
@@ -58,8 +59,8 @@ const getRequiredToken = (): string => {
   return token
 }
 
-const getRequiredWorkspaceId = (): string => {
-  const workspaceId = getWorkspaceId()
+const getRequiredWorkspaceId = (auth: AuthContext): string => {
+  const { workspaceId } = auth
 
   if (workspaceId == null) {
     throw new Error(

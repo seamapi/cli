@@ -1,9 +1,9 @@
 import type { Parameter } from '@seamapi/blueprint'
 
 import { NonInteractiveError, toArgName } from '../args/parse.js'
+import type { CliContext } from '../context.js'
 import { getOutput } from '../output/get-output.js'
 import { ellipsis } from '../render/text.js'
-import type { ContextHelpers } from '../types.js'
 import { interactForAccessCode } from './interact-for-access-code.js'
 import { interactForAcsEntrance } from './interact-for-acs-entrance.js'
 import { interactForAcsSystem } from './interact-for-acs-system.js'
@@ -44,7 +44,7 @@ export const interactForBlueprintObject = async (
     isSubProperty?: boolean
     subPropertyPath?: string
   },
-  ctx: ContextHelpers,
+  ctx: CliContext,
 ): Promise<any> => {
   // Clone args and args params so that we can mutate it
   args = { ...args, params: { ...args.params } }

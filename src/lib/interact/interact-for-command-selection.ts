@@ -1,7 +1,7 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
-import type { ContextHelpers } from '../types.js'
 import { NonInteractiveError } from '../args/parse.js'
+import type { CliContext } from '../context.js'
 import {
   promptAutocomplete,
   PromptCancelledError,
@@ -31,7 +31,7 @@ function ergonomicSort(aStr: string, bStr: string) {
 
 export async function interactForCommandSelection(
   commandPath: string[],
-  helpers: ContextHelpers,
+  helpers: CliContext,
 ) {
   const commands = helpers.blueprint.routes
     .flatMap((route) => route.endpoints)

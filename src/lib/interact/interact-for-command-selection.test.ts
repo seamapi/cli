@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest'
 
+import type { CliContext } from '../context.js'
 import { interactForCommandSelection } from './interact-for-command-selection.js'
-import type { ContextHelpers } from '../types.js'
 import type * as PromptModule from './prompt.js'
 import { promptAutocomplete, withBackHint } from './prompt.js'
 
@@ -27,7 +27,7 @@ const ctx = {
       },
     ],
   },
-} as unknown as ContextHelpers
+} as unknown as CliContext
 
 test('interactForCommandSelection: resolves a complete command', async () => {
   await expect(
@@ -52,7 +52,7 @@ test('interactForCommandSelection: rejects a missing command when non-interactiv
 const interactiveCtx = {
   ...ctx,
   interactivity: 'interactive',
-} as unknown as ContextHelpers
+} as unknown as CliContext
 
 test('interactForCommandSelection: tells the user a sub-command menu can be left', async () => {
   vi.mocked(promptAutocomplete).mockImplementationOnce(async () => 'list')

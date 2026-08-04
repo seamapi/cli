@@ -1,6 +1,6 @@
 import type { Blueprint } from '@seamapi/blueprint'
 
-import { getServer } from '../get-server.js'
+import { resolveAuth } from '../context.js'
 
 /**
  * Build a blueprint from the OpenAPI document the current server is running,
@@ -11,7 +11,7 @@ export const createRemoteBlueprint = async (): Promise<Blueprint> => {
     import('@seamapi/blueprint'),
     import('@seamapi/http/connect'),
   ])
-  const openapi = await getOpenapiSchema(getServer())
+  const openapi = await getOpenapiSchema(resolveAuth().server)
 
   return await createBlueprint({ openapi }, { omitUndocumented: true })
 }

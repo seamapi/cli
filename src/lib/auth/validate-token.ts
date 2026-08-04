@@ -5,10 +5,10 @@ import {
   SeamHttpWithoutWorkspace,
 } from '@seamapi/http/connect'
 
-import { getServer } from '../get-server.js'
+import { resolveAuth } from '../context.js'
 
 export const validateToken = async (token: string, workspaceId?: string) => {
-  const options = { endpoint: getServer() }
+  const options = { endpoint: resolveAuth().server }
 
   if (isPersonalAccessToken(token)) {
     const seam = workspaceId

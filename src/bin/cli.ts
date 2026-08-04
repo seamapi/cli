@@ -23,6 +23,7 @@ import {
 import { getApiBlueprint } from 'lib/blueprint/index.js'
 import { findLocalCommand, getCommandSpec } from 'lib/command-spec.js'
 import { getConfigStore } from 'lib/config/index.js'
+import { type CliContext, resolveAuth } from 'lib/context.js'
 import {
   assertEnvVarUnset,
   endpointEnvVar,
@@ -34,8 +35,6 @@ import {
   tokenEnvVar,
   workspaceIdEnvVar,
 } from 'lib/env.js'
-import { getToken } from 'lib/get-credentials.js'
-import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact/interact-for-action-attempt-poll.js'
 import { interactForCommandParams } from 'lib/interact/interact-for-command-params.js'
 import { interactForCommandSelection } from 'lib/interact/interact-for-command-selection.js'
@@ -59,7 +58,6 @@ import {
 } from 'lib/render/completion/index.js'
 import { renderHelp } from 'lib/render/help.js'
 import { RequestSeamApi } from 'lib/seam/request.js'
-import type { ContextHelpers } from 'lib/types.js'
 import seamapiCliVersion from 'lib/version.js'
 
 async function cli(args: ParsedArgs) {
@@ -156,13 +154,13 @@ async function cli(args: ParsedArgs) {
     config.set('server', fakeApiUrl)
     output.info(`Server URL set to ${fakeApiUrl}`)
 
-    config.set(`${getServer()}.pat`, `seam_apikey1_token`)
+    config.set(`${fakeApiUrl}.pat`, `seam_apikey1_token`)
     output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
     return
   }
 
   if (
-    getToken() == null &&
+    resolveAuth(config).token == null &&
     args._[0] !== 'login' &&
     !isEqual(args._, ['select', 'server'])
   ) {
@@ -182,7 +180,9 @@ async function cli(args: ParsedArgs) {
   // Params given as arguments take precedence over these.
   const commandParams: Record<string, any> = { ...(await readStdinJson()) }
 
-  const ctx: ContextHelpers = {
+  const ctx: CliContext = {
+    config,
+    auth: resolveAuth(config),
     blueprint,
     interactivity: getInteractivity(args, { canPrompt: canPrompt() }),
   }
@@ -226,7 +226,9 @@ async function cli(args: ParsedArgs) {
     if (args['token']) {
       const token = String(args['token']).trim()
       await validateToken(token, args['workspace_id'])
-      config.set(`${getServer()}.pat`, token)
+      // Resolve after any --server write above so the token is stored
+      // under the server it was validated against.
+      config.set(`${resolveAuth(config).server}.pat`, token)
       config.delete('current_workspace_id')
     }
     if (args['workspace_id']) {
@@ -244,7 +246,7 @@ async function cli(args: ParsedArgs) {
     return
   } else if (isEqual(selectedCommand, ['logout'])) {
     assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log out')
-    config.delete(`${getServer()}.pat`)
+    config.delete(`${resolveAuth(config).server}.pat`)
     // Configs written before tokens were stored per server may still hold an
     // un-namespaced token, so drop that too.
     config.delete('pat')
@@ -366,7 +368,7 @@ const toCommandWord = (arg: string): string =>
 const assertKnownArgs = (
   argParams: Record<string, any>,
   command: string[],
-  ctx?: ContextHelpers,
+  ctx?: CliContext,
 ): void => {
   const local = findLocalCommand(command)
 
