@@ -1,8 +1,8 @@
 import { existsSync, rmSync } from 'node:fs'
 
-import type Configstore from 'configstore'
+import Configstore from 'configstore'
 
-import { mergeConfig, splitConfig } from './config-store-utils.js'
+import { mergeConfig, splitConfig } from './config-store.js'
 
 export const migrateConfigStore = (
   settingsStore: Configstore,
@@ -37,4 +37,3 @@ const writeIfChanged = (
     store.all = nextConfig
   }
 }
-

@@ -8,7 +8,7 @@ import parseArgs, { type ParsedArgs } from 'minimist'
 import prompts from 'prompts'
 
 import { getApiBlueprint } from 'lib/get-api-blueprint.js'
-import { getConfigStore } from 'lib/get-config-store.js'
+import { getConfigStore } from 'lib/config/index.js'
 import { getServer } from 'lib/get-server.js'
 import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
 import { interactForCommandParams } from 'lib/interact-for-command-params.js'
