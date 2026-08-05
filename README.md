@@ -438,6 +438,10 @@ Check the credentials without cutting a release by triggering
 $ gh workflow run build.yml --ref <branch>
 ```
 
+GitHub only offers a workflow_dispatch for a workflow already on the default
+branch, so the build workflow must be merged first. It then runs against any
+branch.
+
 Then confirm the run's macOS binaries job signed and notarized: it verifies the
 signature, assesses the binary the way Gatekeeper does, and runs it.
 
