@@ -8,7 +8,7 @@ import { resetPromptClient, setPromptClient } from 'lib/interact/prompt.js'
 
 /** Scripts an answer for each ask, in the order the editor asks. */
 const scriptPrompt = (script: unknown[]): void => {
-  setPromptClient(createMemoryPrompt(script).client)
+  setPromptClient(createMemoryPrompt(script))
 }
 
 beforeEach(() => {

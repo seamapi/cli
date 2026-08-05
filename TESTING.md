@@ -21,7 +21,11 @@ the fake goes.
    capture you assert on. Config (`createMemoryConfigStore()` +
    `setConfigStore()`), the prompt layer (`createMemoryPrompt()` +
    `setPromptClient()`), and the Seam API get the same treatment; nothing else
-   needs it.
+   needs it. An interface with more than one implementation — the real edge
+   and its memory fake — is fulfilled by **classes** (`SeamHttpApi` /
+   `MemorySeamApi`, `TerminalPromptClient` / `MemoryPromptClient`,
+   `SeamConfigStore` / `MemoryConfigStore`), with `createFoo` factories kept
+   as the convenient way to construct them.
 5. **The e2e suite proves wiring once; module tests prove behavior
    everywhere.** Don't re-prove auth headers in a unit test, and don't push
    branching logic into `test/cli.test.ts`.
@@ -114,17 +118,19 @@ export interface SeamApi {
   ) => Promise<SeamApiResponse>
 }
 
-export const createSeamApi = async (): Promise<SeamApi> => {
-  const seam = await getSeam() // the only place SeamHttp appears
-  return {
-    post: async (path, params) => {
-      const { status, data } = await seam.client.post(path, params, {
-        validateStatus: () => true,
-      })
-      return { status, data }
-    },
+export class SeamHttpApi implements SeamApi {
+  constructor(private readonly seam: SeamHttp) {} // the only place SeamHttp appears
+
+  post = async (path: string, params: Record<string, unknown>) => {
+    const { status, data } = await this.seam.client.post(path, params, {
+      validateStatus: () => true,
+    })
+    return { status, data }
   }
 }
+
+export const createSeamApi = async (): Promise<SeamApi> =>
+  new SeamHttpApi(await getSeam())
 ```
 
 The fake is the in-process mirror of the e2e server — a routes table plus a
@@ -132,20 +138,26 @@ capture:
 
 ```ts
 // src/lib/http/create-memory-seam-api.ts
+export class MemorySeamApi implements SeamApi {
+  readonly requests: Array<{ path: string; params: Record<string, unknown> }> =
+    []
+
+  constructor(private readonly routes: Record<string, SeamApiResponse>) {}
+
+  post = async (path: string, params: Record<string, unknown>) => {
+    this.requests.push({ path, params })
+    return (
+      this.routes[path] ?? {
+        status: 404,
+        data: { error: { type: 'not_found' } },
+      }
+    )
+  }
+}
+
 export const createMemorySeamApi = (
   routes: Record<string, SeamApiResponse>,
-) => {
-  const requests: Array<{ path: string; params: Record<string, unknown> }> = []
-  const api: SeamApi = {
-    post: async (path, params) => {
-      requests.push({ path, params })
-      return (
-        routes[path] ?? { status: 404, data: { error: { type: 'not_found' } } }
-      )
-    },
-  }
-  return { api, requests }
-}
+): MemorySeamApi => new MemorySeamApi(routes)
 ```
 
 This split also separates transport from presentation in `http/request.ts`
@@ -153,7 +165,7 @@ This split also separates transport from presentation in `http/request.ts`
 error-status → exit-code behavior becomes a classical test with zero HTTP:
 
 ```ts
-const { api, requests } = createMemorySeamApi({
+const api = createMemorySeamApi({
   '/devices/list': { status: 400, data: { error: { type: 'invalid_input' } } },
 })
 const memory = createMemoryOutput()
@@ -164,7 +176,7 @@ await requestSeamApi(
 )
 
 // Boundary interaction: the outbound message IS the behavior.
-expect(requests).toEqual([{ path: '/devices/list', params: { limit: 5 } }])
+expect(api.requests).toEqual([{ path: '/devices/list', params: { limit: 5 } }])
 expect(memory.stdout()).toContain('invalid_input')
 expect(process.exitCode).toBe(1)
 ```

@@ -1,3 +1,5 @@
+import type { SeamHttp } from '@seamapi/http/connect'
+
 import type { AuthContext } from '../context.js'
 import { getSeam } from './client.js'
 
@@ -22,14 +24,19 @@ export interface SeamApi {
 }
 
 /** The only place `SeamHttp` appears for raw requests. */
-export const createSeamApi = async (auth?: AuthContext): Promise<SeamApi> => {
-  const seam = await getSeam(auth)
-  return {
-    post: async (path, params) => {
-      const { status, data } = await seam.client.post(path, params, {
-        validateStatus: () => true,
-      })
-      return { status, data }
-    },
+export class SeamHttpApi implements SeamApi {
+  constructor(private readonly seam: SeamHttp) {}
+
+  post = async (
+    path: string,
+    params: Record<string, unknown>,
+  ): Promise<SeamApiResponse> => {
+    const { status, data } = await this.seam.client.post(path, params, {
+      validateStatus: () => true,
+    })
+    return { status, data }
   }
 }
+
+export const createSeamApi = async (auth?: AuthContext): Promise<SeamApi> =>
+  new SeamHttpApi(await getSeam(auth))

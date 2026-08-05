@@ -52,7 +52,7 @@ const interactiveHelpers = () => ({
 
 test('interactForCommandSelection: tells the user a sub-command menu can be left', async () => {
   const memoryPrompt = createMemoryPrompt(['list'])
-  setPromptClient(memoryPrompt.client)
+  setPromptClient(memoryPrompt)
 
   await interactForCommandSelection(['devices'], interactiveHelpers())
 
@@ -64,7 +64,7 @@ test('interactForCommandSelection: tells the user a sub-command menu can be left
 // Escape stops the CLI at the top level, so promising a way back would lie.
 test('interactForCommandSelection: says nothing about going back at the top level', async () => {
   const memoryPrompt = createMemoryPrompt(['devices', 'list'])
-  setPromptClient(memoryPrompt.client)
+  setPromptClient(memoryPrompt)
 
   await interactForCommandSelection([], interactiveHelpers())
 

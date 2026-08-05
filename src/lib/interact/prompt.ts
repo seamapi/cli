@@ -133,22 +133,22 @@ const toOptions = <Value>(
         : { label, value, hint }) as Option<Value>,
   )
 
-const terminalPromptClient: PromptClient = {
+export class TerminalPromptClient implements PromptClient {
   /**
    * Prompts read raw keypresses and render an interface, so they need a
    * terminal on both ends: when stdin is a pipe or a file it holds request
    * params, not answers, and when stderr is redirected nobody sees the
    * question.
    */
-  canPrompt: () =>
-    process.stdin.isTTY === true && process.stderr.isTTY === true,
+  canPrompt = (): boolean =>
+    process.stdin.isTTY === true && process.stderr.isTTY === true
 
-  text: async (options) => {
+  text = async (options: PromptTextOptions): Promise<string> => {
     installArrowKeyAliases()
     return unwrap(await text({ ...options, output }))
-  },
+  }
 
-  number: async (options) => {
+  number = async (options: PromptNumberOptions): Promise<number> => {
     installArrowKeyAliases()
     const value = unwrap(
       await text({
@@ -163,14 +163,14 @@ const terminalPromptClient: PromptClient = {
       }),
     )
     return Number(value)
-  },
+  }
 
-  confirm: async (options) => {
+  confirm = async (options: PromptConfirmOptions): Promise<boolean> => {
     installArrowKeyAliases()
     return unwrap(await confirm({ ...options, output }))
-  },
+  }
 
-  select: async <Value,>(options: PromptSelectOptions<Value>) => {
+  select = async <Value>(options: PromptSelectOptions<Value>): Promise<Value> => {
     installArrowKeyAliases()
     return unwrap(
       await select<Value>({
@@ -179,9 +179,11 @@ const terminalPromptClient: PromptClient = {
         output,
       }),
     )
-  },
+  }
 
-  autocomplete: async <Value,>(options: PromptSelectOptions<Value>) => {
+  autocomplete = async <Value>(
+    options: PromptSelectOptions<Value>,
+  ): Promise<Value> => {
     installArrowKeyAliases()
     return unwrap(
       await autocomplete<Value>({
@@ -193,11 +195,11 @@ const terminalPromptClient: PromptClient = {
         output,
       }),
     )
-  },
+  }
 
-  autocompleteMultiselect: async <Value,>(
+  autocompleteMultiselect = async <Value>(
     options: PromptSelectOptions<Value>,
-  ) => {
+  ): Promise<Value[]> => {
     installArrowKeyAliases()
     return unwrap(
       await autocompleteMultiselect<Value>({
@@ -207,8 +209,10 @@ const terminalPromptClient: PromptClient = {
         output,
       }),
     )
-  },
+  }
 }
+
+const terminalPromptClient = new TerminalPromptClient()
 
 let client: PromptClient = terminalPromptClient
 

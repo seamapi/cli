@@ -7,17 +7,17 @@ import { setOutput } from 'lib/output/get-output.js'
 import {
   cancelPrompt,
   createMemoryPrompt,
-  type MemoryPrompt,
+  type MemoryPromptClient,
 } from 'lib/interact/create-memory-prompt.js'
 import { interactForBlueprintObject } from 'lib/interact/interact-for-blueprint-object.js'
 import { resetPromptClient, setPromptClient, withBackHint } from 'lib/interact/prompt.js'
 
-let memoryPrompt: MemoryPrompt
+let memoryPrompt: MemoryPromptClient
 
 /** Replace the prompt client, scripting an answer for each ask in turn. */
-const scriptPrompt = (script: unknown[]): MemoryPrompt => {
+const scriptPrompt = (script: unknown[]): MemoryPromptClient => {
   memoryPrompt = createMemoryPrompt(script)
-  setPromptClient(memoryPrompt.client)
+  setPromptClient(memoryPrompt)
   return memoryPrompt
 }
 

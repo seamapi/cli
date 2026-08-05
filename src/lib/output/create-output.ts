@@ -58,40 +58,55 @@ export interface CreateOutputOptions {
   colors?: boolean
 }
 
-export const createOutput = ({
-  format = 'text',
-  stdout = process.stdout,
-  stderr = process.stderr,
-  colors = false,
-}: CreateOutputOptions = {}): Output => {
-  const isJson = format === 'json'
+/**
+ * The one {@link Output} implementation: writes to a pair of streams. The
+ * process streams make it the real output; in-memory streams make it the
+ * test capture (see `create-memory-output.ts`).
+ */
+export class StreamOutput implements Output {
+  readonly format: OutputFormat
 
-  return {
-    format,
+  private readonly stdout: OutputStream
+  private readonly stderr: OutputStream
+  private readonly colors: boolean
 
-    data: (value: unknown): void => {
-      if (value === undefined) return
-      stdout.write(`${formatData(value, format, colors)}\n`)
-    },
+  constructor({
+    format = 'text',
+    stdout = process.stdout,
+    stderr = process.stderr,
+    colors = false,
+  }: CreateOutputOptions = {}) {
+    this.format = format
+    this.stdout = stdout
+    this.stderr = stderr
+    this.colors = colors
+  }
 
-    text: (value: string): void => {
-      stdout.write(`${value}\n`)
-    },
+  data = (value: unknown): void => {
+    if (value === undefined) return
+    this.stdout.write(`${formatData(value, this.format, this.colors)}\n`)
+  }
 
-    info: (message = ''): void => {
-      if (isJson) return
-      stderr.write(`${message}\n`)
-    },
+  text = (value: string): void => {
+    this.stdout.write(`${value}\n`)
+  }
 
-    warn: (message: string): void => {
-      stderr.write(`${message}\n`)
-    },
+  info = (message = ''): void => {
+    if (this.format === 'json') return
+    this.stderr.write(`${message}\n`)
+  }
 
-    error: (message: string): void => {
-      stderr.write(`${message}\n`)
-    },
+  warn = (message: string): void => {
+    this.stderr.write(`${message}\n`)
+  }
+
+  error = (message: string): void => {
+    this.stderr.write(`${message}\n`)
   }
 }
+
+export const createOutput = (options: CreateOutputOptions = {}): Output =>
+  new StreamOutput(options)
 
 const formatData = (
   value: unknown,

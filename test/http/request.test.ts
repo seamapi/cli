@@ -15,7 +15,7 @@ afterEach(() => {
 })
 
 test('requestSeamApi: sends the params and reports the trimmed payload', async () => {
-  const { api, requests } = createMemorySeamApi({
+  const api = createMemorySeamApi({
     '/devices/list': {
       status: 200,
       data: {
@@ -33,7 +33,9 @@ test('requestSeamApi: sends the params and reports the trimmed payload', async (
   )
 
   // Boundary interaction: the outbound message IS the behavior.
-  expect(requests).toEqual([{ path: '/devices/list', params: { limit: 5 } }])
+  expect(api.requests).toEqual([
+    { path: '/devices/list', params: { limit: 5 } },
+  ])
   expect(response.status).toBe(200)
   expect(JSON.parse(memory.stdout())).toEqual({
     devices: [{ device_id: 'device1' }],
@@ -43,7 +45,7 @@ test('requestSeamApi: sends the params and reports the trimmed payload', async (
 })
 
 test('requestSeamApi: reports an error payload and sets the exit code', async () => {
-  const { api, requests } = createMemorySeamApi({
+  const api = createMemorySeamApi({
     '/devices/list': {
       status: 400,
       data: { error: { type: 'invalid_input' }, ok: false },
@@ -56,14 +58,16 @@ test('requestSeamApi: reports an error payload and sets the exit code', async ()
     { api, output: memory.output },
   )
 
-  expect(requests).toEqual([{ path: '/devices/list', params: { limit: 5 } }])
+  expect(api.requests).toEqual([
+    { path: '/devices/list', params: { limit: 5 } },
+  ])
   expect(memory.stdout()).toContain('invalid_input')
   expect(memory.stderr()).toContain('[400]')
   expect(process.exitCode).toBe(1)
 })
 
 test('requestSeamApi: keeps the request banner out of stdout', async () => {
-  const { api } = createMemorySeamApi({
+  const api = createMemorySeamApi({
     '/devices/list': { status: 200, data: { devices: [], ok: true } },
   })
   const memory = createMemoryOutput({ format: 'text' })
