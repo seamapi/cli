@@ -1,7 +1,7 @@
 import type { CliContext } from 'lib/context.js'
 import { isInsideWebBrowser } from 'lib/env.js'
-import { interactForActionAttemptPoll } from 'lib/interactions/action-attempt-poll.js'
-import { promptConfirm } from 'lib/interactions/prompt.js'
+import { interactForActionAttemptPoll } from 'lib/interactions/index.js'
+import { promptConfirm } from 'lib/prompt.js'
 
 /**
  * Follow-ups a response may call for: opening a connect webview in the

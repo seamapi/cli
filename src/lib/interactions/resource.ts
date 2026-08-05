@@ -1,5 +1,5 @@
-import { promptAutocomplete, withBackHint } from './prompt.js'
 import { withLoading } from 'lib/output/with-loading.js'
+import { promptAutocomplete, withBackHint } from 'lib/prompt.js'
 
 export interface ResourceChoice {
   title: string

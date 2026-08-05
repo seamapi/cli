@@ -1,8 +1,8 @@
 import { afterEach, expect, test } from 'vitest'
 
-import { createMemoryPrompt } from 'lib/interactions/memory-prompt.js'
-import { interactForCommandSelection } from 'lib/interactions/command-selection.js'
-import { resetPromptClient, setPromptClient, withBackHint } from 'lib/interactions/prompt.js'
+import { interactForCommandSelection } from 'lib/interactions/index.js'
+import { createMemoryPrompt } from 'lib/memory-prompt.js'
+import { resetPromptClient, setPromptClient, withBackHint } from 'lib/prompt.js'
 
 afterEach(resetPromptClient)
 

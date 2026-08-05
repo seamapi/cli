@@ -170,7 +170,9 @@ export class TerminalPromptClient implements PromptClient {
     return unwrap(await confirm({ ...options, output }))
   }
 
-  select = async <Value>(options: PromptSelectOptions<Value>): Promise<Value> => {
+  select = async <Value>(
+    options: PromptSelectOptions<Value>,
+  ): Promise<Value> => {
     installArrowKeyAliases()
     return unwrap(
       await select<Value>({

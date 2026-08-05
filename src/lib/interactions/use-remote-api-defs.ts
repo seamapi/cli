@@ -1,6 +1,6 @@
 import { setUseRemoteApiDefs } from 'lib/auth/operations.js'
 import { getOutput } from 'lib/output/get-output.js'
-import { promptSelect } from './prompt.js'
+import { promptSelect } from 'lib/prompt.js'
 
 export async function interactForUseRemoteApiDefs() {
   const useRemoteApiDefs = await promptSelect({

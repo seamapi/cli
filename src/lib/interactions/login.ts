@@ -6,8 +6,9 @@ import { validateToken } from 'lib/auth/validate-token.js'
 import { getConfigStore } from 'lib/config/index.js'
 import { resolveAuth } from 'lib/context.js'
 import { getOutput } from 'lib/output/get-output.js'
-import { promptText } from './prompt.js'
 import { withLoading } from 'lib/output/with-loading.js'
+import { promptText } from 'lib/prompt.js'
+
 import { interactForWorkspaceId } from './workspace-id.js'
 
 export const interactForLogin = async () => {

@@ -1,6 +1,6 @@
 import type { Command } from 'lib/commands/registry.js'
 import { NonInteractiveError } from 'lib/errors.js'
-import { interactForUseRemoteApiDefs } from 'lib/interactions/use-remote-api-defs.js'
+import { interactForUseRemoteApiDefs } from 'lib/interactions/index.js'
 
 export const configUseRemoteApiDefsCommand: Command = {
   definition: {

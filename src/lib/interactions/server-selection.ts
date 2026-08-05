@@ -8,7 +8,7 @@ import {
 import { getConfigStore } from 'lib/config/index.js'
 import { resolveAuth } from 'lib/context.js'
 import { getOutput } from 'lib/output/get-output.js'
-import { promptAutocomplete, promptText } from './prompt.js'
+import { promptAutocomplete, promptText } from 'lib/prompt.js'
 
 export async function interactForServerSelection() {
   const config = getConfigStore()

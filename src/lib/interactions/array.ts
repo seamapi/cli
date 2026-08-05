@@ -1,11 +1,11 @@
-import { getOutput } from 'lib/output/get-output.js'
 import { PromptCancelledError } from 'lib/errors.js'
+import { getOutput } from 'lib/output/get-output.js'
 import {
   promptNumber,
   promptSelect,
   promptText,
   withBackHint,
-} from './prompt.js'
+} from 'lib/prompt.js'
 
 export const interactForArray = async (
   array: string[],

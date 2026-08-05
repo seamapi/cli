@@ -24,12 +24,12 @@ import { type CliContext, resolveAuth } from 'lib/context.js'
 import { tokenEnvVar } from 'lib/env.js'
 import { reportErrorAndExit } from 'lib/errors.js'
 import { createSeamApi, type SeamApi } from 'lib/http/api.js'
-import { interactForCommandSelection } from 'lib/interactions/command-selection.js'
-import { canPrompt } from 'lib/interactions/prompt.js'
+import { interactForCommandSelection } from 'lib/interactions/index.js'
 import { getOutput, setOutput } from 'lib/output/get-output.js'
 import { createOutput } from 'lib/output/output.js'
 import { readStdinJson } from 'lib/output/read-stdin-json.js'
 import { resolveOutputFormat } from 'lib/output/resolve-output-format.js'
+import { canPrompt } from 'lib/prompt.js'
 import {
   completionShells,
   isCompletionShell,

@@ -5,7 +5,7 @@ import { getConfigStore } from 'lib/config/index.js'
 import { resolveAuth } from 'lib/context.js'
 import { getSeamMultiWorkspace } from 'lib/http/client.js'
 import { withLoading } from 'lib/output/with-loading.js'
-import { promptAutocomplete } from './prompt.js'
+import { promptAutocomplete } from 'lib/prompt.js'
 
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {
   const config = getConfigStore()

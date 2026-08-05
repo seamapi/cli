@@ -8,7 +8,7 @@ import {
   emitArrowKeyAliases,
   type SearchableChoice,
   searchChoices,
-} from './prompt.js'
+} from 'lib/prompt.js'
 
 const workspaces = [
   { label: 'Sandbox', hint: 'ws_1' },

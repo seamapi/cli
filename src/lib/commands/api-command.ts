@@ -11,7 +11,7 @@ import type { CliContext } from 'lib/context.js'
 import { UsageError } from 'lib/errors.js'
 import { runResponseFollowUps } from 'lib/http/follow-ups.js'
 import { requestSeamApi } from 'lib/http/request.js'
-import { interactForCommandParams } from 'lib/interactions/command-params.js'
+import { interactForCommandParams } from 'lib/interactions/index.js'
 
 import type { CommandResult, Invocation } from './registry.js'
 

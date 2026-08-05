@@ -4,7 +4,17 @@ import { assertRequiredParams } from 'lib/args/validate.js'
 import type { CliContext } from 'lib/context.js'
 import { NonInteractiveError, PromptCancelledError } from 'lib/errors.js'
 import { getOutput } from 'lib/output/get-output.js'
+import {
+  promptAutocomplete,
+  promptAutocompleteMultiselect,
+  promptConfirm,
+  promptNumber,
+  promptSelect,
+  promptText,
+  withBackHint,
+} from 'lib/prompt.js'
 import { ellipsis } from 'lib/render/text.js'
+
 import { interactForAccessCode } from './access-code.js'
 import { interactForAcsEntrance } from './acs-entrance.js'
 import { interactForAcsSystem } from './acs-system.js'
@@ -15,15 +25,6 @@ import { interactForCustomMetadata } from './custom-metadata.js'
 import { interactForDevice } from './device.js'
 import { interactForTimestamp } from './timestamp.js'
 import { interactForUserIdentity } from './user-identity.js'
-import {
-  promptAutocomplete,
-  promptAutocompleteMultiselect,
-  promptConfirm,
-  promptNumber,
-  promptSelect,
-  promptText,
-  withBackHint,
-} from './prompt.js'
 
 const ergonomicPropOrder = [
   'name',

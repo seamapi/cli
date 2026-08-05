@@ -1,4 +1,4 @@
-import { PromptCancelledError } from '../errors.js'
+import { PromptCancelledError } from 'lib/errors.js'
 import type {
   PromptChoice,
   PromptClient,
@@ -6,7 +6,7 @@ import type {
   PromptNumberOptions,
   PromptSelectOptions,
   PromptTextOptions,
-} from './prompt.js'
+} from 'lib/prompt.js'
 
 /** A question a {@link PromptClient} was asked, as a test sees it. */
 export interface PromptQuestion {
@@ -84,5 +84,6 @@ export class MemoryPromptClient implements PromptClient {
   }
 }
 
-export const createMemoryPrompt = (script: unknown[] = []): MemoryPromptClient =>
-  new MemoryPromptClient(script)
+export const createMemoryPrompt = (
+  script: unknown[] = [],
+): MemoryPromptClient => new MemoryPromptClient(script)
