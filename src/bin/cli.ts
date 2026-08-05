@@ -34,6 +34,7 @@ import {
   isInsideWebBrowser,
   tokenEnvVar,
 } from 'lib/env.js'
+import { RequestSeamApi } from 'lib/http/request.js'
 import { interactForActionAttemptPoll } from 'lib/interact/interact-for-action-attempt-poll.js'
 import { interactForCommandParams } from 'lib/interact/interact-for-command-params.js'
 import { interactForCommandSelection } from 'lib/interact/interact-for-command-selection.js'
@@ -56,7 +57,6 @@ import {
   renderCompletion,
 } from 'lib/render/completion/index.js'
 import { renderHelp } from 'lib/render/help.js'
-import { RequestSeamApi } from 'lib/seam/request.js'
 import seamapiCliVersion from 'lib/version.js'
 
 async function cli(args: ParsedArgs) {

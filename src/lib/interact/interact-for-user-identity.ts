@@ -1,4 +1,4 @@
-import { getSeam } from '../seam/client.js'
+import { getSeam } from '../http/client.js'
 import { interactForResource } from './interact-for-resource.js'
 
 export const interactForUserIdentity = async () => {

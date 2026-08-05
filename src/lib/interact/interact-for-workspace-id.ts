@@ -3,8 +3,8 @@ import { SeamHttpWithoutWorkspace } from '@seamapi/http/connect'
 import { assertMutable, selectWorkspace } from '../auth/operations.js'
 import { getConfigStore } from '../config/index.js'
 import { resolveAuth } from '../context.js'
+import { getSeamMultiWorkspace } from '../http/client.js'
 import { withLoading } from '../output/with-loading.js'
-import { getSeamMultiWorkspace } from '../seam/client.js'
 import { promptAutocomplete } from './prompt.js'
 
 export const interactForWorkspaceId = async (personalAccessToken?: string) => {

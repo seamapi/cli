@@ -34,7 +34,7 @@ the fake goes.
 | **Decision over injected data** — `interact-for-command-selection` (non-interactive), `blueprint/endpoint`, `context.ts` | Takes `CliContext` / blueprint / config store as a parameter | Classical with a literal ctx object (`interact-for-command-selection.test.ts` is the model)                                                                                  | Nothing — a hand-built blueprint literal is a fixture, not a fake | The traversal/decision logic                                     |
 | **Prompt flow** — `interact/interact-for-*` importing `interact/prompt.js`                                               | Imports `interact/prompt.js`                                 | Classical on the returned value, memory output, scripted prompt fake; assert the choice list _offered_ where the prompt is the UX                                            | The prompt layer (the whole `prompts` edge), output               | The module's own branching and param assembly                    |
 | **Config & state** — `config/config-store`, `config/migrate`                                                             | Touches `Configstore` / `env-paths`                          | Classical against a real store in a temp directory — it's a JSON file, and split/merge/migration _is_ the behavior                                                           | The directory; env vars (`vi.stubEnv`)                            | `Configstore` or fs behavior                                     |
-| **Network** — `seam/request`, `auth/validate-token`, `blueprint/source-npm`                                              | Constructs `SeamHttp` or calls `fetch`                       | Classical against a fake port (or a stubbed global `fetch` with captured requests, as `blueprint/source-npm.test.ts` does); assert the payload sent _and_ the value returned | The `SeamApi` port / global `fetch`                               | Status handling, payload selection, formatting — that's the unit |
+| **Network** — `http/request`, `auth/validate-token`, `blueprint/source-npm`                                              | Constructs `SeamHttp` or calls `fetch`                       | Classical against a fake port (or a stubbed global `fetch` with captured requests, as `blueprint/source-npm.test.ts` does); assert the payload sent _and_ the value returned | The `SeamApi` port / global `fetch`                               | Status handling, payload selection, formatting — that's the unit |
 | **Orchestration** — `bin/cli.ts`                                                                                         | Reads argv/env, wires everything                             | E2e: spawn via `execa`, `node:http` fake server, XDG temp dirs (`test/cli.test.ts`)                                                                                          | The far end of the wire; the home directories                     | Anything in-process                                              |
 
 ## The mocking boundary
@@ -78,16 +78,16 @@ HTTP-free share.
 
 ## The Seam SDK boundary
 
-**Wrap it behind our own narrow port.** Not `vi.mock('./seam/client.js')`, and
+**Wrap it behind our own narrow port.** Not `vi.mock('./http/client.js')`, and
 not dependency-injecting `SeamHttp`: both force the fake to imitate an
 axios-shaped SDK surface (`client.post` returning an `AxiosResponse`), so
 tests end up re-verifying the SDK's shape instead of our behavior. The CLI is
 blueprint-driven and has one chokepoint —
 `seam.client.post(path, params, { validateStatus: () => true })` in
-`seam/request.ts` — so the port is one method:
+`http/request.ts` — so the port is one method:
 
 ```ts
-// src/lib/seam/api.ts
+// src/lib/http/api.ts
 export interface SeamApiResponse {
   status: number
   data: unknown
@@ -117,7 +117,7 @@ The fake is the in-process mirror of the e2e server — a routes table plus a
 capture:
 
 ```ts
-// src/lib/seam/create-memory-seam-api.ts
+// src/lib/http/create-memory-seam-api.ts
 export const createMemorySeamApi = (
   routes: Record<string, SeamApiResponse>,
 ) => {
@@ -134,7 +134,7 @@ export const createMemorySeamApi = (
 }
 ```
 
-This split also separates transport from presentation in `seam/request.ts`
+This split also separates transport from presentation in `http/request.ts`
 (which historically also formatted output and set `process.exitCode`), so the
 error-status → exit-code behavior becomes a classical test with zero HTTP:
 

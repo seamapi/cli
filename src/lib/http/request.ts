@@ -1,8 +1,8 @@
 import chalk from 'chalk'
 
+import { getSeam } from 'lib/http/client.js'
 import { getOutput } from 'lib/output/get-output.js'
 import { selectResponsePayload } from 'lib/output/select-response-payload.js'
-import { getSeam } from 'lib/seam/client.js'
 
 import { withLoading } from '../output/with-loading.js'
 
