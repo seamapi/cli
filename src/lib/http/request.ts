@@ -1,8 +1,9 @@
 import chalk from 'chalk'
 
-import type { Output } from '../output/create-output.js'
-import { selectResponsePayload } from '../output/select-response-payload.js'
-import { withLoading } from '../output/with-loading.js'
+import type { Output } from 'lib/output/create-output.js'
+import { selectResponsePayload } from 'lib/output/select-response-payload.js'
+import { withLoading } from 'lib/output/with-loading.js'
+
 import type { SeamApi, SeamApiResponse } from './api.js'
 
 export interface RequestSeamApiOptions {

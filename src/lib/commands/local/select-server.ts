@@ -1,8 +1,8 @@
-import { assertMutable, selectServer } from '../../auth/operations.js'
-import { NonInteractiveError } from '../../errors.js'
-import { interactForServerSelection } from '../../interact/interact-for-server-selection.js'
-import type { Command } from '../registry.js'
-import { stringFlag } from '../spec.js'
+import { assertMutable, selectServer } from 'lib/auth/operations.js'
+import type { Command } from 'lib/commands/registry.js'
+import { stringFlag } from 'lib/commands/spec.js'
+import { NonInteractiveError } from 'lib/errors.js'
+import { interactForServerSelection } from 'lib/interact/interact-for-server-selection.js'
 
 export const selectServerCommand: Command = {
   definition: {

@@ -4,10 +4,10 @@ import {
   assertMutable,
   selectFakeServer,
   selectServer,
-} from '../auth/operations.js'
-import { getConfigStore } from '../config/index.js'
-import { resolveAuth } from '../context.js'
-import { getOutput } from '../output/get-output.js'
+} from 'lib/auth/operations.js'
+import { getConfigStore } from 'lib/config/index.js'
+import { resolveAuth } from 'lib/context.js'
+import { getOutput } from 'lib/output/get-output.js'
 import { promptAutocomplete, promptText } from './prompt.js'
 
 export async function interactForServerSelection() {

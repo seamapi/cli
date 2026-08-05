@@ -1,13 +1,14 @@
 import { randomBytes } from 'node:crypto'
 
-import { type ConfigStore, getConfigStore } from '../config/index.js'
-import { type AuthContext, resolveAuth } from '../context.js'
+import { type ConfigStore, getConfigStore } from 'lib/config/index.js'
+import { type AuthContext, resolveAuth } from 'lib/context.js'
 import {
   assertEnvVarUnset,
   endpointEnvVar,
   tokenEnvVar,
   workspaceIdEnvVar,
-} from '../env.js'
+} from 'lib/env.js'
+
 import { validateToken } from './validate-token.js'
 
 /** A stored auth setting an environment variable may override. */

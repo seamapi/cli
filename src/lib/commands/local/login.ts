@@ -1,8 +1,8 @@
-import { assertMutable, login } from '../../auth/operations.js'
-import { NonInteractiveError } from '../../errors.js'
-import { interactForLogin } from '../../interact/interact-for-login.js'
-import type { Command } from '../registry.js'
-import { stringFlag } from '../spec.js'
+import { assertMutable, login } from 'lib/auth/operations.js'
+import type { Command } from 'lib/commands/registry.js'
+import { stringFlag } from 'lib/commands/spec.js'
+import { NonInteractiveError } from 'lib/errors.js'
+import { interactForLogin } from 'lib/interact/interact-for-login.js'
 
 export const loginCommand: Command = {
   definition: {

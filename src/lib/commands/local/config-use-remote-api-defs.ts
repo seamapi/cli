@@ -1,6 +1,6 @@
-import { NonInteractiveError } from '../../errors.js'
-import { interactForUseRemoteApiDefs } from '../../interact/interact-for-use-remote-api-defs.js'
-import type { Command } from '../registry.js'
+import type { Command } from 'lib/commands/registry.js'
+import { NonInteractiveError } from 'lib/errors.js'
+import { interactForUseRemoteApiDefs } from 'lib/interact/interact-for-use-remote-api-defs.js'
 
 export const configUseRemoteApiDefsCommand: Command = {
   definition: {

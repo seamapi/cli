@@ -46,7 +46,7 @@ export const resetConfigStore = (): void => {
   configStore = null
 }
 
-const createConfigStore = (): SeamConfigStore => {
+const createConfigStore = (): PersistentConfigStore => {
   const settingsStore = new Configstore(legacyConfigStoreId, undefined, {
     configPath: getConfigPath(),
   })
@@ -60,7 +60,7 @@ const createConfigStore = (): SeamConfigStore => {
     new Configstore(legacyConfigStoreId),
   )
 
-  return new SeamConfigStore(settingsStore, stateStore)
+  return new PersistentConfigStore(settingsStore, stateStore)
 }
 
 export const mergeConfig = (
@@ -114,7 +114,7 @@ export const splitConfig = (
   return { settings, state }
 }
 
-export class SeamConfigStore implements ConfigStore {
+export class PersistentConfigStore implements ConfigStore {
   readonly path: string
 
   constructor(

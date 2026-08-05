@@ -2,8 +2,7 @@ import { expect, test } from 'vitest'
 
 import { buildRegistry } from 'lib/commands/registry.js'
 import { renderHelp } from 'lib/render/help.js'
-
-import { testBlueprint } from '../fixtures/blueprint.js'
+import { testBlueprint } from 'test/fixtures/blueprint.js'
 
 const { spec } = buildRegistry(testBlueprint)
 

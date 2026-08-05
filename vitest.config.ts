@@ -5,6 +5,7 @@ export default defineConfig({
     alias: {
       '@seamapi/cli': new URL('./src/index.ts', import.meta.url).pathname,
       lib: new URL('./src/lib', import.meta.url).pathname,
+      test: new URL('./test', import.meta.url).pathname,
     },
   },
   test: {

@@ -1,5 +1,5 @@
-import { requestSeamApi } from '../../http/request.js'
-import type { Command } from '../registry.js'
+import type { Command } from 'lib/commands/registry.js'
+import { requestSeamApi } from 'lib/http/request.js'
 
 export const healthCommand: Command = {
   definition: {

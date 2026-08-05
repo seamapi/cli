@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import type { Blueprint } from '@seamapi/blueprint'
 
-import { seamapiBlueprintVersion } from '../version.js'
+import { seamapiBlueprintVersion } from 'lib/version.js'
 
 const cacheFileName = 'blueprint.json'
 const updateCheckInterval = 24 * 60 * 60 * 1000

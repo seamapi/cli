@@ -1,6 +1,6 @@
 import type { Blueprint } from '@seamapi/blueprint'
 
-import { resolveAuth } from '../context.js'
+import { resolveAuth } from 'lib/context.js'
 
 /**
  * Build a blueprint from the OpenAPI document the current server is running,

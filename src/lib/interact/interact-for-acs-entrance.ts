@@ -1,4 +1,5 @@
-import { getSeam } from '../http/client.js'
+import { getSeam } from 'lib/http/client.js'
+
 import { interactForResource } from './interact-for-resource.js'
 
 export const interactForAcsEntrance = async () => {

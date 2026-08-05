@@ -1,5 +1,5 @@
-import { logout } from '../../auth/operations.js'
-import type { Command } from '../registry.js'
+import { logout } from 'lib/auth/operations.js'
+import type { Command } from 'lib/commands/registry.js'
 
 export const logoutCommand: Command = {
   definition: {

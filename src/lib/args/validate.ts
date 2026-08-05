@@ -1,6 +1,7 @@
 import type { Parameter } from '@seamapi/blueprint'
 
-import { NonInteractiveError, UsageError } from '../errors.js'
+import { NonInteractiveError, UsageError } from 'lib/errors.js'
+
 import { toArgName, toGivenArgName } from './parse.js'
 
 /**

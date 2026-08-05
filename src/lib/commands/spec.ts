@@ -1,6 +1,6 @@
 import type { Blueprint } from '@seamapi/blueprint'
 
-import { firstSentence, toPlainText } from '../render/text.js'
+import { firstSentence, toPlainText } from 'lib/render/text.js'
 
 type Endpoint = Blueprint['routes'][number]['endpoints'][number]
 type Parameter = Endpoint['request']['parameters'][number]

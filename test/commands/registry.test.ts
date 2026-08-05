@@ -6,8 +6,7 @@ import {
   findLocalCommand,
   localCommands,
 } from 'lib/commands/registry.js'
-
-import { testBlueprint } from '../fixtures/blueprint.js'
+import { testBlueprint } from 'test/fixtures/blueprint.js'
 
 const registry = buildRegistry(testBlueprint)
 

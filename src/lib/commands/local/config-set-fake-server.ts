@@ -1,5 +1,5 @@
-import { selectFakeServer } from '../../auth/operations.js'
-import type { Command } from '../registry.js'
+import { selectFakeServer } from 'lib/auth/operations.js'
+import type { Command } from 'lib/commands/registry.js'
 
 /** Hidden: a development shortcut, kept out of help and completion. */
 export const configSetFakeServerCommand: Command = {

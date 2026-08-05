@@ -1,4 +1,5 @@
-import type { CommandFlag, CommandSpec } from '../../commands/spec.js'
+import type { CommandFlag, CommandSpec } from 'lib/commands/spec.js'
+
 import { describeForShell } from './describe.js'
 
 export const renderFishCompletion = (spec: CommandSpec): string =>

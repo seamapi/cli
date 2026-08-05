@@ -16,7 +16,7 @@ export const workspaceIdEnvVar = 'SEAM_CLI_WORKSPACE_ID'
 export const endpointEnvVar = 'SEAM_CLI_ENDPOINT'
 
 /** Every variable read here is declared on `ProcessEnv` in `env.d.ts`. */
-type SeamCliEnvVar =
+type CliEnvVar =
   typeof endpointEnvVar | typeof tokenEnvVar | typeof workspaceIdEnvVar
 
 export const getTokenFromEnv = (): string | null => readEnvVar(tokenEnvVar)
@@ -59,7 +59,7 @@ export const assertEnvVarUnset = (
 export const isInsideWebBrowser = (): boolean =>
   process.env['INSIDE_WEB_BROWSER'] === '1'
 
-const readEnvVar = (envVar: SeamCliEnvVar): string | null => {
+const readEnvVar = (envVar: CliEnvVar): string | null => {
   const value = process.env[envVar]
 
   if (value == null) return null

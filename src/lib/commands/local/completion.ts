@@ -1,10 +1,10 @@
-import { getApiBlueprint } from '../../blueprint/index.js'
-import { getOutput } from '../../output/get-output.js'
+import { getApiBlueprint } from 'lib/blueprint/index.js'
+import type { Command } from 'lib/commands/registry.js'
+import { getOutput } from 'lib/output/get-output.js'
 import {
   type CompletionShell,
   renderCompletion,
-} from '../../render/completion/index.js'
-import type { Command } from '../registry.js'
+} from 'lib/render/completion/index.js'
 
 /**
  * Print the completion script for a shell.
@@ -22,7 +22,7 @@ export const printCompletion = async (
 ): Promise<void> => {
   // Deferred import: the registry lists this module's commands, so a static
   // import back into it would be a cycle.
-  const { buildRegistry } = await import('../registry.js')
+  const { buildRegistry } = await import('lib/commands/registry.js')
   const blueprint = await getApiBlueprint({ update })
   const { spec } = buildRegistry(blueprint)
   getOutput().text(renderCompletion(shell, spec))

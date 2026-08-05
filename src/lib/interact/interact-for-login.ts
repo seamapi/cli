@@ -1,13 +1,13 @@
 import { isApiKey, isPersonalAccessToken } from '@seamapi/http/connect'
 import chalk from 'chalk'
 
-import { assertMutable, storeToken } from '../auth/operations.js'
-import { validateToken } from '../auth/validate-token.js'
-import { getConfigStore } from '../config/index.js'
-import { resolveAuth } from '../context.js'
-import { getOutput } from '../output/get-output.js'
+import { assertMutable, storeToken } from 'lib/auth/operations.js'
+import { validateToken } from 'lib/auth/validate-token.js'
+import { getConfigStore } from 'lib/config/index.js'
+import { resolveAuth } from 'lib/context.js'
+import { getOutput } from 'lib/output/get-output.js'
 import { promptText } from './prompt.js'
-import { withLoading } from '../output/with-loading.js'
+import { withLoading } from 'lib/output/with-loading.js'
 import { interactForWorkspaceId } from './interact-for-workspace-id.js'
 
 export const interactForLogin = async () => {

@@ -1,4 +1,5 @@
-import { getSeam } from '../http/client.js'
+import { getSeam } from 'lib/http/client.js'
+
 import { interactForAcsSystem } from './interact-for-acs-system.js'
 import { interactForResource } from './interact-for-resource.js'
 

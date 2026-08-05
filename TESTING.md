@@ -22,9 +22,9 @@ the fake goes.
    `setConfigStore()`), the prompt layer (`createMemoryPrompt()` +
    `setPromptClient()`), and the Seam API get the same treatment; nothing else
    needs it. An interface with more than one implementation — the real edge
-   and its memory fake — is fulfilled by **classes** (`SeamHttpApi` /
+   and its memory fake — is fulfilled by **classes** (`HttpSeamApi` /
    `MemorySeamApi`, `TerminalPromptClient` / `MemoryPromptClient`,
-   `SeamConfigStore` / `MemoryConfigStore`), with `createFoo` factories kept
+   `PersistentConfigStore` / `MemoryConfigStore`), with `createFoo` factories kept
    as the convenient way to construct them.
 5. **The e2e suite proves wiring once; module tests prove behavior
    everywhere.** Don't re-prove auth headers in a unit test, and don't push
@@ -118,7 +118,7 @@ export interface SeamApi {
   ) => Promise<SeamApiResponse>
 }
 
-export class SeamHttpApi implements SeamApi {
+export class HttpSeamApi implements SeamApi {
   constructor(private readonly seam: SeamHttp) {} // the only place SeamHttp appears
 
   post = async (path: string, params: Record<string, unknown>) => {
@@ -130,7 +130,7 @@ export class SeamHttpApi implements SeamApi {
 }
 
 export const createSeamApi = async (): Promise<SeamApi> =>
-  new SeamHttpApi(await getSeam())
+  new HttpSeamApi(await getSeam())
 ```
 
 The fake is the in-process mirror of the e2e server — a routes table plus a

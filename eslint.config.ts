@@ -33,7 +33,20 @@ export default [
       ],
       'import/extensions': ['error', 'ignorePackages'],
       'import/no-duplicates': ['error', { 'prefer-inline': true }],
-      'import/no-relative-parent-imports': 'error',
+      // The import/no-relative-parent-imports rule is silently inert in this
+      // flat config, so ban parent traversal with the core rule instead.
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['..', '../**'],
+              message:
+                'Import by path alias instead, e.g., lib/foo/bar.js or test/fixtures/blueprint.js.',
+            },
+          ],
+        },
+      ],
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
         'error',
@@ -61,7 +74,7 @@ export default [
             ['^node:'],
             ['^@?\\w'],
             ['@seamapi/cli'],
-            ['^lib/'],
+            ['^lib/', '^test/'],
             ['^'],
             ['^\\.'],
           ],

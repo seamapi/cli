@@ -1,8 +1,9 @@
 import type { ParsedArgs } from 'minimist'
 
-import { toParameterName } from '../args/parse.js'
-import type { ApiBlueprint } from '../blueprint/index.js'
-import type { CliContext } from '../context.js'
+import { toParameterName } from 'lib/args/parse.js'
+import type { ApiBlueprint } from 'lib/blueprint/index.js'
+import type { CliContext } from 'lib/context.js'
+
 import { executeApiCommand } from './api-command.js'
 import { completionCommands } from './local/completion.js'
 import { configRevealLocationCommand } from './local/config-reveal-location.js'

@@ -1,5 +1,5 @@
-import { setUseRemoteApiDefs } from '../auth/operations.js'
-import { getOutput } from '../output/get-output.js'
+import { setUseRemoteApiDefs } from 'lib/auth/operations.js'
+import { getOutput } from 'lib/output/get-output.js'
 import { promptSelect } from './prompt.js'
 
 export async function interactForUseRemoteApiDefs() {

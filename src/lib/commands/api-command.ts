@@ -1,17 +1,18 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
-import { coerceArgParams } from '../args/coerce.js'
-import { parseCliArgs, toArgName, toArgParams } from '../args/parse.js'
-import { assertRequiredParams } from '../args/validate.js'
+import { coerceArgParams } from 'lib/args/coerce.js'
+import { parseCliArgs, toArgName, toArgParams } from 'lib/args/parse.js'
+import { assertRequiredParams } from 'lib/args/validate.js'
 import {
   getCommandBlueprintDef,
   getResponseKey,
-} from '../blueprint/endpoint.js'
-import type { CliContext } from '../context.js'
-import { UsageError } from '../errors.js'
-import { runResponseFollowUps } from '../http/follow-ups.js'
-import { requestSeamApi } from '../http/request.js'
-import { interactForCommandParams } from '../interact/interact-for-command-params.js'
+} from 'lib/blueprint/endpoint.js'
+import type { CliContext } from 'lib/context.js'
+import { UsageError } from 'lib/errors.js'
+import { runResponseFollowUps } from 'lib/http/follow-ups.js'
+import { requestSeamApi } from 'lib/http/request.js'
+import { interactForCommandParams } from 'lib/interact/interact-for-command-params.js'
+
 import type { CommandResult, Invocation } from './registry.js'
 
 /**

@@ -1,7 +1,7 @@
-import { assertMutable } from '../../auth/operations.js'
-import { NonInteractiveError } from '../../errors.js'
-import { interactForWorkspaceId } from '../../interact/interact-for-workspace-id.js'
-import type { Command } from '../registry.js'
+import { assertMutable } from 'lib/auth/operations.js'
+import type { Command } from 'lib/commands/registry.js'
+import { NonInteractiveError } from 'lib/errors.js'
+import { interactForWorkspaceId } from 'lib/interact/interact-for-workspace-id.js'
 
 export const selectWorkspaceCommand: Command = {
   definition: {

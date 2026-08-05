@@ -5,7 +5,7 @@ import {
   SeamHttpWithoutWorkspace,
 } from '@seamapi/http/connect'
 
-import { resolveAuth } from '../context.js'
+import { resolveAuth } from 'lib/context.js'
 
 export const validateToken = async (token: string, workspaceId?: string) => {
   const options = { endpoint: resolveAuth().server }

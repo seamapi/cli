@@ -1,4 +1,4 @@
-import type { Command } from '../registry.js'
+import type { Command } from 'lib/commands/registry.js'
 
 export const configRevealLocationCommand: Command = {
   definition: {

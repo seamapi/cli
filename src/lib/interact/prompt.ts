@@ -12,7 +12,7 @@ import {
 } from '@clack/prompts'
 import chalk from 'chalk'
 
-import { NonInteractiveError, PromptCancelledError } from '../errors.js'
+import { NonInteractiveError, PromptCancelledError } from 'lib/errors.js'
 
 export interface PromptChoice<Value> {
   label: string

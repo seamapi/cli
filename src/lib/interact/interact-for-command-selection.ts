@@ -1,7 +1,7 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
-import type { Interactivity } from '../args/parse.js'
-import { NonInteractiveError, PromptCancelledError } from '../errors.js'
+import type { Interactivity } from 'lib/args/parse.js'
+import { NonInteractiveError, PromptCancelledError } from 'lib/errors.js'
 import { promptAutocomplete, withBackHint } from './prompt.js'
 
 const uniqBy = <T>(items: T[], keyOf: (item: T) => unknown): T[] => {

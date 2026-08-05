@@ -1,4 +1,5 @@
-import type { CommandSpec } from '../../commands/spec.js'
+import type { CommandSpec } from 'lib/commands/spec.js'
+
 import { renderBashCompletion } from './render-bash.js'
 import { renderFishCompletion } from './render-fish.js'
 import { renderZshCompletion } from './render-zsh.js'

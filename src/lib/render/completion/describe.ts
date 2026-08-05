@@ -1,4 +1,4 @@
-import { ellipsis, firstSentence } from '../text.js'
+import { ellipsis, firstSentence } from 'lib/render/text.js'
 
 const maxDescriptionLength = 72
 

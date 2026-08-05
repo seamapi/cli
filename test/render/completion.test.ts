@@ -9,8 +9,7 @@ import {
   renderCompletion,
   renderCompletionStub,
 } from 'lib/render/completion/index.js'
-
-import { testBlueprint } from '../fixtures/blueprint.js'
+import { testBlueprint } from 'test/fixtures/blueprint.js'
 
 const { spec } = buildRegistry(testBlueprint)
 
