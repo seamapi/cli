@@ -37,7 +37,8 @@ on:
         description: >-
           The codesign identity to use, e.g.,
           Developer ID Application: Example, Inc. (XXXXXXXXXX).
-          Defaults to the Developer ID Application identity in the certificate.
+          Normally unset: it defaults to the one Developer ID Application
+          identity in the certificate.
         required: false
       apple_api_key:
         description: >-

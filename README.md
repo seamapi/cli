@@ -417,9 +417,10 @@ Set these repository secrets to code sign:
   chain. Export it from Keychain Access, then encode it with
   `base64 --input certificate.p12 | pbcopy`.
 - `APPLE_CERTIFICATE_PASSWORD`: The password set while exporting the bundle.
-- `APPLE_SIGNING_IDENTITY`: Optional. The identity to sign with, e.g.,
-  `Developer ID Application: Seam Labs, Inc. (XXXXXXXXXX)`. Only needed when the
-  bundle holds more than one Developer ID Application certificate.
+- `APPLE_SIGNING_IDENTITY`: Normally left unset. The build signs with the one
+  Developer ID Application identity in the bundle, so this is only needed to
+  choose between several, e.g.,
+  `Developer ID Application: Seam Labs, Inc. (XXXXXXXXXX)`.
 
 And these to notarize, from an [App Store Connect API key]:
 
