@@ -431,7 +431,7 @@ Check the credentials without cutting a release by triggering
 [a build workflow_dispatch on GitHub Actions], on the web or with
 
 ```
-$ gh workflow run _build.yml --ref <branch>
+$ gh workflow run build.yml --ref <branch>
 ```
 
 Then confirm the run's macOS binaries job signed and notarized: it verifies the

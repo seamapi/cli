@@ -45,12 +45,9 @@ on:
       artifact_name:
         description: The artifact name.
         value: build-${{ github.sha }}
-  # Enables running this workflow by hand, e.g., to check the macOS signing
-  # credentials without cutting a release.
-  workflow_dispatch: {}
 
 jobs:
-  package:
+  build:
     name: Package
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -60,11 +57,11 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
         with:
-          node_version: ${{ inputs.node_version || '24' }}
+          node_version: ${{ inputs.node_version }}
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ inputs.bun_version || '1.2.14' }}
+          bun-version: ${{ inputs.bun_version }}
       - name: Build
         run: npm run build
       - name: Package
@@ -107,11 +104,11 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
         with:
-          node_version: ${{ inputs.node_version || '24' }}
+          node_version: ${{ inputs.node_version }}
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ inputs.bun_version || '1.2.14' }}
+          bun-version: ${{ inputs.bun_version }}
       - name: Inject generated values
         # The package job gets these from npm pack. Without them a binary
         # reports the placeholder version instead of its own.
@@ -310,7 +307,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs:
-      - package
+      - build
       - macos
     steps:
       - name: Download package artifact
