@@ -105,7 +105,7 @@ jobs:
             release/*
 
   macos:
-    name: macOS binaries
+    name: macOS
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
