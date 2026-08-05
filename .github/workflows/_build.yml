@@ -280,13 +280,14 @@ jobs:
             for signed in release/seam-v*-darwin-*; do
               codesign --verify --strict --verbose=2 "$signed"
               codesign --display --verbose=2 --entitlements - "$signed"
+              # Whether the notary service published a ticket for this code.
+              # Reported rather than enforced: notarytool already accepted the
+              # submission, and the ticket is fetched over the network, so a
+              # failure here is not conclusive. Gatekeeper itself cannot be
+              # asked, since spctl only assesses an app bundle.
+              codesign --test-requirement="=notarized" --verify --verbose "$signed" ||
+                echo "::warning title=Notarization check failed::No notarization ticket for ${signed}."
             done
-
-            # How Gatekeeper sees the binary. Reported rather than enforced: the
-            # notary service already accepted it, and the ticket is fetched over
-            # the network, so a rejection here is not conclusive.
-            spctl --assess --type exec --verbose=4 "$binary" ||
-              echo "::warning title=Gatekeeper assessment failed::spctl rejected ${binary}."
           else
             echo '::warning title=Unsigned macOS binaries::Built with sign: false. These binaries are not signed by Seam and must not be released.'
           fi

@@ -443,7 +443,7 @@ branch, so the build workflow must be merged first. It then runs against any
 branch.
 
 Then confirm the run's macOS binaries job signed and notarized: it verifies the
-signature, assesses the binary the way Gatekeeper does, and runs it.
+signature, checks for a notarization ticket, and runs it.
 
 [App Store Connect API key]: https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api
 [Apple Developer Program]: https://developer.apple.com/programs/
