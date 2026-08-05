@@ -10,5 +10,4 @@ jobs:
   build:
     name: Build
     uses: ./.github/workflows/_build.yml
-    # Checks the macOS signing credentials without cutting a release.
     secrets: inherit
