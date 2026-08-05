@@ -379,6 +379,18 @@ test('cli: SEAM_CLI_TOKEN authenticates without logging in', async () => {
   )
 })
 
+test('cli: help and completion work without being logged in', async () => {
+  const help = await runCli(['--help'], { stateHome: loggedOutStateHome })
+  expect(help.exitCode).toBe(0)
+  expect(help.stdout).toContain('Seam CLI')
+
+  const completion = await runCli(['completion', 'bash'], {
+    stateHome: loggedOutStateHome,
+  })
+  expect(completion.exitCode).toBe(0)
+  expect(completion.stdout).toContain('complete -F _seam_completion seam')
+})
+
 test('cli: reports not being logged in without SEAM_CLI_TOKEN', async () => {
   const { stdout, stderr, exitCode } = await runCli(['devices', 'list'], {
     stateHome: loggedOutStateHome,

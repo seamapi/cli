@@ -2,7 +2,7 @@ import {
   type CommandFlag,
   type CommandSpec,
   flagTokens,
-} from '../../command-spec.js'
+} from '../../commands/spec.js'
 
 export const renderBashCompletion = (spec: CommandSpec): string => {
   const globalTokens = spec.globalFlags.flatMap(flagTokens).sort()

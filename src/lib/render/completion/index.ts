@@ -1,6 +1,4 @@
-import type { Blueprint } from '@seamapi/blueprint'
-
-import { type CommandSpec, getCommandSpec } from '../../command-spec.js'
+import type { CommandSpec } from '../../commands/spec.js'
 import { renderBashCompletion } from './render-bash.js'
 import { renderFishCompletion } from './render-fish.js'
 import { renderZshCompletion } from './render-zsh.js'
@@ -27,8 +25,8 @@ const renderers: Record<CompletionShell, (spec: CommandSpec) => string> = {
 
 export const renderCompletion = (
   shell: CompletionShell,
-  blueprint: Blueprint,
-): string => renderers[shell](getCommandSpec(blueprint))
+  spec: CommandSpec,
+): string => renderers[shell](spec)
 
 /**
  * Render the completion loader installed by system packages.

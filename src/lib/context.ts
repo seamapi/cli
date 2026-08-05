@@ -6,6 +6,7 @@ import {
   getTokenFromEnv,
   getWorkspaceIdFromEnv,
 } from './env.js'
+import type { Output } from './output/create-output.js'
 
 export const defaultServer = 'https://connect.getseam.com'
 
@@ -66,6 +67,7 @@ export const resolveAuth = (
 export interface CliContext {
   config: ConfigStore
   auth: AuthContext
+  output: Output
   blueprint: ApiBlueprint
   interactivity: Interactivity
 }

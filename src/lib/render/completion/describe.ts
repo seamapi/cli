@@ -1,5 +1,4 @@
-import { firstSentence } from '../../command-spec.js'
-import { ellipsis } from '../text.js'
+import { ellipsis, firstSentence } from '../text.js'
 
 const maxDescriptionLength = 72
 

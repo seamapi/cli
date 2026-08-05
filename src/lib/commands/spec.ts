@@ -1,5 +1,7 @@
 import type { Blueprint } from '@seamapi/blueprint'
 
+import { firstSentence, toPlainText } from '../render/text.js'
+
 type Endpoint = Blueprint['routes'][number]['endpoints'][number]
 type Parameter = Endpoint['request']['parameters'][number]
 
@@ -122,7 +124,15 @@ export const flagTokens = (flag: CommandFlag): string[] => {
   return tokens
 }
 
-export const getCommandSpec = (blueprint: Blueprint): CommandSpec => {
+/**
+ * Derive the command spec from the API definitions, merged with the commands
+ * the CLI declares itself (see `commands/registry.ts`, the single source of
+ * those declarations).
+ */
+export const getCommandSpec = (
+  blueprint: Blueprint,
+  localCommands: CommandDefinition[] = [],
+): CommandSpec => {
   const commands = sortByPath(
     dedupeByPath([
       ...blueprint.routes
@@ -151,22 +161,10 @@ export const findGroup = (
 ): CommandGroup | undefined =>
   spec.groups.find((group) => isSamePath(group.path, path))
 
-/**
- * The definition of a command the CLI handles itself, or `undefined` when the
- * path is an endpoint or no command at all.
- *
- * Unlike {@link findCommand} this needs no blueprint, since these commands are
- * declared by the CLI rather than derived from the API definitions.
- */
-export const findLocalCommand = (
-  path: string[],
-): CommandDefinition | undefined =>
-  localCommands.find((command) => isSamePath(command.path, path))
-
-const isSamePath = (a: string[], b: string[]): boolean =>
+export const isSamePath = (a: string[], b: string[]): boolean =>
   a.length === b.length && a.every((word, index) => word === b[index])
 
-const stringFlag = (long: string, description: string): CommandFlag => ({
+export const stringFlag = (long: string, description: string): CommandFlag => ({
   long,
   short: null,
   description,
@@ -174,98 +172,6 @@ const stringFlag = (long: string, description: string): CommandFlag => ({
   takesValue: true,
   isRequired: false,
 })
-
-/**
- * Commands handled by the CLI itself, which have no endpoint in the blueprint.
- *
- * Keep in sync with the command handling in `src/bin/cli.ts` and the extra
- * commands offered by `interactForCommandSelection`.
- */
-const localCommands: CommandDefinition[] = [
-  {
-    path: ['completion', 'bash'],
-    kind: 'cli',
-    title: 'Print the bash completion script.',
-    description: '',
-    flags: [],
-  },
-  {
-    path: ['completion', 'fish'],
-    kind: 'cli',
-    title: 'Print the fish completion script.',
-    description: '',
-    flags: [],
-  },
-  {
-    path: ['completion', 'zsh'],
-    kind: 'cli',
-    title: 'Print the zsh completion script.',
-    description: '',
-    flags: [],
-  },
-  {
-    path: ['config', 'reveal-location'],
-    kind: 'cli',
-    title: 'Print the path to the CLI configuration file.',
-    description: '',
-    flags: [],
-  },
-  {
-    path: ['config', 'use-remote-api-defs'],
-    kind: 'cli',
-    title: 'Choose whether to use the API definitions served by Seam.',
-    description: '',
-    flags: [],
-  },
-  {
-    path: ['health', 'get-health'],
-    kind: 'api',
-    title: 'Report the health of the Seam API.',
-    description: '',
-    flags: [],
-  },
-  {
-    path: ['login'],
-    kind: 'cli',
-    title: 'Log in to Seam.',
-    description:
-      'Prompts for a personal access token unless one is passed with --token.',
-    flags: [
-      stringFlag('server', 'Seam API server to log in to.'),
-      stringFlag('token', 'Personal access token to log in with.'),
-      stringFlag('workspace-id', 'Workspace to select after logging in.'),
-    ],
-  },
-  {
-    path: ['logout'],
-    kind: 'cli',
-    title: 'Log out of Seam.',
-    description: '',
-    flags: [],
-  },
-  {
-    path: ['select', 'server'],
-    kind: 'cli',
-    title: 'Select the Seam API server.',
-    description: '',
-    flags: [stringFlag('server', 'Seam API server to select.')],
-  },
-  {
-    path: ['select', 'workspace'],
-    kind: 'cli',
-    title: 'Select the current workspace.',
-    description: '',
-    flags: [],
-  },
-  {
-    path: ['wizard'],
-    kind: 'cli',
-    title: 'Set up Seam in the current project.',
-    description:
-      'Takes a project from zero to a working Seam integration. Run seam wizard --help for its own options.',
-    flags: [],
-  },
-]
 
 const toCommandDefinition = (endpoint: Endpoint): CommandDefinition => {
   const description = toPlainText(endpoint.description)
@@ -342,7 +248,11 @@ const toCommandGroups = (commands: CommandDefinition[]): CommandGroup[] => {
       // `seam devices` alongside `seam devices list`. Prefer the command
       // title, since it describes what running the name does.
       if (depth === command.path.length - 1) {
-        entries.set(name, { isCommand: true, kind, description: command.title })
+        entries.set(name, {
+          isCommand: true,
+          kind,
+          description: command.title,
+        })
         continue
       }
 
@@ -397,16 +307,3 @@ const toCommandPath = (path: string): string[] =>
   path.replace(/^\//, '').split('/').map(toFlagName)
 
 const toFlagName = (name: string): string => name.replace(/_/g, '-')
-
-/** Reduce documentation markdown to a single line of prose. */
-export const toPlainText = (markdown: string): string =>
-  markdown
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/[`*]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-export const firstSentence = (text: string): string => {
-  const [sentence] = text.split(/(?<=\.)\s/)
-  return sentence ?? text
-}

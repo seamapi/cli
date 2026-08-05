@@ -1,57 +1,60 @@
 import { afterEach, expect, test } from 'vitest'
 
-import type { CliContext } from '../context.js'
 import { createMemoryPrompt } from './create-memory-prompt.js'
 import { interactForCommandSelection } from './interact-for-command-selection.js'
 import { resetPromptClient, setPromptClient, withBackHint } from './prompt.js'
 
 afterEach(resetPromptClient)
 
-const ctx = {
+const helpers = {
   interactivity: 'non-interactive',
-  blueprint: {
-    routes: [
-      {
-        endpoints: [
-          { path: '/devices/get' },
-          { path: '/devices/list' },
-          { path: '/devices/unmanaged/list' },
-        ],
-      },
-    ],
-  },
-} as unknown as CliContext
+  commands: [
+    ['devices', 'get'],
+    ['devices', 'list'],
+    ['devices', 'unmanaged', 'list'],
+  ],
+} as const
 
 test('interactForCommandSelection: resolves a complete command', async () => {
   await expect(
-    interactForCommandSelection(['devices', 'list'], ctx),
+    interactForCommandSelection(['devices', 'list'], {
+      ...helpers,
+      commands: [...helpers.commands.map((path) => [...path])],
+    }),
   ).resolves.toEqual(['devices', 'list'])
 })
 
 test('interactForCommandSelection: rejects an incomplete command when non-interactive', async () => {
   await expect(
-    interactForCommandSelection(['devices'], ctx),
+    interactForCommandSelection(['devices'], {
+      ...helpers,
+      commands: [...helpers.commands.map((path) => [...path])],
+    }),
   ).rejects.toThrowError(
     'Incomplete command "seam devices": expected one of list, get, unmanaged',
   )
 })
 
 test('interactForCommandSelection: rejects a missing command when non-interactive', async () => {
-  await expect(interactForCommandSelection([], ctx)).rejects.toThrowError(
-    /^Missing command: expected one of /,
-  )
+  await expect(
+    interactForCommandSelection([], {
+      ...helpers,
+      commands: [...helpers.commands.map((path) => [...path])],
+    }),
+  ).rejects.toThrowError(/^Missing command: expected one of /)
 })
 
-const interactiveCtx = {
-  ...ctx,
-  interactivity: 'interactive',
-} as unknown as CliContext
+const interactiveHelpers = () => ({
+  ...helpers,
+  interactivity: 'interactive' as const,
+  commands: [...helpers.commands.map((path) => [...path])],
+})
 
 test('interactForCommandSelection: tells the user a sub-command menu can be left', async () => {
   const memoryPrompt = createMemoryPrompt(['list'])
   setPromptClient(memoryPrompt.client)
 
-  await interactForCommandSelection(['devices'], interactiveCtx)
+  await interactForCommandSelection(['devices'], interactiveHelpers())
 
   expect(memoryPrompt.questions[0]).toMatchObject({
     message: withBackHint('Select a command: /devices'),
@@ -63,7 +66,7 @@ test('interactForCommandSelection: says nothing about going back at the top leve
   const memoryPrompt = createMemoryPrompt(['devices', 'list'])
   setPromptClient(memoryPrompt.client)
 
-  await interactForCommandSelection([], interactiveCtx)
+  await interactForCommandSelection([], interactiveHelpers())
 
   expect(memoryPrompt.questions[0]).toMatchObject({
     message: 'Select a command: /',

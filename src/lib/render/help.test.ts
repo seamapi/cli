@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest'
 
 import { testBlueprint } from '../../../test/fixtures/blueprint.js'
-import { getCommandSpec } from '../command-spec.js'
+import { buildRegistry } from '../commands/registry.js'
 import { renderHelp } from '../render/help.js'
 
-const spec = getCommandSpec(testBlueprint)
+const { spec } = buildRegistry(testBlueprint)
 
 const help = (...path: string[]): string => {
   const rendered = renderHelp(path, spec)

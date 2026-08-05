@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 
 import { testBlueprint } from '../../../../test/fixtures/blueprint.js'
+import { buildRegistry } from '../../commands/registry.js'
 import { describeForShell } from './describe.js'
 import {
   completionScriptSentinels,
@@ -9,6 +10,8 @@ import {
   renderCompletion,
   renderCompletionStub,
 } from './index.js'
+
+const { spec } = buildRegistry(testBlueprint)
 
 test('isCompletionShell: accepts only supported shells', () => {
   expect(completionShells.every(isCompletionShell)).toBe(true)
@@ -28,7 +31,7 @@ test('describeForShell: drops characters that would end a quoted string', () => 
 })
 
 test('bash completion: dispatches on the command path', () => {
-  const script = renderCompletion('bash', testBlueprint)
+  const script = renderCompletion('bash', spec)
   expect(script).toContain('complete -F _seam_completion seam')
   expect(script).toContain("'devices') echo 'list unmanaged' ;;")
   expect(script).toContain(
@@ -40,7 +43,7 @@ test('bash completion: dispatches on the command path', () => {
 })
 
 test('zsh completion: describes every candidate', () => {
-  const script = renderCompletion('zsh', testBlueprint)
+  const script = renderCompletion('zsh', spec)
   expect(script.startsWith('#compdef seam\n')).toBe(true)
   expect(script).toContain("('devices') _seam_reply+=('list:List Devices'")
   expect(script).toContain("'--limit:Number of devices to return.'")
@@ -50,7 +53,7 @@ test('zsh completion: describes every candidate', () => {
 })
 
 test('fish completion: guards each candidate with its command path', () => {
-  const script = renderCompletion('fish', testBlueprint)
+  const script = renderCompletion('fish', spec)
   expect(script).toContain('complete -c seam -f')
   expect(script).toContain(
     `complete -c seam -n '__seam_using "devices"' -a 'list' -d 'List Devices'`,
@@ -62,7 +65,7 @@ test('fish completion: guards each candidate with its command path', () => {
 })
 
 test.each(completionShells)('%s completion: quotes safely', (shell) => {
-  const script = renderCompletion(shell, testBlueprint)
+  const script = renderCompletion(shell, spec)
   // Descriptions are embedded in single-quoted shell strings.
   expect(script).not.toContain("device's")
   expect(script.endsWith('\n')).toBe(true)
@@ -84,9 +87,7 @@ test.each(completionShells)(
     // The stub requires the sentinel, and the generated script provides it
     // as its exact first line, so the two cannot drift apart.
     expect(renderCompletionStub(shell)).toContain(sentinel)
-    expect(
-      renderCompletion(shell, testBlueprint).startsWith(`${sentinel}\n`),
-    ).toBe(true)
+    expect(renderCompletion(shell, spec).startsWith(`${sentinel}\n`)).toBe(true)
   },
 )
 
@@ -97,7 +98,7 @@ test('zsh completion stub: is an autoloadable completion function', () => {
 test('zsh completion: completes the in-flight request when evaluated by the stub', () => {
   // eval pushes '(eval)' onto funcstack, so the dispatch must search the
   // whole stack for _seam, not only the top.
-  expect(renderCompletion('zsh', testBlueprint)).toContain(
+  expect(renderCompletion('zsh', spec)).toContain(
     // eslint-disable-next-line no-template-curly-in-string
     'if (( ${funcstack[(I)_seam]} )); then',
   )

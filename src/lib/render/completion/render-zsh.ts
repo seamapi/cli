@@ -2,7 +2,7 @@ import {
   type CommandFlag,
   type CommandSpec,
   flagTokens,
-} from '../../command-spec.js'
+} from '../../commands/spec.js'
 import { describeForShell } from './describe.js'
 
 export const renderZshCompletion = (spec: CommandSpec): string => {

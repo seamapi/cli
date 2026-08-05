@@ -7,7 +7,7 @@ import {
   type CommandSpec,
   findCommand,
   findGroup,
-} from '../command-spec.js'
+} from '../commands/spec.js'
 
 /**
  * Render the help guide for a command path, or `null` when no command or

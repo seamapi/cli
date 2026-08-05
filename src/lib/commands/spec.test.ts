@@ -1,15 +1,10 @@
 import { expect, test } from 'vitest'
 
-import { testBlueprint } from '../../test/fixtures/blueprint.js'
-import {
-  findCommand,
-  findGroup,
-  firstSentence,
-  getCommandSpec,
-  toPlainText,
-} from './command-spec.js'
+import { testBlueprint } from '../../../test/fixtures/blueprint.js'
+import { localCommandDefinitions } from './registry.js'
+import { findCommand, findGroup, getCommandSpec } from './spec.js'
 
-const spec = getCommandSpec(testBlueprint)
+const spec = getCommandSpec(testBlueprint, localCommandDefinitions)
 
 test('command spec: derives commands from endpoint paths', () => {
   expect(findCommand(spec, ['devices', 'list'])?.title).toBe('List Devices')
@@ -154,21 +149,4 @@ test('command spec: a command path is either a command or a group', () => {
   expect(findCommand(spec, ['devices'])).toBeUndefined()
   expect(findCommand(spec, ['nope'])).toBeUndefined()
   expect(findGroup(spec, ['nope'])).toBeUndefined()
-})
-
-test('toPlainText: reduces markdown to one line', () => {
-  expect(toPlainText('Returns all [devices](https://docs.seam.co).')).toBe(
-    'Returns all devices.',
-  )
-  expect(toPlainText('Uses `code`\nand **bold**.')).toBe('Uses code and bold.')
-  expect(toPlainText("Keeps the device's colon: intact.")).toBe(
-    "Keeps the device's colon: intact.",
-  )
-})
-
-test('firstSentence: stops at the first sentence break', () => {
-  expect(firstSentence('First sentence. Second sentence.')).toBe(
-    'First sentence.',
-  )
-  expect(firstSentence('No break here')).toBe('No break here')
 })

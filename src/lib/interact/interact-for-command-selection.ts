@@ -1,7 +1,6 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
-import { NonInteractiveError } from '../args/parse.js'
-import type { CliContext } from '../context.js'
+import { type Interactivity, NonInteractiveError } from '../args/parse.js'
 import {
   promptAutocomplete,
   PromptCancelledError,
@@ -29,24 +28,16 @@ function ergonomicSort(aStr: string, bStr: string) {
   return a > b ? 1 : a < b ? -1 : 0
 }
 
+/**
+ * Resolve a command path to a full command, prompting to complete it when
+ * interactive. `commands` is every selectable command path, from the
+ * registry's spec.
+ */
 export async function interactForCommandSelection(
   commandPath: string[],
-  helpers: CliContext,
-) {
-  const commands = helpers.blueprint.routes
-    .flatMap((route) => route.endpoints)
-    .map((endpoint) =>
-      endpoint.path.replace(/_/g, '-').replace(/^\//, '').split('/'),
-    )
-    .concat([
-      ['login'],
-      ['logout'],
-      ['config', 'reveal-location'],
-      ['config', 'use-remote-api-defs'],
-      ['select', 'workspace'],
-      ['select', 'server'],
-      ['health', 'get-health'],
-    ])
+  helpers: { commands: string[][]; interactivity: Interactivity },
+): Promise<string[]> {
+  const commands = helpers.commands
 
   const possibleCommands = uniqBy(
     commandPath.length === 0
