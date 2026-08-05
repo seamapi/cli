@@ -1,6 +1,7 @@
 import type { Parameter } from '@seamapi/blueprint'
 
-import { NonInteractiveError, toArgName } from '../args/parse.js'
+import { NonInteractiveError } from '../args/parse.js'
+import { assertRequiredParams } from '../args/validate.js'
 import type { CliContext } from '../context.js'
 import { getOutput } from '../output/get-output.js'
 import { ellipsis } from '../render/text.js'
@@ -71,14 +72,10 @@ export const interactForBlueprintObject = async (
   }
 
   if (ctx.interactivity === 'non-interactive') {
-    const missing = required.filter((k) => !isSupplied(k))
     const target = args.isSubProperty ? `"${args.subPropertyPath}"` : cmdPath
+    assertRequiredParams(args.parameters, args.params, target)
     throw new NonInteractiveError(
-      missing.length > 0
-        ? `Missing required ${
-            missing.length === 1 ? 'parameter' : 'parameters'
-          } for ${target}: ${missing.map(toArgName).join(' ')}`
-        : `Cannot prompt for ${target} in non-interactive mode`,
+      `Cannot prompt for ${target} in non-interactive mode`,
     )
   }
 

@@ -1,4 +1,38 @@
-import { toGivenArgName, UsageError } from './parse.js'
+import type { Parameter } from '@seamapi/blueprint'
+
+import {
+  NonInteractiveError,
+  toArgName,
+  toGivenArgName,
+  UsageError,
+} from './parse.js'
+
+/**
+ * Report every required parameter still missing from the params, rather
+ * than prompting for it.
+ *
+ * @param target What the params are for, e.g., `/devices/list`.
+ */
+export const assertRequiredParams = (
+  parameters: Parameter[],
+  params: Record<string, unknown>,
+  target: string,
+): void => {
+  // A required parameter is satisfied by being present, not by being
+  // truthy: `false`, `0` and `''` are values a caller can supply.
+  const missing = parameters
+    .filter((parameter) => parameter.isRequired)
+    .map((parameter) => parameter.name)
+    .filter((name) => params[name] === undefined)
+
+  if (missing.length === 0) return
+
+  throw new NonInteractiveError(
+    `Missing required ${
+      missing.length === 1 ? 'parameter' : 'parameters'
+    } for ${target}: ${missing.map(toArgName).join(' ')}`,
+  )
+}
 
 /**
  * Report any argument the command does not accept, rather than acting on it.

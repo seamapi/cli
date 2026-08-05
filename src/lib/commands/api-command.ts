@@ -1,7 +1,11 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import type { Interactivity } from '../args/parse.js'
-import { getResponseKey } from '../blueprint/endpoint.js'
+import { assertRequiredParams } from '../args/validate.js'
+import {
+  getCommandBlueprintDef,
+  getResponseKey,
+} from '../blueprint/endpoint.js'
 import type { CliContext } from '../context.js'
 import { isInsideWebBrowser } from '../env.js'
 import { RequestSeamApi } from '../http/request.js'
@@ -37,17 +41,29 @@ export const executeApiCommand = async (
 
   const apiPath = `/${path.join('/').replace(/-/g, '_')}`
 
-  const params = await interactForCommandParams(
-    { command: path, params: commandParams },
-    ctx,
-  )
+  // Non-interactive runs never prompt: validate and send what was given.
+  let params: Record<string, any>
+  if (isNonInteractive) {
+    assertRequiredParams(
+      getCommandBlueprintDef(path, ctx).request.parameters,
+      commandParams,
+      apiPath,
+    )
+    params = commandParams
+  } else {
+    const edited = await interactForCommandParams(
+      { command: path, params: commandParams },
+      ctx,
+    )
 
-  if (params === '[Back]') {
-    return { kind: 'back', toPath: path.slice(0, -1) }
+    if (edited === '[Back]') {
+      return { kind: 'back', toPath: path.slice(0, -1) }
+    }
+    params = edited
   }
 
-  if (apiPath.includes('/events/list') && params.between) {
-    delete params.since
+  if (apiPath.includes('/events/list') && params['between']) {
+    delete params['since']
   }
 
   const response = await RequestSeamApi({
