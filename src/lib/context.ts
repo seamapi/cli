@@ -6,6 +6,7 @@ import {
   getTokenFromEnv,
   getWorkspaceIdFromEnv,
 } from './env.js'
+import type { SeamApi } from './http/api.js'
 import type { Output } from './output/create-output.js'
 
 export const defaultServer = 'https://connect.getseam.com'
@@ -70,6 +71,8 @@ export interface CliContext {
   output: Output
   blueprint: ApiBlueprint
   interactivity: Interactivity
+  /** The Seam API, constructed on first use and shared for the run. */
+  api: () => Promise<SeamApi>
 }
 
 const readString = (value: unknown): string | null => {

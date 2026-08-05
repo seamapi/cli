@@ -1,10 +1,9 @@
 import chalk from 'chalk'
 
-import { getSeam } from 'lib/http/client.js'
-import { getOutput } from 'lib/output/get-output.js'
-import { selectResponsePayload } from 'lib/output/select-response-payload.js'
-
+import type { Output } from '../output/create-output.js'
+import { selectResponsePayload } from '../output/select-response-payload.js'
 import { withLoading } from '../output/with-loading.js'
+import type { SeamApi, SeamApiResponse } from './api.js'
 
 export interface RequestSeamApiOptions {
   path: string
@@ -13,22 +12,26 @@ export interface RequestSeamApiOptions {
   responseKey?: string | null | undefined
 }
 
-export const RequestSeamApi = async ({
-  path,
-  params,
-  responseKey,
-}: RequestSeamApiOptions) => {
-  const seam = await getSeam()
-  const output = getOutput()
+export interface RequestSeamApiDependencies {
+  api: SeamApi
+  output: Output
+}
 
+/**
+ * Make a request and report the result: the request banner and status go to
+ * stderr, the trimmed payload to stdout, and an error status sets the exit
+ * code. The transport itself is behind the injected {@link SeamApi}.
+ */
+export const requestSeamApi = async (
+  { path, params, responseKey }: RequestSeamApiOptions,
+  { api, output }: RequestSeamApiDependencies,
+): Promise<SeamApiResponse> => {
   output.info(`\n${chalk.green(path)}`)
   output.info(`Request Params:`)
   output.info(formatParams(params))
 
-  const response = await withLoading('Making request...', () =>
-    seam.client.post(path, params, {
-      validateStatus: () => true,
-    }),
+  const response = await withLoading('Making request...', async () =>
+    api.post(path, params),
   )
 
   if (response.status >= 400) {

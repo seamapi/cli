@@ -1,5 +1,5 @@
-import { NonInteractiveError } from '../../args/parse.js'
 import { assertMutable } from '../../auth/operations.js'
+import { NonInteractiveError } from '../../errors.js'
 import { interactForWorkspaceId } from '../../interact/interact-for-workspace-id.js'
 import type { Command } from '../registry.js'
 

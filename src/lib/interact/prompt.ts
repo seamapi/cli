@@ -12,14 +12,7 @@ import {
 } from '@clack/prompts'
 import chalk from 'chalk'
 
-import { NonInteractiveError } from '../args/parse.js'
-
-/** The user dismissed a prompt with ctrl-c or escape instead of answering. */
-export class PromptCancelledError extends Error {
-  constructor() {
-    super('Cancelled')
-  }
-}
+import { NonInteractiveError, PromptCancelledError } from '../errors.js'
 
 export interface PromptChoice<Value> {
   label: string

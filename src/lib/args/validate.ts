@@ -1,11 +1,7 @@
 import type { Parameter } from '@seamapi/blueprint'
 
-import {
-  NonInteractiveError,
-  toArgName,
-  toGivenArgName,
-  UsageError,
-} from './parse.js'
+import { NonInteractiveError, UsageError } from '../errors.js'
+import { toArgName, toGivenArgName } from './parse.js'
 
 /**
  * Report every required parameter still missing from the params, rather

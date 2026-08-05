@@ -1,5 +1,5 @@
-import { NonInteractiveError } from '../../args/parse.js'
 import { assertMutable, login } from '../../auth/operations.js'
+import { NonInteractiveError } from '../../errors.js'
 import { interactForLogin } from '../../interact/interact-for-login.js'
 import type { Command } from '../registry.js'
 import { stringFlag } from '../spec.js'

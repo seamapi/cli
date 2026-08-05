@@ -1,4 +1,4 @@
-import { NonInteractiveError } from '../../args/parse.js'
+import { NonInteractiveError } from '../../errors.js'
 import { interactForUseRemoteApiDefs } from '../../interact/interact-for-use-remote-api-defs.js'
 import type { Command } from '../registry.js'
 

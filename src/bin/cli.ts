@@ -7,10 +7,8 @@ import type { ParsedArgs } from 'minimist'
 import {
   cliFlags,
   getInteractivity,
-  NonInteractiveError,
   parseCliArgs,
   toParameterName,
-  UsageError,
 } from 'lib/args/parse.js'
 import { assertKnownArgs } from 'lib/args/validate.js'
 import { getApiBlueprint } from 'lib/blueprint/index.js'
@@ -23,9 +21,11 @@ import {
 } from 'lib/commands/registry.js'
 import { getConfigStore } from 'lib/config/index.js'
 import { type CliContext, resolveAuth } from 'lib/context.js'
-import { EnvVarOverrideError, tokenEnvVar } from 'lib/env.js'
+import { tokenEnvVar } from 'lib/env.js'
+import { reportErrorAndExit } from 'lib/errors.js'
+import { createSeamApi, type SeamApi } from 'lib/http/api.js'
 import { interactForCommandSelection } from 'lib/interact/interact-for-command-selection.js'
-import { canPrompt, PromptCancelledError } from 'lib/interact/prompt.js'
+import { canPrompt } from 'lib/interact/prompt.js'
 import { createOutput } from 'lib/output/create-output.js'
 import { getOutput, setOutput } from 'lib/output/get-output.js'
 import { readStdinJson } from 'lib/output/read-stdin-json.js'
@@ -145,12 +145,16 @@ async function cli(args: ParsedArgs, argv: string[]) {
   // Params piped or redirected in, e.g., `seam devices list < params.json`.
   const stdinParams: Record<string, any> = { ...(await readStdinJson()) }
 
+  const auth = resolveAuth(config)
+  let seamApi: Promise<SeamApi> | null = null
+
   const ctx: CliContext = {
     config,
-    auth: resolveAuth(config),
+    auth,
     output,
     blueprint,
     interactivity: getInteractivity(args, { canPrompt: canPrompt() }),
+    api: async () => await (seamApi ??= createSeamApi(auth)),
   }
 
   const selectableCommands = registry.spec.commands.map(({ path }) => path)
@@ -220,26 +224,5 @@ const run = async (argv: string[]) => {
 }
 
 run(process.argv.slice(2)).catch((e: unknown) => {
-  const output = getOutput()
-  process.exitCode = 1
-
-  if (e instanceof UsageError) {
-    output.error(chalk.red(e.message))
-    if (e.hint !== '') output.error(e.hint)
-    return
-  }
-
-  if (e instanceof NonInteractiveError || e instanceof EnvVarOverrideError) {
-    output.error(chalk.red(e.message))
-    return
-  }
-
-  if (e instanceof PromptCancelledError) {
-    output.error(chalk.gray(e.message))
-    return
-  }
-
-  const error = e instanceof Error ? e : new Error(String(e))
-  output.error(chalk.red(`CLI Error: ${error.message}`))
-  if (error.stack != null) output.error(chalk.gray(error.stack))
+  reportErrorAndExit(e, getOutput())
 })

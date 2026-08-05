@@ -1,24 +1,17 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import { coerceArgParams } from '../args/coerce.js'
-import {
-  type Interactivity,
-  parseCliArgs,
-  toArgName,
-  toArgParams,
-  UsageError,
-} from '../args/parse.js'
+import { parseCliArgs, toArgName, toArgParams } from '../args/parse.js'
 import { assertRequiredParams } from '../args/validate.js'
 import {
   getCommandBlueprintDef,
   getResponseKey,
 } from '../blueprint/endpoint.js'
 import type { CliContext } from '../context.js'
-import { isInsideWebBrowser } from '../env.js'
-import { RequestSeamApi } from '../http/request.js'
-import { interactForActionAttemptPoll } from '../interact/interact-for-action-attempt-poll.js'
+import { UsageError } from '../errors.js'
+import { runResponseFollowUps } from '../http/follow-ups.js'
+import { requestSeamApi } from '../http/request.js'
 import { interactForCommandParams } from '../interact/interact-for-command-params.js'
-import { promptConfirm } from '../interact/prompt.js'
 import type { CommandResult, Invocation } from './registry.js'
 
 /**
@@ -87,22 +80,12 @@ export const executeApiCommand = async (
     delete params['since']
   }
 
-  const response = await RequestSeamApi({
-    path: apiPath,
-    params,
-    responseKey: getResponseKey(path, ctx),
-  })
+  const response = await requestSeamApi(
+    { path: apiPath, params, responseKey: getResponseKey(path, ctx) },
+    { api: await ctx.api(), output: ctx.output },
+  )
 
-  if (response.data?.connect_webview) {
-    await handleConnectWebviewResponse(
-      response.data.connect_webview,
-      ctx.interactivity,
-    )
-  }
-
-  if (response.data?.action_attempt && !isNonInteractive) {
-    await interactForActionAttemptPoll(response.data.action_attempt)
-  }
+  await runResponseFollowUps(response.data, ctx)
 
   return { kind: 'done' }
 }
@@ -120,24 +103,5 @@ const applyEndpointDefaults = (
     const date = new Date()
     date.setMonth(date.getMonth() - 1)
     params['since'] = date.toISOString()
-  }
-}
-
-const handleConnectWebviewResponse = async (
-  connectWebview: any,
-  interactivity: Interactivity,
-) => {
-  const url = connectWebview.url
-
-  if (interactivity !== 'non-interactive' && !isInsideWebBrowser()) {
-    const action = await promptConfirm({
-      message: 'Would you like to open the webview in your browser?',
-      initialValue: false,
-    })
-
-    if (action) {
-      const { default: open } = await import('open')
-      await open(url)
-    }
   }
 }

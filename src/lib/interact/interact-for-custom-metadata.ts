@@ -1,10 +1,6 @@
 import { getOutput } from '../output/get-output.js'
-import {
-  PromptCancelledError,
-  promptSelect,
-  promptText,
-  withBackHint,
-} from './prompt.js'
+import { PromptCancelledError } from '../errors.js'
+import { promptSelect, promptText, withBackHint } from './prompt.js'
 
 // Structurally the CustomMetadata of @seamapi/types, spelled out here so the
 // published declarations do not depend on a development-only package.

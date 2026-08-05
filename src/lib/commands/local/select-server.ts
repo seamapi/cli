@@ -1,5 +1,5 @@
-import { NonInteractiveError } from '../../args/parse.js'
 import { assertMutable, selectServer } from '../../auth/operations.js'
+import { NonInteractiveError } from '../../errors.js'
 import { interactForServerSelection } from '../../interact/interact-for-server-selection.js'
 import type { Command } from '../registry.js'
 import { stringFlag } from '../spec.js'

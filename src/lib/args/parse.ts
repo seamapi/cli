@@ -37,28 +37,6 @@ export const cliFlags: string[] = [
   'version',
 ]
 
-/**
- * Thrown when the CLI needs input it cannot prompt for.
- */
-export class NonInteractiveError extends Error {
-  override name = 'NonInteractiveError'
-}
-
-/**
- * Thrown when the arguments do not name something the CLI can run.
- */
-export class UsageError extends Error {
-  override name = 'UsageError'
-
-  /** What to run instead, reported after the message. */
-  readonly hint: string
-
-  constructor(message: string, { hint = '' }: { hint?: string } = {}) {
-    super(message)
-    this.hint = hint
-  }
-}
-
 export interface ParseCliArgsOptions {
   /**
    * Argument keys read exactly as given rather than by guessing at a type,

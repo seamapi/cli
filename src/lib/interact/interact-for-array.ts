@@ -1,6 +1,6 @@
 import { getOutput } from '../output/get-output.js'
+import { PromptCancelledError } from '../errors.js'
 import {
-  PromptCancelledError,
   promptNumber,
   promptSelect,
   promptText,

@@ -1,8 +1,8 @@
 import type { Parameter } from '@seamapi/blueprint'
 
-import { NonInteractiveError } from '../args/parse.js'
 import { assertRequiredParams } from '../args/validate.js'
 import type { CliContext } from '../context.js'
+import { NonInteractiveError, PromptCancelledError } from '../errors.js'
 import { getOutput } from '../output/get-output.js'
 import { ellipsis } from '../render/text.js'
 import { interactForAccessCode } from './interact-for-access-code.js'
@@ -18,7 +18,6 @@ import { interactForUserIdentity } from './interact-for-user-identity.js'
 import {
   promptAutocomplete,
   promptAutocompleteMultiselect,
-  PromptCancelledError,
   promptConfirm,
   promptNumber,
   promptSelect,

@@ -1,5 +1,5 @@
+import { PromptCancelledError } from '../errors.js'
 import {
-  PromptCancelledError,
   type PromptChoice,
   type PromptClient,
   type PromptSelectOptions,

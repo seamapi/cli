@@ -1,4 +1,4 @@
-import { RequestSeamApi } from '../../http/request.js'
+import { requestSeamApi } from '../../http/request.js'
 import type { Command } from '../registry.js'
 
 export const healthCommand: Command = {
@@ -11,11 +11,11 @@ export const healthCommand: Command = {
     flags: [],
   },
   requiresAuth: true,
-  execute: async () => {
-    await RequestSeamApi({
-      path: '/health/get_health',
-      params: {},
-    })
+  execute: async (_invocation, ctx) => {
+    await requestSeamApi(
+      { path: '/health/get_health', params: {} },
+      { api: await ctx.api(), output: ctx.output },
+    )
     return { kind: 'done' }
   },
 }
