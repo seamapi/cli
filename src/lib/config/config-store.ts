@@ -15,7 +15,7 @@ const paths = envPaths('seam', { suffix: '' })
  * What a config store can do, regardless of where it keeps the values.
  *
  * The CLI reads and writes through this interface so a test may hand code an
- * in-memory store (see `create-memory-config-store.ts`) instead of the real
+ * in-memory store (see `memory-config-store.ts`) instead of the real
  * file-backed one.
  */
 export interface ConfigStore {

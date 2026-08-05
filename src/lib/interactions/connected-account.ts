@@ -1,6 +1,6 @@
 import { getSeam } from 'lib/http/client.js'
 
-import { interactForResource } from './interact-for-resource.js'
+import { interactForResource } from './resource.js'
 export const interactForConnectedAccount = async () => {
   const seam = await getSeam()
 

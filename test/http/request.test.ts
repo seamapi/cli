@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
-import { createMemorySeamApi } from 'lib/http/create-memory-seam-api.js'
+import { createMemorySeamApi } from 'lib/http/memory-seam-api.js'
 import { requestSeamApi } from 'lib/http/request.js'
-import { createMemoryOutput } from 'lib/output/create-memory-output.js'
+import { createMemoryOutput } from 'lib/output/memory-output.js'
 
 let exitCodeBefore: number | string | undefined
 

@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 
 import { EnvVarOverrideError } from './env.js'
-import type { Output } from './output/create-output.js'
+import type { Output } from './output/output.js'
 
 /**
  * Thrown when the CLI needs input it cannot prompt for.

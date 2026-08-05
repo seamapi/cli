@@ -2,15 +2,15 @@ import type { Parameter } from '@seamapi/blueprint'
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
 import type { CliContext } from 'lib/context.js'
-import { createMemoryOutput } from 'lib/output/create-memory-output.js'
+import { createMemoryOutput } from 'lib/output/memory-output.js'
 import { setOutput } from 'lib/output/get-output.js'
 import {
   cancelPrompt,
   createMemoryPrompt,
   type MemoryPromptClient,
-} from 'lib/interact/create-memory-prompt.js'
-import { interactForBlueprintObject } from 'lib/interact/interact-for-blueprint-object.js'
-import { resetPromptClient, setPromptClient, withBackHint } from 'lib/interact/prompt.js'
+} from 'lib/interactions/memory-prompt.js'
+import { interactForBlueprintObject } from 'lib/interactions/blueprint-object.js'
+import { resetPromptClient, setPromptClient, withBackHint } from 'lib/interactions/prompt.js'
 
 let memoryPrompt: MemoryPromptClient
 

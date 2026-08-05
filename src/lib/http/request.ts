@@ -1,6 +1,6 @@
 import chalk from 'chalk'
 
-import type { Output } from 'lib/output/create-output.js'
+import type { Output } from 'lib/output/output.js'
 import { selectResponsePayload } from 'lib/output/select-response-payload.js'
 import { withLoading } from 'lib/output/with-loading.js'
 

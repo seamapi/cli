@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
-import { createMemoryConfigStore } from 'lib/config/create-memory-config-store.js'
+import { createMemoryConfigStore } from 'lib/config/memory-config-store.js'
 import { resolveAuth } from 'lib/context.js'
 import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
 

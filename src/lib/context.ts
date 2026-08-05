@@ -7,7 +7,7 @@ import {
   getWorkspaceIdFromEnv,
 } from './env.js'
 import type { SeamApi } from './http/api.js'
-import type { Output } from './output/create-output.js'
+import type { Output } from './output/output.js'
 
 export const defaultServer = 'https://connect.getseam.com'
 

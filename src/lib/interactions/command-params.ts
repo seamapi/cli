@@ -1,7 +1,7 @@
 import { getCommandBlueprintDef } from 'lib/blueprint/endpoint.js'
 import type { CliContext } from 'lib/context.js'
 
-import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
+import { interactForBlueprintObject } from './blueprint-object.js'
 
 export const interactForCommandParams = async (
   args: {

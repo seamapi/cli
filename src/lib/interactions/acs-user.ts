@@ -1,7 +1,7 @@
 import { getSeam } from 'lib/http/client.js'
 
-import { interactForAcsSystem } from './interact-for-acs-system.js'
-import { interactForResource } from './interact-for-resource.js'
+import { interactForAcsSystem } from './acs-system.js'
+import { interactForResource } from './resource.js'
 
 export const interactForAcsUser = async () => {
   const seam = await getSeam()

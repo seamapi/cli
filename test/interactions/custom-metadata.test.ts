@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
-import { createMemoryOutput } from 'lib/output/create-memory-output.js'
+import { createMemoryOutput } from 'lib/output/memory-output.js'
 import { setOutput } from 'lib/output/get-output.js'
-import { createMemoryPrompt } from 'lib/interact/create-memory-prompt.js'
-import { interactForCustomMetadata } from 'lib/interact/interact-for-custom-metadata.js'
-import { resetPromptClient, setPromptClient } from 'lib/interact/prompt.js'
+import { createMemoryPrompt } from 'lib/interactions/memory-prompt.js'
+import { interactForCustomMetadata } from 'lib/interactions/custom-metadata.js'
+import { resetPromptClient, setPromptClient } from 'lib/interactions/prompt.js'
 
 /** Scripts an answer for each ask, in the order the editor asks. */
 const scriptPrompt = (script: unknown[]): void => {

@@ -1,7 +1,7 @@
 import { getSeam } from 'lib/http/client.js'
 
-import { interactForDevice } from './interact-for-device.js'
-import { interactForResource } from './interact-for-resource.js'
+import { interactForDevice } from './device.js'
+import { interactForResource } from './resource.js'
 
 export const interactForAccessCode = async ({
   // The key is a Seam API parameter name: callers pass the blueprint params

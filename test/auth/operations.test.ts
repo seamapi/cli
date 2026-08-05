@@ -8,7 +8,7 @@ import {
   selectWorkspace,
   storeToken,
 } from 'lib/auth/operations.js'
-import { createMemoryConfigStore } from 'lib/config/create-memory-config-store.js'
+import { createMemoryConfigStore } from 'lib/config/memory-config-store.js'
 import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
 
 const server = 'https://connect.example.com'

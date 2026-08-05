@@ -8,7 +8,7 @@ import { resolveAuth } from 'lib/context.js'
 import { getOutput } from 'lib/output/get-output.js'
 import { promptText } from './prompt.js'
 import { withLoading } from 'lib/output/with-loading.js'
-import { interactForWorkspaceId } from './interact-for-workspace-id.js'
+import { interactForWorkspaceId } from './workspace-id.js'
 
 export const interactForLogin = async () => {
   const config = getConfigStore()

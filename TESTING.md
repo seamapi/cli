@@ -49,8 +49,8 @@ the fake goes.
 | Module kind                                                                                                              | The tell                                                     | Default test                                                                                                                                                                 | Gets faked                                                        | Never faked                                                      |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
 | **Pure transform** — `render/help`, `render/completion/render-*`, `output/select-response-payload`, `args/parse`         | Value in → value out; no I/O imports                         | Classical unit, real values                                                                                                                                                  | Nothing                                                           | Anything                                                         |
-| **Decision over injected data** — `interact-for-command-selection` (non-interactive), `blueprint/endpoint`, `context.ts` | Takes `CliContext` / blueprint / config store as a parameter | Classical with a literal ctx object (`interact-for-command-selection.test.ts` is the model)                                                                                  | Nothing — a hand-built blueprint literal is a fixture, not a fake | The traversal/decision logic                                     |
-| **Prompt flow** — `interact/interact-for-*` importing `interact/prompt.js`                                               | Imports `interact/prompt.js`                                 | Classical on the returned value, memory output, scripted prompt fake; assert the choice list _offered_ where the prompt is the UX                                            | The prompt layer (the whole `prompts` edge), output               | The module's own branching and param assembly                    |
+| **Decision over injected data** — `interact-for-command-selection` (non-interactive), `blueprint/endpoint`, `context.ts` | Takes `CliContext` / blueprint / config store as a parameter | Classical with a literal ctx object (`command-selection.test.ts` is the model)                                                                                               | Nothing — a hand-built blueprint literal is a fixture, not a fake | The traversal/decision logic                                     |
+| **Prompt flow** — `interactions/*` importing `interactions/prompt.js`                                                    | Imports `interactions/prompt.js`                             | Classical on the returned value, memory output, scripted prompt fake; assert the choice list _offered_ where the prompt is the UX                                            | The prompt layer (the whole `prompts` edge), output               | The module's own branching and param assembly                    |
 | **Config & state** — `config/config-store`, `config/migrate`                                                             | Touches `Configstore` / `env-paths`                          | Classical against a real store in a temp directory — it's a JSON file, and split/merge/migration _is_ the behavior                                                           | The directory; env vars (`vi.stubEnv`)                            | `Configstore` or fs behavior                                     |
 | **Network** — `http/request`, `auth/validate-token`, `blueprint/source-npm`                                              | Constructs `SeamHttp` or calls `fetch`                       | Classical against a fake port (or a stubbed global `fetch` with captured requests, as `blueprint/source-npm.test.ts` does); assert the payload sent _and_ the value returned | The `SeamApi` port / global `fetch`                               | Status handling, payload selection, formatting — that's the unit |
 | **Orchestration** — `bin/cli.ts`                                                                                         | Reads argv/env, wires everything                             | E2e: spawn via `execa`, `node:http` fake server, XDG temp dirs (`test/cli.test.ts`)                                                                                          | The far end of the wire; the home directories                     | Anything in-process                                              |
@@ -72,7 +72,7 @@ itself the user-observable contract** — when the message crosses a process
 boundary. "We sent this request body to `/devices/list`" is behavior: the
 request is the product. "The prompt offered these choices with these hints" is
 behavior: the choices are what the user sees
-(`interact-for-blueprint-object.test.ts` asserting on the recorded `choices`
+(`blueprint-object.test.ts` asserting on the recorded `choices`
 is the good in-repo example). "`resolveAuth` called `getConfigStore`" is
 implementation: the contract is _what server comes back_, not how it was
 looked up.
@@ -137,7 +137,7 @@ The fake is the in-process mirror of the e2e server — a routes table plus a
 capture:
 
 ```ts
-// src/lib/http/create-memory-seam-api.ts
+// src/lib/http/memory-seam-api.ts
 export class MemorySeamApi implements SeamApi {
   readonly requests: Array<{ path: string; params: Record<string, unknown> }> =
     []
@@ -181,7 +181,7 @@ expect(memory.stdout()).toContain('invalid_input')
 expect(process.exitCode).toBe(1)
 ```
 
-`auth/validate-token.ts` and the resource pickers (`interact/interact-for-device.ts`
+`auth/validate-token.ts` and the resource pickers (`interactions/device.ts`
 and friends) use typed SDK methods and stay on the real SDK, covered by e2e —
 don't invent a second port for them.
 

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { createMemoryOutput } from './create-memory-output.js'
+import { createMemoryOutput } from './memory-output.js'
 
 test('createOutput: writes data to stdout as json', () => {
   const { output, stdout, stderr } = createMemoryOutput({ format: 'json' })

@@ -49,7 +49,7 @@ export interface PromptSelectOptions<Value> {
  * asked, and how to ask each kind.
  *
  * A test replaces this with an in-memory client (see
- * `create-memory-prompt.ts`) via {@link setPromptClient} — the code under
+ * `memory-prompt.ts`) via {@link setPromptClient} — the code under
  * test keeps calling `promptText` and friends as usual.
  */
 export interface PromptClient {

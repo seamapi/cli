@@ -3,7 +3,7 @@ import {
   type CreateOutputOptions,
   type Output,
   type OutputStream,
-} from './create-output.js'
+} from './output.js'
 
 export interface MemoryOutput {
   output: Output
