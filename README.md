@@ -402,9 +402,13 @@ The following repository secrets must be set on [GitHub Actions]:
 
 The standalone macOS binaries are code signed and notarized while they are
 built, so that Gatekeeper lets them run on machines other than the one that
-built them. Both steps need an [Apple Developer Program] membership and are
-skipped, with a warning, when their secrets are unset: the binaries then only
-carry an ad-hoc signature and are not fit to release.
+built them. Both need an [Apple Developer Program] membership.
+
+Anything that releases signs, and fails rather than publish a binary that
+macOS refuses to run. A check builds the macOS binaries with `sign: false`
+instead: a pull request from a fork cannot read the credentials, and nothing a
+check builds is ever released. There is no ad-hoc signature fallback, since
+Gatekeeper rejects one anywhere but the machine that made it.
 
 Set these repository secrets to code sign:
 
@@ -417,8 +421,7 @@ Set these repository secrets to code sign:
   `Developer ID Application: Seam Labs, Inc. (XXXXXXXXXX)`. Only needed when the
   bundle holds more than one Developer ID Application certificate.
 
-Set these repository secrets to notarize, from an
-[App Store Connect API key]:
+And these to notarize, from an [App Store Connect API key]:
 
 - `APPLE_API_KEY`: The base64 encoded API private key (`.p8`).
 - `APPLE_API_KEY_ID`: The API key id.

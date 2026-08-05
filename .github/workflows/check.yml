@@ -56,6 +56,10 @@ jobs:
   build:
     name: Build
     uses: ./.github/workflows/_build.yml
+    with:
+      # A pull request from a fork cannot read the signing credentials,
+      # and a check never releases what it builds.
+      sign: false
   install:
     name: Install (Node.js v${{ matrix.node }} on ${{ matrix.os_name }})
     runs-on: ${{ matrix.os }}
