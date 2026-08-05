@@ -1,42 +1,58 @@
-import type { SeamHttp } from '@seamapi/http/connect'
+import { type SeamHttp, SeamHttpRequest } from '@seamapi/http/connect'
 
 import type { AuthContext } from 'lib/context.js'
 
 import { getSeam } from './client.js'
 
-export interface SeamApiResponse {
-  status: number
-  data: unknown
+export interface ApiRequestOptions {
+  path: string
+  params: Record<string, unknown>
+  /** Response key documented for the endpoint, e.g., `devices`. */
+  responseKey?: string | null | undefined
 }
 
 /**
- * The one method the blueprint-driven CLI needs from the Seam API: post
- * params to an endpoint path and read back the status and body.
+ * A prepared call to the Seam API: inspectable before it is sent, e.g., to
+ * report the URL, then sent with {@link SeamApiRequest.fetchResponse}.
  *
- * Tests fake at this port with `createMemorySeamApi()` — the in-process
- * mirror of the e2e suite's HTTP server — so nothing in-process ever
- * imitates the SDK's own surface.
+ * The real implementation is the SDK's own `SeamHttpRequest`; sending one
+ * rejects with a `SeamHttpApiError` when the API reports an error.
+ */
+export interface SeamApiRequest {
+  readonly url: URL
+  readonly method: string
+  readonly body: unknown
+  /** Send the request and return the full response body. */
+  fetchResponse: () => Promise<unknown>
+}
+
+/**
+ * How the blueprint-driven CLI reaches the Seam API: prepare a request for
+ * an endpoint path. Tests fake at this port with `createMemorySeamApi()` —
+ * the in-process mirror of the e2e suite's HTTP server.
  */
 export interface SeamApi {
-  post: (
-    path: string,
-    params: Record<string, unknown>,
-  ) => Promise<SeamApiResponse>
+  createRequest: (options: ApiRequestOptions) => SeamApiRequest
 }
 
 /** The only place `SeamHttp` appears for raw requests. */
 export class HttpSeamApi implements SeamApi {
   constructor(private readonly seam: SeamHttp) {}
 
-  post = async (
-    path: string,
-    params: Record<string, unknown>,
-  ): Promise<SeamApiResponse> => {
-    const { status, data } = await this.seam.client.post(path, params, {
-      validateStatus: () => true,
-    })
-    return { status, data }
-  }
+  createRequest = ({
+    path,
+    params,
+    responseKey,
+  }: ApiRequestOptions): SeamApiRequest =>
+    new SeamHttpRequest<Record<string, unknown>, string | undefined>(
+      this.seam,
+      {
+        pathname: path,
+        method: 'POST',
+        body: params,
+        responseKey: responseKey ?? undefined,
+      },
+    )
 }
 
 export const createSeamApi = async (auth?: AuthContext): Promise<SeamApi> => {

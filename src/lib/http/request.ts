@@ -1,10 +1,14 @@
+import {
+  isSeamHttpApiError,
+  type SeamHttpApiError,
+} from '@seamapi/http/connect'
 import chalk from 'chalk'
 
 import type { Output } from 'lib/output/output.js'
 import { selectResponsePayload } from 'lib/output/select-response-payload.js'
 import { withLoading } from 'lib/output/with-loading.js'
 
-import type { SeamApi, SeamApiResponse } from './api.js'
+import type { SeamApi } from './api.js'
 
 export interface RequestSeamApiOptions {
   path: string
@@ -19,33 +23,47 @@ export interface RequestSeamApiDependencies {
 }
 
 /**
- * Make a request and report the result: the request banner and status go to
- * stderr, the trimmed payload to stdout, and an error status sets the exit
- * code. The transport itself is behind the injected {@link SeamApi}.
+ * Make a request and report the result: the request URL and params go to
+ * stderr, the trimmed payload to stdout. An API error reports its status
+ * and payload and sets the exit code. Returns the response body, or `null`
+ * when the API reported an error.
  */
 export const requestSeamApi = async (
-  { path, params, responseKey }: RequestSeamApiOptions,
+  options: RequestSeamApiOptions,
   { api, output }: RequestSeamApiDependencies,
-): Promise<SeamApiResponse> => {
-  output.info(`\n${chalk.green(path)}`)
+): Promise<unknown> => {
+  const request = api.createRequest(options)
+
+  output.info(`\n${chalk.green(request.url.toString())}`)
   output.info(`Request Params:`)
-  output.info(formatParams(params))
+  output.info(formatParams(options.params))
 
-  const response = await withLoading('Making request...', async () =>
-    api.post(path, params),
-  )
+  let body: unknown
+  try {
+    body = await withLoading('Making request...', async () => {
+      return await request.fetchResponse()
+    })
+  } catch (error) {
+    if (!isSeamHttpApiError(error)) throw error
 
-  if (response.status >= 400) {
-    output.warn(chalk.red(`[${response.status}]`))
+    output.warn(chalk.red(`[${error.statusCode}]`))
     process.exitCode = 1
-  } else {
-    output.info(chalk.green(`[${response.status}]`))
+    output.data({ error: toErrorPayload(error) })
+    return null
   }
 
-  output.data(selectResponsePayload(response.data, { responseKey }))
+  output.data(selectResponsePayload(body, { responseKey: options.responseKey }))
 
-  return response
+  return body
 }
+
+const toErrorPayload = (
+  error: SeamHttpApiError,
+): { type: string; message: string; data?: unknown } => ({
+  type: error.code,
+  message: error.message,
+  ...(error.data === undefined ? {} : { data: error.data }),
+})
 
 const formatParams = (params: Record<string, any>): string =>
   JSON.stringify(params, null, 2)

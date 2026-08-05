@@ -27,7 +27,7 @@ test('requestSeamApi: sends the params and reports the trimmed payload', async (
   })
   const memory = createMemoryOutput({ format: 'json' })
 
-  const response = await requestSeamApi(
+  const body = await requestSeamApi(
     { path: '/devices/list', params: { limit: 5 }, responseKey: 'devices' },
     { api, output: memory.output },
   )
@@ -36,7 +36,7 @@ test('requestSeamApi: sends the params and reports the trimmed payload', async (
   expect(api.requests).toEqual([
     { path: '/devices/list', params: { limit: 5 } },
   ])
-  expect(response.status).toBe(200)
+  expect(body).toMatchObject({ devices: [{ device_id: 'device1' }] })
   expect(JSON.parse(memory.stdout())).toEqual({
     devices: [{ device_id: 'device1' }],
     pagination: { has_next_page: false },
@@ -44,16 +44,19 @@ test('requestSeamApi: sends the params and reports the trimmed payload', async (
   expect(process.exitCode).toBe(exitCodeBefore)
 })
 
-test('requestSeamApi: reports an error payload and sets the exit code', async () => {
+test('requestSeamApi: reports an API error and sets the exit code', async () => {
   const api = createMemorySeamApi({
     '/devices/list': {
       status: 400,
-      data: { error: { type: 'invalid_input' }, ok: false },
+      data: {
+        error: { type: 'invalid_input', message: 'Bad request' },
+        ok: false,
+      },
     },
   })
   const memory = createMemoryOutput({ format: 'json' })
 
-  await requestSeamApi(
+  const body = await requestSeamApi(
     { path: '/devices/list', params: { limit: 5 } },
     { api, output: memory.output },
   )
@@ -61,12 +64,15 @@ test('requestSeamApi: reports an error payload and sets the exit code', async ()
   expect(api.requests).toEqual([
     { path: '/devices/list', params: { limit: 5 } },
   ])
-  expect(memory.stdout()).toContain('invalid_input')
+  expect(body).toBe(null)
+  expect(JSON.parse(memory.stdout())).toEqual({
+    error: { type: 'invalid_input', message: 'Bad request' },
+  })
   expect(memory.stderr()).toContain('[400]')
   expect(process.exitCode).toBe(1)
 })
 
-test('requestSeamApi: keeps the request banner out of stdout', async () => {
+test('requestSeamApi: reports the request URL on stderr, never stdout', async () => {
   const api = createMemorySeamApi({
     '/devices/list': { status: 200, data: { devices: [], ok: true } },
   })

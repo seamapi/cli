@@ -50,7 +50,7 @@ the fake goes.
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
 | **Pure transform** — `render/help`, `render/completion/render-*`, `output/select-response-payload`, `args/parse`         | Value in → value out; no I/O imports                         | Classical unit, real values                                                                                                                                                  | Nothing                                                           | Anything                                                         |
 | **Decision over injected data** — `interact-for-command-selection` (non-interactive), `blueprint/endpoint`, `context.ts` | Takes `CliContext` / blueprint / config store as a parameter | Classical with a literal ctx object (`command-selection.test.ts` is the model)                                                                                               | Nothing — a hand-built blueprint literal is a fixture, not a fake | The traversal/decision logic                                     |
-| **Prompt flow** — `interactions/*` importing `lib/prompt.js`                                                             | Imports `lib/prompt.js`                                      | Classical on the returned value, memory output, scripted prompt fake; assert the choice list _offered_ where the prompt is the UX                                            | The prompt layer (the whole `prompts` edge), output               | The module's own branching and param assembly                    |
+| **Prompt flow** — `interactions/*` importing `lib/prompt.js`                                                             | Imports `lib/prompt.js`                                      | Classical on the returned value, memory output, scripted prompt fake; assert the choice list _offered_ where the prompt is the UX                                            | The prompt layer (the whole `@clack/prompts` edge), output        | The module's own branching and param assembly                    |
 | **Config & state** — `config/config-store`, `config/migrate`                                                             | Touches `Configstore` / `env-paths`                          | Classical against a real store in a temp directory — it's a JSON file, and split/merge/migration _is_ the behavior                                                           | The directory; env vars (`vi.stubEnv`)                            | `Configstore` or fs behavior                                     |
 | **Network** — `http/request`, `auth/validate-token`, `blueprint/source-npm`                                              | Constructs `SeamHttp` or calls `fetch`                       | Classical against a fake port (or a stubbed global `fetch` with captured requests, as `blueprint/source-npm.test.ts` does); assert the payload sent _and_ the value returned | The `SeamApi` port / global `fetch`                               | Status handling, payload selection, formatting — that's the unit |
 | **Orchestration** — `bin/cli.ts`                                                                                         | Reads argv/env, wires everything                             | E2e: spawn via `execa`, `node:http` fake server, XDG temp dirs (`test/cli.test.ts`)                                                                                          | The far end of the wire; the home directories                     | Anything in-process                                              |
@@ -97,44 +97,43 @@ HTTP-free share.
 ## The Seam SDK boundary
 
 **Wrap it behind our own narrow port.** Not `vi.mock('./http/client.js')`, and
-not dependency-injecting `SeamHttp`: both force the fake to imitate an
-axios-shaped SDK surface (`client.post` returning an `AxiosResponse`), so
-tests end up re-verifying the SDK's shape instead of our behavior. The CLI is
-blueprint-driven and has one chokepoint —
-`seam.client.post(path, params, { validateStatus: () => true })` in
-`http/request.ts` — so the port is one method:
+not dependency-injecting `SeamHttp`: both force the fake to imitate the SDK's
+whole surface, so tests end up re-verifying the SDK's shape instead of our
+behavior. The CLI is blueprint-driven and has one chokepoint: preparing a
+`SeamHttpRequest` for an endpoint path. The port mirrors that — prepare a
+request, inspect it, send it:
 
 ```ts
 // src/lib/http/api.ts
-export interface SeamApiResponse {
-  status: number
-  data: unknown
+export interface SeamApiRequest {
+  readonly url: URL
+  readonly method: string
+  readonly body: unknown
+  fetchResponse: () => Promise<unknown>
 }
 
 export interface SeamApi {
-  post: (
-    path: string,
-    params: Record<string, unknown>,
-  ) => Promise<SeamApiResponse>
+  createRequest: (options: ApiRequestOptions) => SeamApiRequest
 }
 
 export class HttpSeamApi implements SeamApi {
   constructor(private readonly seam: SeamHttp) {} // the only place SeamHttp appears
 
-  post = async (path: string, params: Record<string, unknown>) => {
-    const { status, data } = await this.seam.client.post(path, params, {
-      validateStatus: () => true,
+  createRequest = ({ path, params, responseKey }: ApiRequestOptions) =>
+    new SeamHttpRequest(this.seam, {
+      pathname: path,
+      method: 'POST',
+      body: params,
+      responseKey: responseKey ?? undefined,
     })
-    return { status, data }
-  }
 }
-
-export const createSeamApi = async (): Promise<SeamApi> =>
-  new HttpSeamApi(await getSeam())
 ```
 
-The fake is the in-process mirror of the e2e server — a routes table plus a
-capture:
+The real request object is the SDK's own `SeamHttpRequest`, so the URL is
+inspectable before sending and an error status rejects with the SDK's typed
+`SeamHttpApiError`. The fake is the in-process mirror of the e2e server — a
+routes table plus a capture — and it rejects with those same SDK error
+classes, never an imitation:
 
 ```ts
 // src/lib/http/memory-seam-api.ts
@@ -142,27 +141,24 @@ export class MemorySeamApi implements SeamApi {
   readonly requests: Array<{ path: string; params: Record<string, unknown> }> =
     []
 
-  constructor(private readonly routes: Record<string, SeamApiResponse>) {}
+  constructor(private readonly routes: Record<string, MemorySeamApiResponse>) {}
 
-  post = async (path: string, params: Record<string, unknown>) => {
-    this.requests.push({ path, params })
-    return (
-      this.routes[path] ?? {
-        status: 404,
-        data: { error: { type: 'not_found' } },
-      }
-    )
-  }
+  createRequest = ({ path, params }: ApiRequestOptions): SeamApiRequest => ({
+    url: new URL(`https://memory.seam.example${path}`),
+    method: 'POST',
+    body: params,
+    fetchResponse: async () => {
+      this.requests.push({ path, params })
+      const route = this.routes[path]
+      if (route == null || route.status >= 400) throw toSeamHttpError(route)
+      return route.data
+    },
+  })
 }
-
-export const createMemorySeamApi = (
-  routes: Record<string, SeamApiResponse>,
-): MemorySeamApi => new MemorySeamApi(routes)
 ```
 
-This split also separates transport from presentation in `http/request.ts`
-(which historically also formatted output and set `process.exitCode`), so the
-error-status → exit-code behavior becomes a classical test with zero HTTP:
+This keeps transport separate from presentation: the error-status → exit-code
+behavior is a classical test with zero HTTP:
 
 ```ts
 const api = createMemorySeamApi({
