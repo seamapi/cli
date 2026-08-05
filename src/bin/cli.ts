@@ -47,7 +47,8 @@ async function cli(args: ParsedArgs, argv: string[]) {
   if (helpFlag != null) {
     // Help comes from the cached API definitions so that it works without
     // logging in, and offline once the cache is warm.
-    const { spec } = buildRegistry(await getApiBlueprint(false, { update }))
+    const cachedBlueprint = await getApiBlueprint({ update })
+    const { spec } = buildRegistry(cachedBlueprint)
 
     // minimist reads the word after --help as its value, so 'seam --help
     // devices' asks about devices just as 'seam devices --help' does.
@@ -136,14 +137,16 @@ async function cli(args: ParsedArgs, argv: string[]) {
   const useRemoteApiDefs =
     args['remote_api_defs'] ?? config.get('use_remote_api_defs')
 
-  const blueprint = await getApiBlueprint(useRemoteApiDefs ?? false, {
+  const blueprint = await getApiBlueprint({
+    useRemoteDefinitions: useRemoteApiDefs ?? false,
     update,
   })
 
   const registry = buildRegistry(blueprint)
 
   // Params piped or redirected in, e.g., `seam devices list < params.json`.
-  const stdinParams: Record<string, any> = { ...(await readStdinJson()) }
+  const pipedParams = await readStdinJson()
+  const stdinParams: Record<string, any> = { ...pipedParams }
 
   const auth = resolveAuth(config)
   let seamApi: Promise<SeamApi> | null = null

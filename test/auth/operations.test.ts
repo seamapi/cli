@@ -207,7 +207,10 @@ test(`selectWorkspace: refuses while ${workspaceIdEnvVar} is set`, () => {
 test('selectFakeServer: stores the server and its well-known token', () => {
   const store = createMemoryConfigStore({ current_workspace_id: 'workspace1' })
 
-  const { server: fakeServer } = selectFakeServer('abc123', store)
+  const { server: fakeServer } = selectFakeServer({
+    urlSeed: 'abc123',
+    config: store,
+  })
 
   expect(fakeServer).toBe('https://abc123.fakeseamconnect.seam.vc')
   expect(store.get('server')).toBe(fakeServer)
@@ -219,7 +222,7 @@ test(`selectFakeServer: refuses while ${endpointEnvVar} is set`, () => {
   process.env[endpointEnvVar] = server
   const store = createMemoryConfigStore()
 
-  expect(() => selectFakeServer('abc123', store)).toThrow(
+  expect(() => selectFakeServer({ urlSeed: 'abc123', config: store })).toThrow(
     `Cannot select a server while ${endpointEnvVar} is set`,
   )
 })

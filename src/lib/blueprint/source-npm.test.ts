@@ -70,18 +70,25 @@ const seedCache = async (
   )
 }
 
-const readCache = async (): Promise<typeof seedCacheState> =>
-  JSON.parse(
-    await readFile(join(cacheDirectory, 'blueprint.json'), 'utf8'),
-  ) as typeof seedCacheState
+const readCache = async (): Promise<typeof seedCacheState> => {
+  const contents = await readFile(
+    join(cacheDirectory, 'blueprint.json'),
+    'utf8',
+  )
+  return JSON.parse(contents) as typeof seedCacheState
+}
 
 const hoursAgo = (hours: number): string =>
   new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
 
 beforeAll(async () => {
-  const pkg = JSON.parse(
-    await readFile(new URL('../../../package.json', import.meta.url), 'utf8'),
-  ) as { dependencies: Record<string, string> }
+  const packageJson = await readFile(
+    new URL('../../../package.json', import.meta.url),
+    'utf8',
+  )
+  const pkg = JSON.parse(packageJson) as {
+    dependencies: Record<string, string>
+  }
   pinnedBlueprintVersion = pkg.dependencies['@seamapi/blueprint'] ?? ''
 
   // Build a @seamapi/types package tarball from the locally installed
@@ -106,9 +113,11 @@ beforeAll(async () => {
   try {
     stubRegistry()
     await getBlueprint({ cacheDirectory: seedDirectory })
-    seedCacheState = JSON.parse(
-      await readFile(join(seedDirectory, 'blueprint.json'), 'utf8'),
-    ) as typeof seedCacheState
+    const seedContents = await readFile(
+      join(seedDirectory, 'blueprint.json'),
+      'utf8',
+    )
+    seedCacheState = JSON.parse(seedContents) as typeof seedCacheState
   } finally {
     vi.unstubAllGlobals()
     await rm(seedDirectory, { recursive: true, force: true })

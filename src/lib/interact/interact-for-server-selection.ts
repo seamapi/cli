@@ -36,7 +36,7 @@ export async function interactForServerSelection() {
     if (userUrlSeed.trim().length === 0) {
       userUrlSeed = randomBytes(5).toString('hex')
     }
-    selectFakeServer(userUrlSeed, config)
+    selectFakeServer({ urlSeed: userUrlSeed, config })
     output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
   } else {
     selectServer(server, config)

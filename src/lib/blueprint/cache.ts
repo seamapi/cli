@@ -23,7 +23,8 @@ export const readCache = async (
   file: string,
 ): Promise<BlueprintCache | null> => {
   try {
-    const cache = JSON.parse(await readFile(file, 'utf8')) as unknown
+    const contents = await readFile(file, 'utf8')
+    const cache = JSON.parse(contents) as unknown
     if (!isBlueprintCache(cache)) return null
     return cache
   } catch {
@@ -67,9 +68,11 @@ const findOwnPackageJson = async (): Promise<{
   let directory = dirname(fileURLToPath(import.meta.url))
   while (true) {
     try {
-      const pkg = JSON.parse(
-        await readFile(join(directory, 'package.json'), 'utf8'),
-      ) as { name?: string; dependencies?: Record<string, string> }
+      const contents = await readFile(join(directory, 'package.json'), 'utf8')
+      const pkg = JSON.parse(contents) as {
+        name?: string
+        dependencies?: Record<string, string>
+      }
       if (pkg.name === '@seamapi/cli') return pkg
     } catch {
       // Keep walking up until a package.json for this package is found.

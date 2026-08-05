@@ -139,10 +139,13 @@ export const selectWorkspace = (
  * Point the CLI at a fake Seam Connect server and store the well-known
  * token it accepts. Returns the generated server URL for reporting.
  */
-export const selectFakeServer = (
-  urlSeed: string = randomBytes(5).toString('hex'),
-  config: ConfigStore = getConfigStore(),
-): { server: string; token: string } => {
+export const selectFakeServer = ({
+  urlSeed = randomBytes(5).toString('hex'),
+  config = getConfigStore(),
+}: {
+  urlSeed?: string
+  config?: ConfigStore
+} = {}): { server: string; token: string } => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'server', 'select a server')
   assertMutable(auth, 'token', 'log in')

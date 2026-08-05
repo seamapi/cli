@@ -102,7 +102,8 @@ const fetchLatestTypesPackageManifest =
     if (!res.ok) {
       throw new Error(`npm registry responded with status ${res.status}`)
     }
-    const manifest = (await res.json()) as Partial<TypesPackageManifest>
+    const body = await res.json()
+    const manifest = body as Partial<TypesPackageManifest>
     if (
       typeof manifest.version !== 'string' ||
       typeof manifest.dist?.tarball !== 'string'
@@ -139,21 +140,24 @@ const downloadOpenapi = async (
   await rm(extractDirectory, { recursive: true, force: true })
   await mkdir(extractDirectory, { recursive: true })
   try {
-    await writeFile(tarballFile, Buffer.from(await res.arrayBuffer()))
+    const tarball = await res.arrayBuffer()
+    await writeFile(tarballFile, Buffer.from(tarball))
     await extract({ file: tarballFile, cwd: extractDirectory }, [
       openapiTarEntryName,
     ])
 
     const moduleFile = join(extractDirectory, openapiTarEntryName)
-    if (!(await exists(moduleFile))) {
+    const moduleFileExists = await exists(moduleFile)
+    if (!moduleFileExists) {
       throw new Error(`Missing ${openapiTarEntryName} in package tarball`)
     }
 
     // The OpenAPI document is published as a JavaScript module, so import it.
     const openapiModuleUrl = pathToFileURL(moduleFile).href
-    const { default: openapi } = (await import(openapiModuleUrl)) as {
+    const openapiModule = (await import(openapiModuleUrl)) as {
       default: unknown
     }
+    const { default: openapi } = openapiModule
     if (openapi == null) {
       throw new Error(`Missing default export in ${openapiTarEntryName}`)
     }

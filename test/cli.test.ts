@@ -99,9 +99,10 @@ beforeAll(async () => {
   // A pre-seeded blueprint cache holding the fixture blueprint, so tests
   // that pin parameter handling run against known API definitions and
   // never touch the npm registry.
-  const pkg = JSON.parse(
-    await readFile(join(projectRoot, 'package.json'), 'utf8'),
-  ) as { dependencies: Record<string, string> }
+  const packageJson = await readFile(join(projectRoot, 'package.json'), 'utf8')
+  const pkg = JSON.parse(packageJson) as {
+    dependencies: Record<string, string>
+  }
   cacheHome = join(home, 'cache')
   await mkdir(join(cacheHome, 'seam'), { recursive: true })
   await writeFile(
@@ -619,7 +620,8 @@ test('cli: logout removes the stored token and workspace', async () => {
   expect(exitCode).toBe(0)
   expect(stderr).toContain('Logged out!')
 
-  const state = JSON.parse(await readFile(stateFile, 'utf8'))
+  const stateJson = await readFile(stateFile, 'utf8')
+  const state = JSON.parse(stateJson)
   expect(state[endpoint]?.pat).toBeUndefined()
   expect(state.pat).toBeUndefined()
   expect(state.current_workspace_id).toBeUndefined()

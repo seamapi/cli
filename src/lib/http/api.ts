@@ -38,5 +38,7 @@ export class SeamHttpApi implements SeamApi {
   }
 }
 
-export const createSeamApi = async (auth?: AuthContext): Promise<SeamApi> =>
-  new SeamHttpApi(await getSeam(auth))
+export const createSeamApi = async (auth?: AuthContext): Promise<SeamApi> => {
+  const seam = await getSeam(auth)
+  return new SeamHttpApi(seam)
+}

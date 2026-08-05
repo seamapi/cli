@@ -80,9 +80,10 @@ export const executeApiCommand = async (
     delete params['since']
   }
 
+  const api = await ctx.api()
   const response = await requestSeamApi(
     { path: apiPath, params, responseKey: getResponseKey(path, ctx) },
-    { api: await ctx.api(), output: ctx.output },
+    { api, output: ctx.output },
   )
 
   await runResponseFollowUps(response.data, ctx)

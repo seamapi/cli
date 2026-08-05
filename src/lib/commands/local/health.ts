@@ -12,9 +12,10 @@ export const healthCommand: Command = {
   },
   requiresAuth: true,
   execute: async (_invocation, ctx) => {
+    const api = await ctx.api()
     await requestSeamApi(
       { path: '/health/get_health', params: {} },
-      { api: await ctx.api(), output: ctx.output },
+      { api, output: ctx.output },
     )
     return { kind: 'done' }
   },

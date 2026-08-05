@@ -13,7 +13,7 @@ export const configSetFakeServerCommand: Command = {
   requiresAuth: false,
   hidden: true,
   execute: async (_invocation, ctx) => {
-    const { server } = selectFakeServer(undefined, ctx.config)
+    const { server } = selectFakeServer({ config: ctx.config })
     ctx.output.info(`Server URL set to ${server}`)
     ctx.output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
     return { kind: 'done' }

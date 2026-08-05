@@ -23,7 +23,8 @@ export const printCompletion = async (
   // Deferred import: the registry lists this module's commands, so a static
   // import back into it would be a cycle.
   const { buildRegistry } = await import('../registry.js')
-  const { spec } = buildRegistry(await getApiBlueprint(false, { update }))
+  const blueprint = await getApiBlueprint({ update })
+  const { spec } = buildRegistry(blueprint)
   getOutput().text(renderCompletion(shell, spec))
 }
 
