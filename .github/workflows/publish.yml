@@ -12,6 +12,8 @@ jobs:
   build:
     name: Build
     uses: ./.github/workflows/_build.yml
+    # Passes the Apple credentials used to sign and notarize the macOS binaries.
+    secrets: inherit
   release:
     name: GitHub Releases
     runs-on: ubuntu-latest
