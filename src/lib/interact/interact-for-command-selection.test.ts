@@ -1,18 +1,11 @@
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, expect, test } from 'vitest'
 
 import type { CliContext } from '../context.js'
+import { createMemoryPrompt } from './create-memory-prompt.js'
 import { interactForCommandSelection } from './interact-for-command-selection.js'
-import type * as PromptModule from './prompt.js'
-import { promptAutocomplete, withBackHint } from './prompt.js'
+import { resetPromptClient, setPromptClient, withBackHint } from './prompt.js'
 
-vi.mock('./prompt.js', async (importOriginal) => ({
-  ...(await importOriginal<typeof PromptModule>()),
-  promptAutocomplete: vi.fn(),
-}))
-
-beforeEach(() => {
-  vi.mocked(promptAutocomplete).mockReset()
-})
+afterEach(resetPromptClient)
 
 const ctx = {
   interactivity: 'non-interactive',
@@ -55,24 +48,24 @@ const interactiveCtx = {
 } as unknown as CliContext
 
 test('interactForCommandSelection: tells the user a sub-command menu can be left', async () => {
-  vi.mocked(promptAutocomplete).mockImplementationOnce(async () => 'list')
+  const memoryPrompt = createMemoryPrompt(['list'])
+  setPromptClient(memoryPrompt.client)
 
   await interactForCommandSelection(['devices'], interactiveCtx)
 
-  expect(vi.mocked(promptAutocomplete).mock.calls[0]?.[0]).toMatchObject({
+  expect(memoryPrompt.questions[0]).toMatchObject({
     message: withBackHint('Select a command: /devices'),
   })
 })
 
 // Escape stops the CLI at the top level, so promising a way back would lie.
 test('interactForCommandSelection: says nothing about going back at the top level', async () => {
-  vi.mocked(promptAutocomplete)
-    .mockImplementationOnce(async () => 'devices')
-    .mockImplementationOnce(async () => 'list')
+  const memoryPrompt = createMemoryPrompt(['devices', 'list'])
+  setPromptClient(memoryPrompt.client)
 
   await interactForCommandSelection([], interactiveCtx)
 
-  expect(vi.mocked(promptAutocomplete).mock.calls[0]?.[0]).toMatchObject({
+  expect(memoryPrompt.questions[0]).toMatchObject({
     message: 'Select a command: /',
   })
 })

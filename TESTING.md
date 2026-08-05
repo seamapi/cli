@@ -1,0 +1,203 @@
+# Testing the Seam CLI
+
+How to decide, for any module in this repo, what kind of test it gets and where
+the fake goes.
+
+## Principles
+
+1. **Classical by default.** Assert on returned values and on data captured at
+   a process edge. A test that asserts "function A called function B" is
+   testing the implementation unless B is the outside world.
+2. **Fake only where data leaves the process** — the terminal, the wire, the
+   disk location, the environment. Everything on our side of those edges stays
+   real in every test, including sibling modules in `src/lib`.
+3. **Fakes are injected values, never module-path substitution.**
+   `vi.mock('./config/index.js')` couples the test to file layout and to the
+   accidental shape of the import; a rename or internal refactor breaks tests
+   while behavior is unchanged. A fake is a real implementation of a narrow
+   interface, handed to the code under test.
+4. **`createMemoryOutput()` + `setOutput()` is the house pattern**
+   (`src/lib/output/`): a tiny interface, a real in-memory implementation, a
+   capture you assert on. Config (`createMemoryConfigStore()` +
+   `setConfigStore()`), the prompt layer (`createMemoryPrompt()` +
+   `setPromptClient()`), and the Seam API get the same treatment; nothing else
+   needs it.
+5. **The e2e suite proves wiring once; module tests prove behavior
+   everywhere.** Don't re-prove auth headers in a unit test, and don't push
+   branching logic into `test/cli.test.ts`.
+
+## Taxonomy
+
+| Module kind                                                                                                              | The tell                                                     | Default test                                                                                                                                                                 | Gets faked                                                        | Never faked                                                      |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Pure transform** — `render/help`, `render/completion/render-*`, `output/select-response-payload`, `args/parse`         | Value in → value out; no I/O imports                         | Classical unit, real values                                                                                                                                                  | Nothing                                                           | Anything                                                         |
+| **Decision over injected data** — `interact-for-command-selection` (non-interactive), `blueprint/endpoint`, `context.ts` | Takes `CliContext` / blueprint / config store as a parameter | Classical with a literal ctx object (`interact-for-command-selection.test.ts` is the model)                                                                                  | Nothing — a hand-built blueprint literal is a fixture, not a fake | The traversal/decision logic                                     |
+| **Prompt flow** — `interact/interact-for-*` importing `interact/prompt.js`                                               | Imports `interact/prompt.js`                                 | Classical on the returned value, memory output, scripted prompt fake; assert the choice list _offered_ where the prompt is the UX                                            | The prompt layer (the whole `prompts` edge), output               | The module's own branching and param assembly                    |
+| **Config & state** — `config/config-store`, `config/migrate`                                                             | Touches `Configstore` / `env-paths`                          | Classical against a real store in a temp directory — it's a JSON file, and split/merge/migration _is_ the behavior                                                           | The directory; env vars (`vi.stubEnv`)                            | `Configstore` or fs behavior                                     |
+| **Network** — `seam/request`, `auth/validate-token`, `blueprint/source-npm`                                              | Constructs `SeamHttp` or calls `fetch`                       | Classical against a fake port (or a stubbed global `fetch` with captured requests, as `blueprint/source-npm.test.ts` does); assert the payload sent _and_ the value returned | The `SeamApi` port / global `fetch`                               | Status handling, payload selection, formatting — that's the unit |
+| **Orchestration** — `bin/cli.ts`                                                                                         | Reads argv/env, wires everything                             | E2e: spawn via `execa`, `node:http` fake server, XDG temp dirs (`test/cli.test.ts`)                                                                                          | The far end of the wire; the home directories                     | Anything in-process                                              |
+
+## The mocking boundary
+
+Legitimate fakes in this repo, exhaustively: the **terminal** (prompt layer +
+output streams), the **wire** (fake `node:http` server for the spawned e2e; the
+`SeamApi` port in-process; `fetch` stub for the npm registry), the **disk
+location** (temp dirs — never a fake fs), and **env vars**. Everything else —
+`Configstore`, blueprint traversal, response formatting, `command-spec`, any
+sibling in `src/lib` — must stay real, because faking it removes exactly the
+thing the test exists to prove.
+
+## London vs. classical: the rule
+
+A mock-verification assertion is legitimate **only when the interaction is
+itself the user-observable contract** — when the message crosses a process
+boundary. "We sent this request body to `/devices/list`" is behavior: the
+request is the product. "The prompt offered these choices with these hints" is
+behavior: the choices are what the user sees
+(`interact-for-blueprint-object.test.ts` asserting on the recorded `choices`
+is the good in-repo example). "`resolveAuth` called `getConfigStore`" is
+implementation: the contract is _what server comes back_, not how it was
+looked up.
+
+Even at a real boundary, prefer **capture-then-assert** over
+`toHaveBeenCalledWith`: have the fake record what it received (like the e2e
+server's `requests` array, or `createMemoryPrompt()`'s `questions`) and make
+classical assertions on the capture. A good London test asserts on the content
+of one outbound message; a bad one asserts call counts and ordering of
+internal helpers.
+
+## The real-HTTP line
+
+A test earns a real HTTP server only if it proves wiring that exists solely in
+the real transport stack: `SeamHttp` auth-header construction, token-type
+dispatch, endpoint resolution, `validateStatus`, and the exit code of the
+actual spawned process. That is `test/cli.test.ts` and nothing else. Everything
+in-process fakes at the port. Today the e2e file is ~20% of tests; hold it
+there — each user-visible flow once end-to-end, while new module tests grow the
+HTTP-free share.
+
+## The Seam SDK boundary
+
+**Wrap it behind our own narrow port.** Not `vi.mock('./seam/client.js')`, and
+not dependency-injecting `SeamHttp`: both force the fake to imitate an
+axios-shaped SDK surface (`client.post` returning an `AxiosResponse`), so
+tests end up re-verifying the SDK's shape instead of our behavior. The CLI is
+blueprint-driven and has one chokepoint —
+`seam.client.post(path, params, { validateStatus: () => true })` in
+`seam/request.ts` — so the port is one method:
+
+```ts
+// src/lib/seam/api.ts
+export interface SeamApiResponse {
+  status: number
+  data: unknown
+}
+
+export interface SeamApi {
+  post: (
+    path: string,
+    params: Record<string, unknown>,
+  ) => Promise<SeamApiResponse>
+}
+
+export const createSeamApi = async (): Promise<SeamApi> => {
+  const seam = await getSeam() // the only place SeamHttp appears
+  return {
+    post: async (path, params) => {
+      const { status, data } = await seam.client.post(path, params, {
+        validateStatus: () => true,
+      })
+      return { status, data }
+    },
+  }
+}
+```
+
+The fake is the in-process mirror of the e2e server — a routes table plus a
+capture:
+
+```ts
+// src/lib/seam/create-memory-seam-api.ts
+export const createMemorySeamApi = (
+  routes: Record<string, SeamApiResponse>,
+) => {
+  const requests: Array<{ path: string; params: Record<string, unknown> }> = []
+  const api: SeamApi = {
+    post: async (path, params) => {
+      requests.push({ path, params })
+      return (
+        routes[path] ?? { status: 404, data: { error: { type: 'not_found' } } }
+      )
+    },
+  }
+  return { api, requests }
+}
+```
+
+This split also separates transport from presentation in `seam/request.ts`
+(which historically also formatted output and set `process.exitCode`), so the
+error-status → exit-code behavior becomes a classical test with zero HTTP:
+
+```ts
+const { api, requests } = createMemorySeamApi({
+  '/devices/list': { status: 400, data: { error: { type: 'invalid_input' } } },
+})
+const memory = createMemoryOutput()
+
+await requestSeamApi(
+  { path: '/devices/list', params: { limit: 5 } },
+  { api, output: memory.output },
+)
+
+// Boundary interaction: the outbound message IS the behavior.
+expect(requests).toEqual([{ path: '/devices/list', params: { limit: 5 } }])
+expect(memory.stdout()).toContain('invalid_input')
+expect(process.exitCode).toBe(1)
+```
+
+`auth/validate-token.ts` and the resource pickers (`interact/interact-for-device.ts`
+and friends) use typed SDK methods and stay on the real SDK, covered by e2e —
+don't invent a second port for them.
+
+## Singletons: `getConfigStore`, `getOutput`, the prompt client
+
+Target shape: `CliContext = { config, auth, output, blueprint, interactivity, api }`
+threaded as a parameter, with port boundaries exactly the ones above — config
+store interface, `Output`, the prompt client, `SeamApi`. That makes every fake
+an ordinary argument.
+
+The rule: a singleton getter is tolerable only when it has (a) a setter +
+reset and (b) an in-memory fake of the same narrow interface. In this repo
+that is `getOutput`/`setOutput`/`resetOutput` + `createMemoryOutput()`,
+`getConfigStore`/`setConfigStore`/`resetConfigStore` +
+`createMemoryConfigStore()`, and `setPromptClient`/`resetPromptClient` +
+`createMemoryPrompt()`. `vi.mock` on a module path is never the delivery
+mechanism for a fake. Direct env reads (`env.ts`, `resolveAuth`) are a genuine
+ambient edge — setting env vars in the test is fine.
+
+## Anti-pattern
+
+The shape the (since deleted) `get-server.test.ts` used:
+
+```ts
+const storedConfig: Record<string, unknown> = {}
+vi.mock('./config/index.js', () => ({
+  getConfigStore: vi.fn(() => ({ get: (key: string) => storedConfig[key] })),
+}))
+afterEach(() => {
+  vi.mocked(getConfigStore).mockClear()
+})
+```
+
+Three things wrong: the fake is delivered by file path, so renaming
+`config/index.js` breaks the test; the fake's shape is whatever the test author
+remembered (`{ get }`) rather than the store's interface, so it drifts
+silently; and the `mockClear` bookkeeping exists only because the mock is
+module-global state. The same tests written against an injected
+`createMemoryConfigStore()` keep every assertion and lose all three problems.
+
+## Rule of thumb
+
+> **Assert on what leaves the process — stdout, the config file, the request
+> payload, the choices offered, the exit code. Fake only the edge it leaves
+> through, and keep everything on our side of that edge real.**

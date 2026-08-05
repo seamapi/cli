@@ -1,49 +1,31 @@
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test } from 'vitest'
 
-import { interactForCustomMetadata } from './interact-for-custom-metadata.js'
 import { createMemoryOutput } from '../output/create-memory-output.js'
 import { setOutput } from '../output/get-output.js'
-import type * as PromptModule from './prompt.js'
-import { promptSelect, promptText } from './prompt.js'
+import { createMemoryPrompt } from './create-memory-prompt.js'
+import { interactForCustomMetadata } from './interact-for-custom-metadata.js'
+import { resetPromptClient, setPromptClient } from './prompt.js'
 
-// Only the prompts themselves are replaced, so the real PromptCancelledError
-// and withBackHint are used, as they are in production.
-vi.mock('./prompt.js', async (importOriginal) => ({
-  ...(await importOriginal<typeof PromptModule>()),
-  promptText: vi.fn(),
-  promptNumber: vi.fn(),
-  promptConfirm: vi.fn(),
-  promptSelect: vi.fn(),
-  promptAutocomplete: vi.fn(),
-  promptAutocompleteMultiselect: vi.fn(),
-}))
-
-/** Queues answers in the order the editor asks for them. */
-const answerSelects = (...values: string[]): void => {
-  const queue = [...values]
-  vi.mocked(promptSelect).mockImplementation(async () => queue.shift() as never)
-}
-
-const answerTexts = (...values: string[]): void => {
-  const queue = [...values]
-  vi.mocked(promptText).mockImplementation(async () => queue.shift() as never)
+/** Scripts an answer for each ask, in the order the editor asks. */
+const scriptPrompt = (script: unknown[]): void => {
+  setPromptClient(createMemoryPrompt(script).client)
 }
 
 beforeEach(() => {
-  vi.mocked(promptSelect).mockReset()
-  vi.mocked(promptText).mockReset()
+  // Keep the interactive chrome out of the test output.
   setOutput(createMemoryOutput().output)
 })
 
+afterEach(resetPromptClient)
+
 test('interactForCustomMetadata: adds a key and value', async () => {
-  answerSelects('add', 'done')
-  answerTexts('floor', '3')
+  scriptPrompt(['add', 'floor', '3', 'done'])
 
   await expect(interactForCustomMetadata({})).resolves.toEqual({ floor: '3' })
 })
 
 test('interactForCustomMetadata: removes a key from the result', async () => {
-  answerSelects('remove', 'floor', 'done')
+  scriptPrompt(['remove', 'floor', 'done'])
 
   await expect(
     interactForCustomMetadata({ floor: '3', wing: 'east' }),
@@ -51,7 +33,7 @@ test('interactForCustomMetadata: removes a key from the result', async () => {
 })
 
 test('interactForCustomMetadata: leaves the given metadata unmodified', async () => {
-  answerSelects('remove', 'floor', 'done')
+  scriptPrompt(['remove', 'floor', 'done'])
   const customMetadata = { floor: '3', wing: 'east' }
 
   await interactForCustomMetadata(customMetadata)
@@ -62,8 +44,7 @@ test('interactForCustomMetadata: leaves the given metadata unmodified', async ()
 test.for([['true', true] as const, ['false', false] as const])(
   'interactForCustomMetadata: stores %s as a boolean',
   async ([given, stored]) => {
-    answerSelects('add', 'done')
-    answerTexts('enabled', given)
+    scriptPrompt(['add', 'enabled', given, 'done'])
 
     await expect(interactForCustomMetadata({})).resolves.toEqual({
       enabled: stored,
@@ -72,8 +53,7 @@ test.for([['true', true] as const, ['false', false] as const])(
 )
 
 test('interactForCustomMetadata: stores null for the null keyword', async () => {
-  answerSelects('add', 'done')
-  answerTexts('note', 'null')
+  scriptPrompt(['add', 'note', 'null', 'done'])
 
   await expect(interactForCustomMetadata({})).resolves.toEqual({ note: null })
 })

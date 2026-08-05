@@ -14,17 +14,6 @@ import chalk from 'chalk'
 
 import { NonInteractiveError } from '../args/parse.js'
 
-/**
- * Whether the CLI can ask the user a question.
- *
- * Prompts read raw keypresses and render an interface, so they need a
- * terminal on both ends: when stdin is a pipe or a file it holds request
- * params, not answers, and when stderr is redirected nobody sees the
- * question.
- */
-export const canPrompt = (): boolean =>
-  process.stdin.isTTY === true && process.stderr.isTTY === true
-
 /** The user dismissed a prompt with ctrl-c or escape instead of answering. */
 export class PromptCancelledError extends Error {
   constructor() {
@@ -38,6 +27,50 @@ export interface PromptChoice<Value> {
   hint?: string | undefined
 }
 
+export interface PromptTextOptions {
+  message: string
+  placeholder?: string
+  defaultValue?: string
+  validate?: (value: string | undefined) => string | undefined
+}
+
+export interface PromptNumberOptions {
+  message: string
+  validate?: (value: number) => string | undefined
+}
+
+export interface PromptConfirmOptions {
+  message: string
+  initialValue?: boolean
+  active?: string
+  inactive?: string
+}
+
+export interface PromptSelectOptions<Value> {
+  message: string
+  choices: Array<PromptChoice<Value>>
+}
+
+/**
+ * The terminal edge behind the prompt functions: whether questions can be
+ * asked, and how to ask each kind.
+ *
+ * A test replaces this with an in-memory client (see
+ * `create-memory-prompt.ts`) via {@link setPromptClient} — the code under
+ * test keeps calling `promptText` and friends as usual.
+ */
+export interface PromptClient {
+  canPrompt: () => boolean
+  text: (options: PromptTextOptions) => Promise<string>
+  number: (options: PromptNumberOptions) => Promise<number>
+  confirm: (options: PromptConfirmOptions) => Promise<boolean>
+  select: <Value>(options: PromptSelectOptions<Value>) => Promise<Value>
+  autocomplete: <Value>(options: PromptSelectOptions<Value>) => Promise<Value>
+  autocompleteMultiselect: <Value>(
+    options: PromptSelectOptions<Value>,
+  ) => Promise<Value[]>
+}
+
 /**
  * Note on a prompt message that dismissing it returns to the previous step.
  *
@@ -48,15 +81,6 @@ export interface PromptChoice<Value> {
  */
 export const withBackHint = (message: string): string =>
   `${message} ${chalk.dim('· Esc: go back')}`
-
-const ensureInteractive = (): void => {
-  if (!canPrompt()) {
-    throw new NonInteractiveError(
-      'Cannot prompt without a terminal: pass the missing arguments, or pipe them in as JSON',
-    )
-  }
-  installArrowKeyAliases()
-}
 
 /**
  * The arrow keypress an Emacs-style control keypress stands for, or
@@ -116,90 +140,144 @@ const toOptions = <Value>(
         : { label, value, hint }) as Option<Value>,
   )
 
-export const promptText = async (options: {
-  message: string
-  placeholder?: string
-  defaultValue?: string
-  validate?: (value: string | undefined) => string | undefined
-}): Promise<string> => {
-  ensureInteractive()
-  return unwrap(await text({ ...options, output }))
+const terminalPromptClient: PromptClient = {
+  /**
+   * Prompts read raw keypresses and render an interface, so they need a
+   * terminal on both ends: when stdin is a pipe or a file it holds request
+   * params, not answers, and when stderr is redirected nobody sees the
+   * question.
+   */
+  canPrompt: () =>
+    process.stdin.isTTY === true && process.stderr.isTTY === true,
+
+  text: async (options) => {
+    installArrowKeyAliases()
+    return unwrap(await text({ ...options, output }))
+  },
+
+  number: async (options) => {
+    installArrowKeyAliases()
+    const value = unwrap(
+      await text({
+        message: options.message,
+        validate: (value) => {
+          if (value == null || value.trim() === '') return 'Enter a number'
+          const parsed = Number(value)
+          if (Number.isNaN(parsed)) return 'Enter a number'
+          return options.validate?.(parsed)
+        },
+        output,
+      }),
+    )
+    return Number(value)
+  },
+
+  confirm: async (options) => {
+    installArrowKeyAliases()
+    return unwrap(await confirm({ ...options, output }))
+  },
+
+  select: async <Value,>(options: PromptSelectOptions<Value>) => {
+    installArrowKeyAliases()
+    return unwrap(
+      await select<Value>({
+        message: options.message,
+        options: toOptions(options.choices),
+        output,
+      }),
+    )
+  },
+
+  autocomplete: async <Value,>(options: PromptSelectOptions<Value>) => {
+    installArrowKeyAliases()
+    return unwrap(
+      await autocomplete<Value>({
+        message: options.message,
+        options: toOptions(options.choices),
+        // Search a list by any part of a name or hint, rather than only by
+        // the label, which is all clack matches for itself.
+        filter: searchChoices,
+        output,
+      }),
+    )
+  },
+
+  autocompleteMultiselect: async <Value,>(
+    options: PromptSelectOptions<Value>,
+  ) => {
+    installArrowKeyAliases()
+    return unwrap(
+      await autocompleteMultiselect<Value>({
+        message: options.message,
+        options: toOptions(options.choices),
+        filter: searchChoices,
+        output,
+      }),
+    )
+  },
 }
 
-export const promptNumber = async (options: {
-  message: string
-  validate?: (value: number) => string | undefined
-}): Promise<number> => {
-  ensureInteractive()
-  const value = unwrap(
-    await text({
-      message: options.message,
-      validate: (value) => {
-        if (value == null || value.trim() === '') return 'Enter a number'
-        const parsed = Number(value)
-        if (Number.isNaN(parsed)) return 'Enter a number'
-        return options.validate?.(parsed)
-      },
-      output,
-    }),
-  )
-  return Number(value)
+let client: PromptClient = terminalPromptClient
+
+export const setPromptClient = (promptClient: PromptClient): void => {
+  client = promptClient
 }
 
-export const promptConfirm = async (options: {
-  message: string
-  initialValue?: boolean
-  active?: string
-  inactive?: string
-}): Promise<boolean> => {
-  ensureInteractive()
-  return unwrap(await confirm({ ...options, output }))
+export const resetPromptClient = (): void => {
+  client = terminalPromptClient
 }
 
-export const promptSelect = async <Value>(options: {
-  message: string
-  choices: Array<PromptChoice<Value>>
-}): Promise<Value> => {
-  ensureInteractive()
-  return unwrap(
-    await select<Value>({
-      message: options.message,
-      options: toOptions(options.choices),
-      output,
-    }),
-  )
+/** Whether the CLI can ask the user a question. */
+export const canPrompt = (): boolean => client.canPrompt()
+
+const ensureInteractive = (): void => {
+  if (!client.canPrompt()) {
+    throw new NonInteractiveError(
+      'Cannot prompt without a terminal: pass the missing arguments, or pipe them in as JSON',
+    )
+  }
 }
 
-export const promptAutocomplete = async <Value>(options: {
-  message: string
-  choices: Array<PromptChoice<Value>>
-}): Promise<Value> => {
+export const promptText = async (
+  options: PromptTextOptions,
+): Promise<string> => {
   ensureInteractive()
-  return unwrap(
-    await autocomplete<Value>({
-      message: options.message,
-      options: toOptions(options.choices),
-      // Search a list by any part of a name or hint, rather than only by
-      // the label, which is all clack matches for itself.
-      filter: searchChoices,
-      output,
-    }),
-  )
+  return await client.text(options)
 }
 
-export const promptAutocompleteMultiselect = async <Value>(options: {
-  message: string
-  choices: Array<PromptChoice<Value>>
-}): Promise<Value[]> => {
+export const promptNumber = async (
+  options: PromptNumberOptions,
+): Promise<number> => {
   ensureInteractive()
-  return unwrap(
-    await autocompleteMultiselect<Value>({
-      message: options.message,
-      options: toOptions(options.choices),
-      filter: searchChoices,
-      output,
-    }),
-  )
+  return await client.number(options)
+}
+
+export const promptConfirm = async (
+  options: PromptConfirmOptions,
+): Promise<boolean> => {
+  ensureInteractive()
+  return await client.confirm(options)
+}
+
+export const promptSelect = async <Value>(
+  options: PromptSelectOptions<Value>,
+): Promise<Value> => {
+  ensureInteractive()
+  return await client.select(options)
+}
+
+export const promptAutocomplete = async <Value>(
+  options: PromptSelectOptions<Value>,
+): Promise<Value> => {
+  ensureInteractive()
+  return await client.autocomplete(options)
+}
+
+export const promptAutocompleteMultiselect = async <Value>(
+  options: PromptSelectOptions<Value>,
+): Promise<Value[]> => {
+  ensureInteractive()
+  return await client.autocompleteMultiselect(options)
 }
 
 export interface SearchableChoice {

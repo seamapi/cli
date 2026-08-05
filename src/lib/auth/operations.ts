@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
-import { getConfigStore, type SeamConfigStore } from '../config/index.js'
+import { type ConfigStore, getConfigStore } from '../config/index.js'
 import { type AuthContext, resolveAuth } from '../context.js'
 import {
   assertEnvVarUnset,
@@ -56,10 +56,13 @@ export interface LoginOptions {
  *
  * The token is stored under the server it will be used with, so a given
  * server is stored and re-resolved before the token key is derived.
+ *
+ * Validation reaches the network, so a test may inject its own `validate`.
  */
 export const login = async (
   { server, token, workspaceId }: LoginOptions,
-  config: SeamConfigStore = getConfigStore(),
+  config: ConfigStore = getConfigStore(),
+  validate: typeof validateToken = validateToken,
 ): Promise<void> => {
   let auth = resolveAuth(config)
 
@@ -78,7 +81,7 @@ export const login = async (
   }
 
   if (token != null) {
-    await validateToken(token, workspaceId)
+    await validate(token, workspaceId)
     config.set(`${auth.server}.pat`, token)
     config.delete('current_workspace_id')
   }
@@ -91,7 +94,7 @@ export const login = async (
 /** Store the token for the current server, e.g., one just prompted for. */
 export const storeToken = (
   token: string,
-  config: SeamConfigStore = getConfigStore(),
+  config: ConfigStore = getConfigStore(),
 ): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log in')
@@ -99,7 +102,7 @@ export const storeToken = (
 }
 
 /** Remove the stored token and workspace selection. */
-export const logout = (config: SeamConfigStore = getConfigStore()): void => {
+export const logout = (config: ConfigStore = getConfigStore()): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log out')
   config.delete(`${auth.server}.pat`)
@@ -116,7 +119,7 @@ export const logout = (config: SeamConfigStore = getConfigStore()): void => {
  */
 export const selectServer = (
   server: string,
-  config: SeamConfigStore = getConfigStore(),
+  config: ConfigStore = getConfigStore(),
 ): void => {
   assertMutable(resolveAuth(config), 'server', 'select a server')
   config.set('server', server)
@@ -126,7 +129,7 @@ export const selectServer = (
 /** Store the workspace requests are made against. */
 export const selectWorkspace = (
   workspaceId: string,
-  config: SeamConfigStore = getConfigStore(),
+  config: ConfigStore = getConfigStore(),
 ): void => {
   assertMutable(resolveAuth(config), 'workspaceId', 'select a workspace')
   config.set('current_workspace_id', workspaceId)
@@ -138,7 +141,7 @@ export const selectWorkspace = (
  */
 export const selectFakeServer = (
   urlSeed: string = randomBytes(5).toString('hex'),
-  config: SeamConfigStore = getConfigStore(),
+  config: ConfigStore = getConfigStore(),
 ): { server: string; token: string } => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'server', 'select a server')
@@ -156,7 +159,7 @@ export const selectFakeServer = (
 /** Store whether API definitions come from the server instead of npm. */
 export const setUseRemoteApiDefs = (
   useRemoteApiDefs: boolean,
-  config: SeamConfigStore = getConfigStore(),
+  config: ConfigStore = getConfigStore(),
 ): void => {
   config.set('use_remote_api_defs', useRemoteApiDefs)
 }

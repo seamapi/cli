@@ -11,14 +11,37 @@ const currentWorkspaceIdKey = 'current_workspace_id'
 const patKey = 'pat'
 const paths = envPaths('seam', { suffix: '' })
 
-let configStore: SeamConfigStore | null = null
+/**
+ * What a config store can do, regardless of where it keeps the values.
+ *
+ * The CLI reads and writes through this interface so a test may hand code an
+ * in-memory store (see `create-memory-config-store.ts`) instead of the real
+ * file-backed one.
+ */
+export interface ConfigStore {
+  readonly path: string
+  all: Record<string, unknown>
+  readonly size: number
+  get: (key: string) => unknown
+  set: (key: string | Record<string, unknown>, value?: unknown) => void
+  has: (key: string) => boolean
+  delete: (key: string) => void
+  clear: () => void
+}
 
-export const getConfigStore = (): SeamConfigStore => {
+let configStore: ConfigStore | null = null
+
+export const getConfigStore = (): ConfigStore => {
   configStore ??= createConfigStore()
   return configStore
 }
 
-/** Drop the memoized store so a test may read a fresh one. */
+/** Replace the store, e.g., with an in-memory one for a test. */
+export const setConfigStore = (store: ConfigStore): void => {
+  configStore = store
+}
+
+/** Drop the current store so the next read builds the real one. */
 export const resetConfigStore = (): void => {
   configStore = null
 }
@@ -91,7 +114,7 @@ export const splitConfig = (
   return { settings, state }
 }
 
-export class SeamConfigStore {
+export class SeamConfigStore implements ConfigStore {
   readonly path: string
 
   constructor(

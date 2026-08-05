@@ -1,13 +1,12 @@
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
-import type { SeamConfigStore } from './config/index.js'
+import { createMemoryConfigStore } from './config/create-memory-config-store.js'
 import { resolveAuth } from './context.js'
 import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from './env.js'
 
 const server = 'https://connect.example.com'
 
-const store = (values: Record<string, unknown> = {}): SeamConfigStore =>
-  ({ get: (key: string) => values[key] }) as unknown as SeamConfigStore
+const store = createMemoryConfigStore
 
 const clearEnv = (): void => {
   delete process.env[endpointEnvVar]
