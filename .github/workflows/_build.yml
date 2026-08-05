@@ -41,17 +41,6 @@ on:
       apple_api_issuer_id:
         description: The App Store Connect API issuer id.
         required: false
-      apple_id:
-        description: >-
-          The Apple ID used to authenticate with the notary service.
-          Only used when no App Store Connect API key is set.
-        required: false
-      apple_app_specific_password:
-        description: The app-specific password for the Apple ID.
-        required: false
-      apple_team_id:
-        description: The Apple Developer team id.
-        required: false
     outputs:
       artifact_name:
         description: The artifact name.
@@ -142,20 +131,16 @@ jobs:
         env:
           APPLE_CERTIFICATE: ${{ secrets.apple_certificate }}
           APPLE_API_KEY: ${{ secrets.apple_api_key }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.apple_app_specific_password }}
         run: |
           set -euo pipefail
 
-          notarize=none
+          sign=false
+          notarize=false
           if [[ -n "${APPLE_CERTIFICATE}" ]]; then
             sign=true
             if [[ -n "${APPLE_API_KEY}" ]]; then
-              notarize=api-key
-            elif [[ -n "${APPLE_APP_SPECIFIC_PASSWORD}" ]]; then
-              notarize=apple-id
+              notarize=true
             fi
-          else
-            sign=false
           fi
 
           echo "sign=${sign}" >> "$GITHUB_OUTPUT"
@@ -163,8 +148,8 @@ jobs:
 
           if [[ "${sign}" != true ]]; then
             echo '::warning title=Unsigned macOS binaries::No apple_certificate secret: signing the macOS binaries ad-hoc instead. Gatekeeper rejects an ad-hoc signature on any other machine, so these binaries are not fit to release.'
-          elif [[ "${notarize}" == none ]]; then
-            echo '::warning title=Unnotarized macOS binaries::No notary service credentials: skipping notarization. Gatekeeper blocks a binary downloaded through a browser until it is notarized.'
+          elif [[ "${notarize}" != true ]]; then
+            echo '::warning title=Unnotarized macOS binaries::No apple_api_key secret: skipping notarization. Gatekeeper blocks a binary downloaded through a browser until it is notarized.'
           fi
       - name: Create entitlements
         # A compiled binary embeds the Bun runtime, so under the hardened
@@ -186,53 +171,38 @@ jobs:
           </plist>
           PLIST
       - name: Import signing certificate
-        id: certificate
+        # Imports into a temporary keychain on the search list,
+        # and deletes it after the job.
+        if: steps.credentials.outputs.sign == 'true'
+        uses: apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.apple_certificate }}
+          p12-password: ${{ secrets.apple_certificate_password }}
+      - name: Resolve signing identity
+        id: identity
         if: steps.credentials.outputs.sign == 'true'
         env:
-          APPLE_CERTIFICATE: ${{ secrets.apple_certificate }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.apple_certificate_password }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.apple_signing_identity }}
         run: |
           set -euo pipefail
 
-          keychain="${RUNNER_TEMP}/signing.keychain-db"
-          keychain_password=$(openssl rand -base64 24)
-          certificate="${RUNNER_TEMP}/certificate.p12"
-
-          printf '%s' "${APPLE_CERTIFICATE}" | base64 --decode > "$certificate"
-
-          security create-keychain -p "$keychain_password" "$keychain"
-          # Keep the keychain unlocked for the whole job: codesign cannot prompt.
-          security set-keychain-settings -lut 21600 "$keychain"
-          security unlock-keychain -p "$keychain_password" "$keychain"
-          security import "$certificate" -k "$keychain" \
-            -P "${APPLE_CERTIFICATE_PASSWORD}" \
-            -T /usr/bin/codesign
-          security set-key-partition-list \
-            -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" > /dev/null
-          # codesign only searches the keychains on the user search list.
-          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
-          rm -f "$certificate"
-
           identity="${APPLE_SIGNING_IDENTITY}"
           if [[ -z "$identity" ]]; then
-            identity=$(security find-identity -v -p codesigning "$keychain" |
+            identity=$(security find-identity -v -p codesigning |
               awk '/Developer ID Application/ { print $2; exit }')
           fi
           if [[ -z "$identity" ]]; then
-            security find-identity -v -p codesigning "$keychain"
+            security find-identity -v -p codesigning
             echo '::error title=Missing signing identity::The certificate holds no Developer ID Application identity.'
             exit 1
           fi
 
-          echo "keychain=${keychain}" >> "$GITHUB_OUTPUT"
           echo "identity=${identity}" >> "$GITHUB_OUTPUT"
       - name: Sign binaries
         env:
           # An ad-hoc signature keeps the credential-less build on the same code
           # path, and is enough to run the binary on this runner.
-          IDENTITY: ${{ steps.certificate.outputs.identity || '-' }}
-          KEYCHAIN: ${{ steps.certificate.outputs.keychain }}
+          IDENTITY: ${{ steps.identity.outputs.identity || '-' }}
         run: |
           set -euo pipefail
 
@@ -243,12 +213,12 @@ jobs:
             --identifier com.getseam.cli
             --entitlements "${RUNNER_TEMP}/entitlements.plist"
           )
-          if [[ -n "${KEYCHAIN}" ]]; then
+          if [[ "${IDENTITY}" == - ]]; then
             # The notary service requires a secure timestamp,
             # which an ad-hoc signature cannot carry.
-            args+=(--keychain "${KEYCHAIN}" --timestamp)
-          else
             args+=(--timestamp=none)
+          else
+            args+=(--timestamp)
           fi
 
           for binary in release/seam-v*-darwin-*; do
@@ -259,38 +229,18 @@ jobs:
             codesign "${args[@]}" "$binary"
           done
       - name: Notarize binaries
-        if: steps.credentials.outputs.notarize != 'none'
+        if: steps.credentials.outputs.notarize == 'true'
         env:
-          NOTARIZE: ${{ steps.credentials.outputs.notarize }}
           APPLE_API_KEY: ${{ secrets.apple_api_key }}
           APPLE_API_KEY_ID: ${{ secrets.apple_api_key_id }}
           APPLE_API_ISSUER_ID: ${{ secrets.apple_api_issuer_id }}
-          APPLE_ID: ${{ secrets.apple_id }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.apple_app_specific_password }}
-          APPLE_TEAM_ID: ${{ secrets.apple_team_id }}
         run: |
           set -euo pipefail
 
           key="${RUNNER_TEMP}/api-key.p8"
           trap 'rm -f "$key"' EXIT
-
-          case "${NOTARIZE}" in
-            api-key)
-              printf '%s' "${APPLE_API_KEY}" | base64 --decode > "$key"
-              auth=(--key "$key" --key-id "${APPLE_API_KEY_ID}" --issuer "${APPLE_API_ISSUER_ID}")
-              ;;
-            apple-id)
-              auth=(
-                --apple-id "${APPLE_ID}"
-                --password "${APPLE_APP_SPECIFIC_PASSWORD}"
-                --team-id "${APPLE_TEAM_ID}"
-              )
-              ;;
-            *)
-              echo "::error::Unknown notarization method ${NOTARIZE}."
-              exit 1
-              ;;
-          esac
+          printf '%s' "${APPLE_API_KEY}" | base64 --decode > "$key"
+          auth=(--key "$key" --key-id "${APPLE_API_KEY_ID}" --issuer "${APPLE_API_ISSUER_ID}")
 
           # notarytool only takes an archive, and the notary service notarizes
           # every eligible binary inside it, so one submission covers both
@@ -335,7 +285,7 @@ jobs:
           # How Gatekeeper sees the binary. Reported rather than enforced: the
           # notary service already accepted it, and the ticket is fetched over
           # the network, so a rejection here is not conclusive.
-          if [[ "${NOTARIZE}" != none ]]; then
+          if [[ "${NOTARIZE}" == true ]]; then
             spctl --assess --type exec --verbose=4 "$binary" ||
               echo "::warning title=Gatekeeper assessment failed::spctl rejected ${binary}."
           fi
@@ -348,13 +298,6 @@ jobs:
             echo "::error title=Wrong version::${binary} reports ${reported}, expected ${version}."
             exit 1
           fi
-      - name: Delete keychain
-        if: always() && steps.certificate.outputs.keychain != ''
-        env:
-          KEYCHAIN: ${{ steps.certificate.outputs.keychain }}
-        run: |
-          security list-keychains -d user -s login.keychain-db
-          security delete-keychain "${KEYCHAIN}"
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:

@@ -417,18 +417,12 @@ Set these repository secrets to code sign:
   `Developer ID Application: Seam Labs, Inc. (XXXXXXXXXX)`. Only needed when the
   bundle holds more than one Developer ID Application certificate.
 
-Set these repository secrets to notarize, using either an
-[App Store Connect API key] (preferred) or an Apple ID:
+Set these repository secrets to notarize, from an
+[App Store Connect API key]:
 
 - `APPLE_API_KEY`: The base64 encoded API private key (`.p8`).
 - `APPLE_API_KEY_ID`: The API key id.
 - `APPLE_API_ISSUER_ID`: The API key issuer id.
-
-or
-
-- `APPLE_ID`: The Apple ID of an account in the team.
-- `APPLE_APP_SPECIFIC_PASSWORD`: An [app-specific password] for that Apple ID.
-- `APPLE_TEAM_ID`: The Apple Developer team id.
 
 Notarization tickets cannot be stapled to a bare executable, so Gatekeeper
 looks them up online the first time a downloaded binary runs.
@@ -443,7 +437,6 @@ $ gh workflow run _build.yml --ref <branch>
 Then confirm the run's macOS binaries job signed and notarized: it verifies the
 signature, assesses the binary the way Gatekeeper does, and runs it.
 
-[app-specific password]: https://support.apple.com/en-us/102654
 [App Store Connect API key]: https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api
 [Apple Developer Program]: https://developer.apple.com/programs/
 [Developer ID Application]: https://developer.apple.com/help/account/reference/certificate-types/
