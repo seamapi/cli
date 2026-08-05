@@ -59,17 +59,44 @@ export class UsageError extends Error {
   }
 }
 
-export const parseCliArgs = (argv: string[]): ParsedArgs =>
+export interface ParseCliArgsOptions {
+  /**
+   * Argument keys read exactly as given rather than by guessing at a type,
+   * e.g., every parameter of an endpoint that does not take a number or a
+   * boolean. Read as a number, an opaque value like an access code would
+   * lose leading zeroes or turn exponent notation into a digit string.
+   */
+  stringKeys?: string[]
+}
+
+export const parseCliArgs = (
+  argv: string[],
+  { stringKeys = [] }: ParseCliArgsOptions = {},
+): ParsedArgs =>
   parseArgs(argv, {
-    // A page cursor is opaque, so keep it exactly as given: read as a number
-    // it would lose leading zeroes and turn exponent notation into a digit
-    // string, naming a page the API never issued.
-    string: ['code', 'page-cursor', 'page_cursor'],
+    // A page cursor and a code are opaque even before the endpoint's own
+    // parameter types are known, so always keep them exactly as given.
+    string: ['code', 'page-cursor', 'page_cursor', ...stringKeys],
     boolean: ['non-interactive', 'interactive', 'json'],
     // Deliberately not aliased to -n, which is reserved for a future
     // --dry-run flag.
     alias: { 'non-interactive': 'y', interactive: 'i' },
   })
+
+/**
+ * The request params among the parsed arguments: every key normalized to
+ * the parameter it names, minus the flags that configure the CLI itself.
+ */
+export const toArgParams = (args: ParsedArgs): Record<string, unknown> => {
+  const argParams: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(args)) {
+    if (key === '_') continue
+    const name = toParameterName(key)
+    if (cliFlags.includes(name)) continue
+    argParams[name] = value
+  }
+  return argParams
+}
 
 export interface GetInteractivityOptions {
   /**

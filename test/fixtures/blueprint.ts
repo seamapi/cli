@@ -36,6 +36,7 @@ export const testBlueprint = {
               },
             ],
           },
+          response: { responseType: 'resource_list', responseKey: 'devices' },
         },
         {
           path: '/devices/unmanaged/get',
@@ -51,6 +52,36 @@ export const testBlueprint = {
               },
             ],
           },
+          response: { responseType: 'resource', responseKey: 'device' },
+        },
+        {
+          path: '/access_codes/create',
+          title: 'Create an Access Code',
+          description: 'Creates an access code on a device.',
+          request: {
+            parameters: [
+              {
+                name: 'device_id',
+                description: 'ID of the device.',
+                format: 'id',
+                isRequired: true,
+              },
+              {
+                name: 'code',
+                description: 'Code to program, e.g., with leading zeroes.',
+                format: 'string',
+                isRequired: false,
+              },
+              {
+                name: 'accepted_providers',
+                description: 'Providers to accept.',
+                format: 'list',
+                itemFormat: 'string',
+                isRequired: false,
+              },
+            ],
+          },
+          response: { responseType: 'resource', responseKey: 'access_code' },
         },
       ],
     },

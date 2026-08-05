@@ -44,6 +44,8 @@ export interface Invocation {
   stdinParams: Record<string, unknown>
   /** The full parsed arguments, for commands that read their own flags. */
   args: ParsedArgs
+  /** The raw argv, for commands that re-read arguments with their own types. */
+  argv: string[]
 }
 
 export type CommandResult =

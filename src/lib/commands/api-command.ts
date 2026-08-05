@@ -1,6 +1,13 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
-import type { Interactivity } from '../args/parse.js'
+import { coerceArgParams } from '../args/coerce.js'
+import {
+  type Interactivity,
+  parseCliArgs,
+  toArgName,
+  toArgParams,
+  UsageError,
+} from '../args/parse.js'
 import { assertRequiredParams } from '../args/validate.js'
 import {
   getCommandBlueprintDef,
@@ -25,30 +32,44 @@ export const executeApiCommand = async (
 ): Promise<CommandResult> => {
   const { path } = invocation
   const isNonInteractive = ctx.interactivity === 'non-interactive'
+  const apiPath = `/${path.join('/').replace(/-/g, '_')}`
+
+  const parameters = getCommandBlueprintDef(path, ctx).request.parameters
+
+  // Re-read the arguments knowing the endpoint's own parameter types — the
+  // generic first parse guessed, mangling opaque values like access codes —
+  // then coerce each value to the JSON type its parameter documents.
+  const stringKeys = parameters
+    .filter(({ format }) => format !== 'boolean' && format !== 'number')
+    .flatMap(({ name }) => [name, name.replace(/_/g, '-')])
+  const { params: argParams, issues } = coerceArgParams(
+    parameters,
+    toArgParams(parseCliArgs(invocation.argv, { stringKeys })),
+  )
+
+  if (issues.length > 0) {
+    throw new UsageError(
+      `Invalid ${
+        issues.length === 1 ? 'value' : 'values'
+      } for ${apiPath}: ${issues
+        .map(({ name, expected }) => `${toArgName(name)} expects ${expected}`)
+        .join('; ')}`,
+      {
+        hint: `Run 'seam ${path.join(' ')} --help' to see what it accepts.`,
+      },
+    )
+  }
 
   // Params given as arguments win over params piped in.
   const commandParams: Record<string, any> = { ...invocation.stdinParams }
-  Object.assign(commandParams, invocation.argParams)
+  Object.assign(commandParams, argParams)
 
   applyEndpointDefaults(path, commandParams)
-
-  // TODO - do this using the OpenAPI spec for the command rather than
-  // explicitly encoding the property names
-  if (commandParams['accepted_providers']) {
-    commandParams['accepted_providers'] =
-      commandParams['accepted_providers'].split(',')
-  }
-
-  const apiPath = `/${path.join('/').replace(/-/g, '_')}`
 
   // Non-interactive runs never prompt: validate and send what was given.
   let params: Record<string, any>
   if (isNonInteractive) {
-    assertRequiredParams(
-      getCommandBlueprintDef(path, ctx).request.parameters,
-      commandParams,
-      apiPath,
-    )
+    assertRequiredParams(parameters, commandParams, apiPath)
     params = commandParams
   } else {
     const edited = await interactForCommandParams(

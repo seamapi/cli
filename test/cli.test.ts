@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { afterAll, beforeAll, expect, test } from 'vitest'
 
+import { testBlueprint } from './fixtures/blueprint.js'
+
 const projectRoot = fileURLToPath(new URL('..', import.meta.url))
 const entrypoint = join(projectRoot, 'src', 'bin', 'cli.ts')
 
@@ -25,6 +27,7 @@ let server: Server
 let endpoint: string
 let stateHome: string
 let configHome: string
+let cacheHome: string
 let loggedOutStateHome: string
 let otherServerConfigHome: string
 let requests: Array<{
@@ -92,6 +95,24 @@ beforeAll(async () => {
     join(otherServerConfigHome, 'seam', 'cli.json'),
     JSON.stringify({ server: 'http://localhost:1' }),
   )
+
+  // A pre-seeded blueprint cache holding the fixture blueprint, so tests
+  // that pin parameter handling run against known API definitions and
+  // never touch the npm registry.
+  const pkg = JSON.parse(
+    await readFile(join(projectRoot, 'package.json'), 'utf8'),
+  ) as { dependencies: Record<string, string> }
+  cacheHome = join(home, 'cache')
+  await mkdir(join(cacheHome, 'seam'), { recursive: true })
+  await writeFile(
+    join(cacheHome, 'seam', 'blueprint.json'),
+    JSON.stringify({
+      blueprintVersion: pkg.dependencies['@seamapi/blueprint'],
+      typesVersion: '0.0.0-e2e',
+      checkedAt: new Date().toISOString(),
+      blueprint: testBlueprint,
+    }),
+  )
 })
 
 afterAll(async () => {
@@ -111,11 +132,13 @@ const runCli = async (
     env,
     configHome: configHomeOverride,
     stateHome: stateHomeOverride,
+    cacheHome: cacheHomeOverride,
   }: {
     input?: string
     env?: Record<string, string>
     configHome?: string
     stateHome?: string
+    cacheHome?: string
   } = {},
 ): Promise<CliResult> => {
   const { stdout, stderr, exitCode } = await execa(
@@ -126,6 +149,9 @@ const runCli = async (
       env: {
         XDG_CONFIG_HOME: configHomeOverride ?? configHome,
         XDG_STATE_HOME: stateHomeOverride ?? stateHome,
+        ...(cacheHomeOverride == null
+          ? {}
+          : { XDG_CACHE_HOME: cacheHomeOverride }),
         FORCE_COLOR: '0',
         // Never inherit credentials from the environment running the tests.
         SEAM_CLI_TOKEN: undefined,
@@ -377,6 +403,89 @@ test('cli: SEAM_CLI_TOKEN authenticates without logging in', async () => {
   expect(requests[0]?.headers['authorization']).toBe(
     'Bearer seam_apikey1_from_env',
   )
+})
+
+test('cli: sends a boolean parameter as a JSON boolean', async () => {
+  requests = []
+  const { exitCode } = await runCli(
+    ['devices', 'list', '--is-managed', 'true'],
+    { cacheHome },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({ is_managed: true })
+
+  await runCli(['devices', 'list', '--is-managed', 'false'], { cacheHome })
+  expect(requests[1]?.body).toEqual({ is_managed: false })
+})
+
+test('cli: sends a number parameter as a JSON number', async () => {
+  requests = []
+  const { exitCode } = await runCli(['devices', 'list', '--limit', '5'], {
+    cacheHome,
+  })
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({ limit: 5 })
+})
+
+test('cli: keeps an opaque string parameter exactly as given', async () => {
+  requests = []
+  const { exitCode } = await runCli(
+    ['access-codes', 'create', '--device-id', 'device1', '--code', '0123'],
+    { cacheHome },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({ device_id: 'device1', code: '0123' })
+})
+
+test('cli: splits a list parameter on commas', async () => {
+  requests = []
+  const { exitCode } = await runCli(
+    [
+      'access-codes',
+      'create',
+      '--device-id',
+      'device1',
+      '--accepted-providers',
+      'august,schlage',
+    ],
+    { cacheHome },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({
+    device_id: 'device1',
+    accepted_providers: ['august', 'schlage'],
+  })
+})
+
+test('cli: rejects a value outside the documented enum', async () => {
+  requests = []
+  const { stdout, stderr, exitCode } = await runCli(
+    ['devices', 'list', '--device-type', 'bogus'],
+    { cacheHome },
+  )
+
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain(
+    '--device-type expects one of august_lock, schlage_lock',
+  )
+  expect(requests).toHaveLength(0)
+})
+
+test('cli: rejects a value that is not the documented boolean', async () => {
+  requests = []
+  const { stderr, exitCode } = await runCli(
+    ['devices', 'list', '--is-managed', 'maybe'],
+    { cacheHome },
+  )
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('--is-managed expects true or false')
+  expect(requests).toHaveLength(0)
 })
 
 test('cli: help and completion work without being logged in', async () => {

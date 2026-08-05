@@ -37,7 +37,7 @@ import {
 import { renderHelp } from 'lib/render/help.js'
 import seamapiCliVersion from 'lib/version.js'
 
-async function cli(args: ParsedArgs) {
+async function cli(args: ParsedArgs, argv: string[]) {
   const config = getConfigStore()
   const output = getOutput()
 
@@ -183,7 +183,7 @@ async function cli(args: ParsedArgs) {
     })
 
     const result = await command.execute(
-      { path: selectedCommand, argParams, stdinParams, args },
+      { path: selectedCommand, argParams, stdinParams, args, argv },
       ctx,
     )
 
@@ -216,7 +216,7 @@ const run = async (argv: string[]) => {
     }),
   )
 
-  await cli(args)
+  await cli(args, argv)
 }
 
 run(process.argv.slice(2)).catch((e: unknown) => {
