@@ -1,8 +1,9 @@
 import { expect, test } from 'vitest'
 
-import { testBlueprint } from '../../../test/fixtures/blueprint.js'
-import { localCommandDefinitions } from './registry.js'
-import { findCommand, findGroup, getCommandSpec } from './spec.js'
+import { localCommandDefinitions } from 'lib/commands/registry.js'
+import { findCommand, findGroup, getCommandSpec } from 'lib/commands/spec.js'
+
+import { testBlueprint } from '../fixtures/blueprint.js'
 
 const spec = getCommandSpec(testBlueprint, localCommandDefinitions)
 

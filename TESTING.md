@@ -26,6 +26,20 @@ the fake goes.
    everywhere.** Don't re-prove auth headers in a unit test, and don't push
    branching logic into `test/cli.test.ts`.
 
+## Where tests live
+
+- **Test fixtures live in `test/fixtures` and nowhere else.** Anything that
+  exists for a test — a hand-built blueprint, seeded config files — never
+  sits beside normal code.
+- **A test that uses such a fixture is not a unit test.** It goes under
+  `test/`, mirroring the source layout (`test/commands/registry.test.ts`
+  tests `src/lib/commands/registry.ts`).
+- **A test may sit beside its module in `src` only when it tests the module
+  of the same name and imports nothing beyond it** — external packages and
+  type-only imports excepted. The moment it needs another module's code (a
+  memory fake from elsewhere, a sibling's helpers, a fixture), it moves
+  under `test/`.
+
 ## Taxonomy
 
 | Module kind                                                                                                              | The tell                                                     | Default test                                                                                                                                                                 | Gets faked                                                        | Never faked                                                      |

@@ -1,15 +1,16 @@
 import { expect, test } from 'vitest'
 
-import { testBlueprint } from '../../../../test/fixtures/blueprint.js'
-import { buildRegistry } from '../../commands/registry.js'
-import { describeForShell } from './describe.js'
+import { buildRegistry } from 'lib/commands/registry.js'
+import { describeForShell } from 'lib/render/completion/describe.js'
 import {
   completionScriptSentinels,
   completionShells,
   isCompletionShell,
   renderCompletion,
   renderCompletionStub,
-} from './index.js'
+} from 'lib/render/completion/index.js'
+
+import { testBlueprint } from '../fixtures/blueprint.js'
 
 const { spec } = buildRegistry(testBlueprint)
 

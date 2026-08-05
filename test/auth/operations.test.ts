@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
-import { createMemoryConfigStore } from '../config/create-memory-config-store.js'
-import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from '../env.js'
 import {
   login,
   logout,
@@ -9,7 +7,9 @@ import {
   selectServer,
   selectWorkspace,
   storeToken,
-} from './operations.js'
+} from 'lib/auth/operations.js'
+import { createMemoryConfigStore } from 'lib/config/create-memory-config-store.js'
+import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
 
 const server = 'https://connect.example.com'
 

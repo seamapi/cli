@@ -1,12 +1,13 @@
 import { expect, test } from 'vitest'
 
-import { testBlueprint } from '../../../test/fixtures/blueprint.js'
 import {
   acceptedParamsOf,
   buildRegistry,
   findLocalCommand,
   localCommands,
-} from './registry.js'
+} from 'lib/commands/registry.js'
+
+import { testBlueprint } from '../fixtures/blueprint.js'
 
 const registry = buildRegistry(testBlueprint)
 
