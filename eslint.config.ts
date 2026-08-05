@@ -22,6 +22,23 @@ export default [
       'unused-imports': unusedImports,
       import: importPlugin,
     },
+    settings: {
+      // no-cycle builds the import graph by parsing the imported files, and
+      // its default parser cannot read TypeScript: without this setting it
+      // sees no edges and silently reports nothing.
+      'import/parsers': {
+        '@typescript-eslint/parser': ['.ts', '.tsx'],
+      },
+      // Resolves the .js-suffixed TypeScript imports and the tsconfig path
+      // aliases. Without a resolver, every import in this ESM TypeScript
+      // codebase is unresolvable, which silently disables the import rules
+      // that resolve before reporting, e.g., no-relative-parent-imports.
+      'import/resolver': {
+        typescript: {
+          project: './tsconfig.json',
+        },
+      },
+    },
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-import-type-side-effects': 'error',
@@ -31,10 +48,26 @@ export default [
           fixStyle: 'inline-type-imports',
         },
       ],
-      'import/extensions': ['error', 'ignorePackages'],
+      // Not import/extensions: with the resolver active it resolves the
+      // .js-suffixed import to the .ts file and demands a .ts extension.
+      // TypeScript's nodenext resolution already fails the build on a
+      // missing or wrong extension, so the rule adds nothing here.
+      //
+      // Not import/no-relative-parent-imports: with a resolver it bans
+      // depending on anything in a parent directory however the import is
+      // written, path aliases included. The core rule below bans the ../
+      // spelling, which is the actual mistake.
       'import/no-duplicates': ['error', { 'prefer-inline': true }],
-      // The import/no-relative-parent-imports rule is silently inert in this
-      // flat config, so ban parent traversal with the core rule instead.
+      'import/no-cycle': [
+        'error',
+        {
+          ignoreExternal: true,
+          // A cycle broken by a deferred import() is intentional, e.g., the
+          // command registry lists the completion command while the
+          // completion command builds a spec from the registry.
+          allowUnsafeDynamicCyclicDependency: true,
+        },
+      ],
       'no-restricted-imports': [
         'error',
         {

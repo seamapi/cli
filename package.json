@@ -114,6 +114,7 @@
     "concurrently": "^10.0.4",
     "del-cli": "^7.0.0",
     "eslint": "^9.31.0",
+    "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.1.4",

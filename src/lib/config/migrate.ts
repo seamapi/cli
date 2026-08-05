@@ -2,7 +2,7 @@ import { existsSync, rmSync } from 'node:fs'
 
 import type Configstore from 'configstore'
 
-import { mergeConfig, splitConfig } from './config-store.js'
+import { mergeConfig, splitConfig } from './values.js'
 
 export const migrateConfigStore = (
   settingsStore: Configstore,
