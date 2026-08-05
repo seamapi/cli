@@ -5,11 +5,19 @@ import { interactForBlueprintObject } from './interact-for-blueprint-object.js'
 import { createMemoryOutput } from './output/create-memory-output.js'
 import { setOutput } from './output/get-output.js'
 import type { ContextHelpers } from './types.js'
-import { promptAutocomplete, promptSelect } from './util/prompt.js'
+import type * as PromptModule from './util/prompt.js'
+import {
+  promptAutocomplete,
+  PromptCancelledError,
+  promptSelect,
+  promptText,
+  withBackHint,
+} from './util/prompt.js'
 
-vi.mock('./util/prompt.js', () => ({
-  canPrompt: vi.fn(() => true),
-  PromptCancelledError: class extends Error {},
+// Only the prompts themselves are replaced, so the real PromptCancelledError
+// and withBackHint are used, as they are in production.
+vi.mock('./util/prompt.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof PromptModule>()),
   promptText: vi.fn(),
   promptNumber: vi.fn(),
   promptConfirm: vi.fn(),
@@ -20,6 +28,8 @@ vi.mock('./util/prompt.js', () => ({
 
 beforeEach(() => {
   vi.mocked(promptAutocomplete).mockClear()
+  vi.mocked(promptAutocomplete).mockImplementation(async () => 'done')
+  vi.mocked(promptText).mockReset()
   // Keep the interactive chrome out of the test output.
   setOutput(createMemoryOutput().output)
 })
@@ -174,3 +184,75 @@ test.for(['custom_metadata', 'custom_metadata_has'] as const)(
     ).resolves.toEqual({ [name]: {} })
   },
 )
+
+test('interactForBlueprintObject: dismissing the parameter menu leaves the command', async () => {
+  vi.mocked(promptAutocomplete).mockRejectedValueOnce(
+    new PromptCancelledError(),
+  )
+
+  await expect(
+    interactForBlueprintObject(
+      args({ device_id: 'device1' }),
+      ctx('interactive'),
+    ),
+  ).resolves.toBe('[Back]')
+})
+
+test('interactForBlueprintObject: dismissing a value prompt returns to the menu', async () => {
+  vi.mocked(promptAutocomplete)
+    .mockImplementationOnce(async () => 'name')
+    .mockImplementationOnce(async () => 'done')
+  vi.mocked(promptText).mockRejectedValueOnce(new PromptCancelledError())
+
+  // The parameter is left unset and the command still runs, rather than the
+  // dismissal ending the whole command.
+  await expect(
+    interactForBlueprintObject(
+      args({ device_id: 'device1' }),
+      ctx('interactive'),
+    ),
+  ).resolves.toEqual({ device_id: 'device1' })
+  expect(promptAutocomplete).toHaveBeenCalledTimes(2)
+})
+
+test('interactForBlueprintObject: dismissing a value prompt keeps an earlier value', async () => {
+  vi.mocked(promptAutocomplete)
+    .mockImplementationOnce(async () => 'name')
+    .mockImplementationOnce(async () => 'done')
+  vi.mocked(promptText).mockRejectedValueOnce(new PromptCancelledError())
+
+  await expect(
+    interactForBlueprintObject(
+      args({ device_id: 'device1', name: 'Front Door' }),
+      ctx('interactive'),
+    ),
+  ).resolves.toEqual({ device_id: 'device1', name: 'Front Door' })
+})
+
+test('interactForBlueprintObject: tells the user the parameter menu can be left', async () => {
+  await interactForBlueprintObject(
+    args({ device_id: 'device1' }),
+    ctx('interactive'),
+  )
+
+  const { message } = vi.mocked(promptAutocomplete).mock.calls[0]?.[0] as {
+    message: string
+  }
+  expect(message).toBe(withBackHint('[/devices/get] Parameters'))
+})
+
+test('interactForBlueprintObject: tells the user a value prompt can be left', async () => {
+  vi.mocked(promptAutocomplete)
+    .mockImplementationOnce(async () => 'name')
+    .mockImplementationOnce(async () => 'done')
+  vi.mocked(promptText).mockImplementationOnce(async () => 'Front Door')
+
+  await interactForBlueprintObject(
+    args({ device_id: 'device1' }),
+    ctx('interactive'),
+  )
+
+  expect(vi.mocked(promptText).mock.calls[0]?.[0]).toMatchObject({
+    message: withBackHint('name:'),
+  })
+})

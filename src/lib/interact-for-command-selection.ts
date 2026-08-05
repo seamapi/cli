@@ -2,7 +2,11 @@ import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import type { ContextHelpers } from './types.js'
 import { NonInteractiveError } from './util/cli-args.js'
-import { promptAutocomplete } from './util/prompt.js'
+import {
+  promptAutocomplete,
+  PromptCancelledError,
+  withBackHint,
+} from './util/prompt.js'
 
 const uniqBy = <T>(items: T[], keyOf: (item: T) => unknown): T[] => {
   const seen = new Set<unknown>()
@@ -92,16 +96,30 @@ export async function interactForCommandSelection(
 
   const commandPathStr = commandPath.join('/').replace(/-/g, '_')
 
-  const selectedCommand = await promptAutocomplete({
-    message: `Select a command: /${commandPathStr}`,
-    choices: [
-      ...possibleCommands.map((cmd) => ({
-        label:
-          cmd?.[commandPath.length] ?? `[Call /${commandPathStr} Directly]`,
-        value: cmd?.[commandPath.length] ?? '<none>',
-      })),
-    ].sort((a, b) => ergonomicSort(a.value, b.value)),
-  })
+  // Only a sub-command menu has a level to go back to, so only it says so.
+  const selectMessage = `Select a command: /${commandPathStr}`
+
+  let selectedCommand: string
+  try {
+    selectedCommand = await promptAutocomplete({
+      message:
+        commandPath.length > 0 ? withBackHint(selectMessage) : selectMessage,
+      choices: [
+        ...possibleCommands.map((cmd) => ({
+          label:
+            cmd?.[commandPath.length] ?? `[Call /${commandPathStr} Directly]`,
+          value: cmd?.[commandPath.length] ?? '<none>',
+        })),
+      ].sort((a, b) => ergonomicSort(a.value, b.value)),
+    })
+  } catch (error) {
+    if (!(error instanceof PromptCancelledError)) throw error
+    // Dismissing the menu means the same as its [Back] entry, which is only
+    // offered when there is a level to go back to. At the top there is none,
+    // so dismissing it stops the CLI as it always has.
+    if (commandPath.length === 0) throw error
+    selectedCommand = '[Back]'
+  }
 
   if (selectedCommand === '<none>') {
     return commandPath

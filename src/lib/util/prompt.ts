@@ -10,6 +10,7 @@ import {
   select,
   text,
 } from '@clack/prompts'
+import chalk from 'chalk'
 
 import { NonInteractiveError } from './cli-args.js'
 
@@ -36,6 +37,17 @@ export interface PromptChoice<Value> {
   value: Value
   hint?: string | undefined
 }
+
+/**
+ * Note on a prompt message that dismissing it returns to the previous step.
+ *
+ * Only for prompts whose caller catches the dismissal: elsewhere it still
+ * stops the CLI, and saying otherwise would mislead. The note goes in the
+ * message because clack renders its own keyboard hints from a hardcoded list
+ * that a caller cannot add to.
+ */
+export const withBackHint = (message: string): string =>
+  `${message} ${chalk.dim('· Esc: go back')}`
 
 const ensureInteractive = (): void => {
   if (!canPrompt()) {
