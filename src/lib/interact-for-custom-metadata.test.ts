@@ -3,11 +3,13 @@ import { beforeEach, expect, test, vi } from 'vitest'
 import { interactForCustomMetadata } from './interact-for-custom-metadata.js'
 import { createMemoryOutput } from './output/create-memory-output.js'
 import { setOutput } from './output/get-output.js'
+import type * as PromptModule from './util/prompt.js'
 import { promptSelect, promptText } from './util/prompt.js'
 
-vi.mock('./util/prompt.js', () => ({
-  canPrompt: vi.fn(() => true),
-  PromptCancelledError: class extends Error {},
+// Only the prompts themselves are replaced, so the real PromptCancelledError
+// and withBackHint are used, as they are in production.
+vi.mock('./util/prompt.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof PromptModule>()),
   promptText: vi.fn(),
   promptNumber: vi.fn(),
   promptConfirm: vi.fn(),

@@ -1,4 +1,4 @@
-import { promptAutocomplete } from './util/prompt.js'
+import { promptAutocomplete, withBackHint } from './util/prompt.js'
 import { withLoading } from './util/with-loading.js'
 
 export interface ResourceChoice {
@@ -23,7 +23,9 @@ export const interactForResource = async <Resource>({
     fetchResources,
   )
   return await promptAutocomplete({
-    message,
+    // Resource pickers are only reached from the parameter flow, which
+    // returns to its menu when one is dismissed.
+    message: withBackHint(message),
     choices: resources.map((resource) => {
       const { title, value, description } = toChoice(resource)
       return { label: title, value, hint: description }

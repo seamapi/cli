@@ -3,6 +3,7 @@ import {
   PromptCancelledError,
   promptSelect,
   promptText,
+  withBackHint,
 } from './util/prompt.js'
 
 // Structurally the CustomMetadata of @seamapi/types, spelled out here so the
@@ -37,7 +38,7 @@ export const interactForCustomMetadata = async (
 
     try {
       action = await promptSelect({
-        message: 'Choose an action:',
+        message: withBackHint('Choose an action:'),
         choices: [
           { label: 'Add an item to params', value: 'add' },
           { label: 'Remove an item from params', value: 'remove' },
@@ -53,11 +54,13 @@ export const interactForCustomMetadata = async (
     try {
       if (action === 'add') {
         const newKey = await promptText({
-          message: 'Enter a key to add or edit:',
+          message: withBackHint('Enter a key to add or edit:'),
         })
 
         let newValue: string | boolean = await promptText({
-          message: 'Enter the new value to add or edit (or null to delete):',
+          message: withBackHint(
+            'Enter the new value to add or edit (or null to delete):',
+          ),
         })
         if (newKey) {
           if (newValue === 'false' || newValue === 'true') {
@@ -71,7 +74,9 @@ export const interactForCustomMetadata = async (
         }
       } else if (action === 'remove') {
         const customKeyToRemove = await promptSelect({
-          message: 'Choose a key-value pair to remove from params:',
+          message: withBackHint(
+            'Choose a key-value pair to remove from params:',
+          ),
           choices: Object.keys(updatedCustomMetadata).map(
             (customMetadataKey) => {
               return {

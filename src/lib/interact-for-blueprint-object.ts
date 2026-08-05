@@ -22,6 +22,7 @@ import {
   promptNumber,
   promptSelect,
   promptText,
+  withBackHint,
 } from './util/prompt.js'
 
 const ergonomicPropOrder = [
@@ -89,9 +90,11 @@ export const interactForBlueprintObject = async (
     return ergonomicPropOrder.indexOf(prop)
   }
 
-  const parameterSelectionMessage = args.isSubProperty
-    ? `Editing "${args.subPropertyPath}"`
-    : `[${cmdPath}] Parameters`
+  const parameterSelectionMessage = withBackHint(
+    args.isSubProperty
+      ? `Editing "${args.subPropertyPath}"`
+      : `[${cmdPath}] Parameters`,
+  )
 
   getOutput().info()
   let paramToEdit: string
@@ -223,14 +226,14 @@ export const interactForBlueprintObject = async (
           value = await interactForTimestamp()
         } else {
           value = await promptText({
-            message: `${paramToEdit}:`,
+            message: withBackHint(`${paramToEdit}:`),
           })
         }
         args.params[paramToEdit] = value
         return interactForBlueprintObject(args, ctx)
       } else if (prop.format === 'enum') {
         const value = await promptSelect({
-          message: `${paramToEdit}:`,
+          message: withBackHint(`${paramToEdit}:`),
           choices: prop.values.map((v) => ({
             label: v.name,
             value: v.name,
@@ -240,7 +243,7 @@ export const interactForBlueprintObject = async (
         return interactForBlueprintObject(args, ctx)
       } else if (prop.format === 'boolean') {
         const value = await promptConfirm({
-          message: `${paramToEdit}:`,
+          message: withBackHint(`${paramToEdit}:`),
           initialValue: true,
           active: 'true',
           inactive: 'false',
@@ -251,7 +254,7 @@ export const interactForBlueprintObject = async (
         return interactForBlueprintObject(args, ctx)
       } else if (prop.format === 'list' && prop.itemFormat === 'enum') {
         const value = await promptAutocompleteMultiselect({
-          message: `${paramToEdit}:`,
+          message: withBackHint(`${paramToEdit}:`),
           choices: prop.itemEnumValues.map((v) => ({
             label: v.name,
             value: v.name,
@@ -279,7 +282,7 @@ export const interactForBlueprintObject = async (
         return interactForBlueprintObject(args, ctx)
       } else if (prop.format === 'number') {
         const value = await promptNumber({
-          message: `${paramToEdit}:`,
+          message: withBackHint(`${paramToEdit}:`),
         })
 
         args.params[paramToEdit] = value
