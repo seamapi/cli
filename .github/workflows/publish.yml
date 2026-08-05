@@ -12,6 +12,7 @@ jobs:
   build:
     name: Build
     uses: ./.github/workflows/_build.yml
+    secrets: inherit
   release:
     name: GitHub Releases
     runs-on: ubuntu-latest

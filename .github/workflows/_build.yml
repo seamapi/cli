@@ -9,13 +9,55 @@ on:
         type: string
         required: false
         default: '24'
+      bun_version:
+        description: The Bun version.
+        type: string
+        required: false
+        default: 1.2.14
+      sign:
+        description: >-
+          Code sign and notarize the macOS binaries.
+          Every credential below is then required: the build fails rather than
+          release a binary that is not properly signed. Pass false to only
+          build them, e.g., for a check on a pull request from a fork,
+          which cannot read the credentials.
+        type: boolean
+        required: false
+        default: true
+    secrets:
+      apple_certificate:
+        description: >-
+          The Developer ID Application certificate and its private key,
+          as a base64 encoded PKCS#12 bundle including the certificate chain.
+        required: false
+      apple_certificate_password:
+        description: The password protecting the PKCS#12 bundle.
+        required: false
+      apple_signing_identity:
+        description: >-
+          The codesign identity to use, e.g.,
+          Developer ID Application: Example, Inc. (XXXXXXXXXX).
+          Normally unset: it defaults to the one Developer ID Application
+          identity in the certificate.
+        required: false
+      apple_api_key:
+        description: >-
+          The base64 encoded App Store Connect API private key (.p8)
+          used to authenticate with the notary service.
+        required: false
+      apple_api_key_id:
+        description: The App Store Connect API key id.
+        required: false
+      apple_api_issuer_id:
+        description: The App Store Connect API issuer id.
+        required: false
     outputs:
       artifact_name:
         description: The artifact name.
         value: build-${{ github.sha }}
 
 jobs:
-  build:
+  linux:
     name: Package
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -29,17 +71,19 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.14
+          bun-version: ${{ inputs.bun_version }}
       - name: Build
         run: npm run build
       - name: Package
         run: npm pack
       - name: Build standalone binaries
+        # The macOS binaries are built and signed by the macos job.
         run: |
+          set -euo pipefail
           version=$(jq --raw-output '.version' package.json)
           rm -rf release
           mkdir -p release
-          for platform in linux-x64 linux-arm64 darwin-x64 darwin-arm64 windows-x64; do
+          for platform in linux-x64 linux-arm64 windows-x64; do
             binary="release/seam-v${version}-${platform}"
             if [[ "$platform" == windows-* ]]; then
               binary="${binary}.exe"
@@ -51,6 +95,235 @@ jobs:
         run: |
           version=$(jq --raw-output '.version' package.json)
           tar -czf "release/seam-completions-v${version}.tar.gz" -C completions seam.bash seam.fish seam.zsh
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ github.sha }}-package
+          if-no-files-found: error
+          path: |
+            *.tgz
+            release/*
+
+  macos:
+    name: macOS binaries
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check signing credentials
+        # Fails the job before it builds anything rather than fall back to a
+        # signature that Gatekeeper rejects.
+        if: inputs.sign
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.apple_certificate }}
+          APPLE_API_KEY: ${{ secrets.apple_api_key }}
+          APPLE_API_KEY_ID: ${{ secrets.apple_api_key_id }}
+          APPLE_API_ISSUER_ID: ${{ secrets.apple_api_issuer_id }}
+        run: |
+          set -euo pipefail
+
+          missing=
+          for name in APPLE_CERTIFICATE APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER_ID; do
+            if [[ -z "${!name}" ]]; then
+              missing="${missing} ${name}"
+            fi
+          done
+
+          if [[ -n "${missing}" ]]; then
+            echo "::error title=Missing Apple credentials::Set the${missing} repository secret, or call this workflow with sign: false to build the macOS binaries without signing them."
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          node_version: ${{ inputs.node_version }}
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun_version }}
+      - name: Inject generated values
+        # The package job gets these from npm pack. Without them a binary
+        # reports the placeholder version instead of its own.
+        run: npm run prepack
+      - name: Build standalone binaries
+        run: |
+          set -euo pipefail
+          version=$(jq --raw-output '.version' package.json)
+          rm -rf release
+          mkdir -p release
+          for platform in darwin-x64 darwin-arm64; do
+            bun build src/bin/cli.ts --compile --minify \
+              --target="bun-${platform}" --outfile="release/seam-v${version}-${platform}"
+          done
+      - name: Create entitlements
+        # A compiled binary embeds the Bun runtime, so under the hardened
+        # runtime JavaScriptCore needs the JIT entitlements to start at all.
+        if: inputs.sign
+        run: |
+          set -euo pipefail
+          cat > "${RUNNER_TEMP}/entitlements.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>com.apple.security.cs.allow-jit</key>
+              <true/>
+              <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+              <true/>
+              <key>com.apple.security.cs.disable-library-validation</key>
+              <true/>
+            </dict>
+          </plist>
+          PLIST
+      - name: Import signing certificate
+        # Imports into a temporary keychain on the search list,
+        # and deletes it after the job.
+        if: inputs.sign
+        uses: apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.apple_certificate }}
+          p12-password: ${{ secrets.apple_certificate_password }}
+      - name: Resolve signing identity
+        id: identity
+        if: inputs.sign
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.apple_signing_identity }}
+        run: |
+          set -euo pipefail
+
+          identity="${APPLE_SIGNING_IDENTITY}"
+          if [[ -z "$identity" ]]; then
+            identity=$(security find-identity -v -p codesigning |
+              awk '/Developer ID Application/ { print $2; exit }')
+          fi
+          if [[ -z "$identity" ]]; then
+            security find-identity -v -p codesigning
+            echo '::error title=Missing signing identity::The certificate holds no Developer ID Application identity.'
+            exit 1
+          fi
+
+          echo "identity=${identity}" >> "$GITHUB_OUTPUT"
+      - name: Sign binaries
+        if: inputs.sign
+        env:
+          IDENTITY: ${{ steps.identity.outputs.identity }}
+        run: |
+          set -euo pipefail
+
+          args=(
+            --sign "${IDENTITY}"
+            --force
+            --options runtime
+            --identifier com.getseam.cli
+            # The notary service requires a secure timestamp.
+            --timestamp
+            --entitlements "${RUNNER_TEMP}/entitlements.plist"
+          )
+
+          for binary in release/seam-v*-darwin-*; do
+            # Bun signs its own output ad-hoc, and the darwin-x64 signature it
+            # writes reserves more room than the file holds. Drop it so codesign
+            # lays out the real signature from scratch.
+            codesign --remove-signature "$binary" || true
+            codesign "${args[@]}" "$binary"
+          done
+      - name: Notarize binaries
+        if: inputs.sign
+        env:
+          APPLE_API_KEY: ${{ secrets.apple_api_key }}
+          APPLE_API_KEY_ID: ${{ secrets.apple_api_key_id }}
+          APPLE_API_ISSUER_ID: ${{ secrets.apple_api_issuer_id }}
+        run: |
+          set -euo pipefail
+
+          key="${RUNNER_TEMP}/api-key.p8"
+          trap 'rm -f "$key"' EXIT
+          printf '%s' "${APPLE_API_KEY}" | base64 --decode > "$key"
+          auth=(--key "$key" --key-id "${APPLE_API_KEY_ID}" --issuer "${APPLE_API_ISSUER_ID}")
+
+          # notarytool only takes an archive, and the notary service notarizes
+          # every eligible binary inside it, so one submission covers both
+          # architectures. The ticket cannot be stapled to a bare executable:
+          # Gatekeeper looks it up online by the signature cdhash instead.
+          archive="${RUNNER_TEMP}/notarize.zip"
+          ditto -c -k --keepParent release "$archive"
+
+          # notarytool exits non-zero on a rejected submission,
+          # which still reports why it was rejected.
+          submission=$(xcrun notarytool submit "$archive" "${auth[@]}" --wait --output-format json) || true
+          echo "$submission"
+
+          id=
+          status=
+          if [[ -n "$submission" ]]; then
+            id=$(jq --raw-output '.id // empty' <<< "$submission")
+            status=$(jq --raw-output '.status // empty' <<< "$submission")
+          fi
+
+          if [[ "$status" != Accepted ]]; then
+            if [[ -n "$id" ]]; then
+              xcrun notarytool log "$id" "${auth[@]}" || true
+            fi
+            echo "::error title=Notarization failed::Submission ${id:-unknown} finished as ${status:-unknown}."
+            exit 1
+          fi
+      - name: Verify binaries
+        env:
+          SIGN: ${{ inputs.sign }}
+        run: |
+          set -euo pipefail
+          version=$(jq --raw-output '.version' package.json)
+          binary="release/seam-v${version}-darwin-arm64"
+
+          if [[ "${SIGN}" == true ]]; then
+            for signed in release/seam-v*-darwin-*; do
+              codesign --verify --strict --verbose=2 "$signed"
+              codesign --display --verbose=2 --entitlements - "$signed"
+            done
+
+            # How Gatekeeper sees the binary. Reported rather than enforced: the
+            # notary service already accepted it, and the ticket is fetched over
+            # the network, so a rejection here is not conclusive.
+            spctl --assess --type exec --verbose=4 "$binary" ||
+              echo "::warning title=Gatekeeper assessment failed::spctl rejected ${binary}."
+          else
+            echo '::warning title=Unsigned macOS binaries::Built with sign: false. These binaries are not signed by Seam and must not be released.'
+          fi
+
+          # Signing rewrites a binary that also carries the compiled JavaScript
+          # bundle, so run it to prove the bundle survived.
+          "$binary" wizard --version
+          reported=$("$binary" --version)
+          if [[ "$reported" != "$version" ]]; then
+            echo "::error title=Wrong version::${binary} reports ${reported}, expected ${version}."
+            exit 1
+          fi
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ github.sha }}-macos
+          if-no-files-found: error
+          path: release/*
+
+  build:
+    name: Bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - linux
+      - macos
+    steps:
+      - name: Download package artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: build-${{ github.sha }}-package
+          path: .
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: build-${{ github.sha }}-macos
+          path: release
       - name: Generate checksums
         working-directory: release
         run: sha256sum seam-* > checksums.txt

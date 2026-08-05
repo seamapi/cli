@@ -56,6 +56,8 @@ jobs:
   build:
     name: Build
     uses: ./.github/workflows/_build.yml
+    with:
+      sign: false
   install:
     name: Install (Node.js v${{ matrix.node }} on ${{ matrix.os_name }})
     runs-on: ${{ matrix.os }}

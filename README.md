@@ -22,7 +22,9 @@ $ npm install --global @seamapi/cli
 ```
 
 Alternatively, download a standalone binary for your platform from the
-[latest GitHub release].
+[latest GitHub release]. The macOS binaries are signed with the Seam Labs, Inc.
+Apple Developer ID and notarized by Apple, so macOS runs them without
+a Gatekeeper prompt.
 
 On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
 
@@ -395,6 +397,58 @@ The following repository secrets must be set on [GitHub Actions]:
 
 [GitHub Actions]: https://github.com/features/actions
 [GPG private key]: https://github.com/marketplace/actions/import-gpg#prerequisites
+
+### Signing the macOS binaries
+
+The standalone macOS binaries are code signed and notarized while they are
+built, so that Gatekeeper lets them run on machines other than the one that
+built them. Both need an [Apple Developer Program] membership.
+
+Anything that releases signs, and fails rather than publish a binary that
+macOS refuses to run. A check builds the macOS binaries with `sign: false`
+instead: a pull request from a fork cannot read the credentials, and nothing a
+check builds is ever released. There is no ad-hoc signature fallback, since
+Gatekeeper rejects one anywhere but the machine that made it.
+
+Set these repository secrets to code sign:
+
+- `APPLE_CERTIFICATE`: A base64 encoded PKCS#12 (`.p12`) bundle holding a
+  [Developer ID Application] certificate, its private key, and its certificate
+  chain. Export it from Keychain Access, then encode it with
+  `base64 --input certificate.p12 | pbcopy`.
+- `APPLE_CERTIFICATE_PASSWORD`: The password set while exporting the bundle.
+- `APPLE_SIGNING_IDENTITY`: Normally left unset. The build signs with the one
+  Developer ID Application identity in the bundle, so this is only needed to
+  choose between several, e.g.,
+  `Developer ID Application: Seam Labs, Inc. (XXXXXXXXXX)`.
+
+And these to notarize, from an [App Store Connect API key]:
+
+- `APPLE_API_KEY`: The base64 encoded API private key (`.p8`).
+- `APPLE_API_KEY_ID`: The API key id.
+- `APPLE_API_ISSUER_ID`: The API key issuer id.
+
+Notarization tickets cannot be stapled to a bare executable, so Gatekeeper
+looks them up online the first time a downloaded binary runs.
+
+Check the credentials without cutting a release by triggering
+[a build workflow_dispatch on GitHub Actions], on the web or with
+
+```
+$ gh workflow run build.yml --ref <branch>
+```
+
+GitHub only offers a workflow_dispatch for a workflow already on the default
+branch, so the build workflow must be merged first. It then runs against any
+branch.
+
+Then confirm the run's macOS binaries job signed and notarized: it verifies the
+signature, assesses the binary the way Gatekeeper does, and runs it.
+
+[App Store Connect API key]: https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api
+[Apple Developer Program]: https://developer.apple.com/programs/
+[Developer ID Application]: https://developer.apple.com/help/account/reference/certificate-types/
+[a build workflow_dispatch on GitHub Actions]: https://github.com/seamapi/cli/actions?query=workflow%3A_build
 
 ## Contributing
 
