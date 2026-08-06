@@ -114,7 +114,8 @@ async function cli(args: ParsedArgs, argv: string[]) {
       isLocal: true,
     })
 
-    await printCompletion(shell, { update })
+    const cachedBlueprint = await getApiBlueprint({ update })
+    printCompletion(shell, buildRegistry(cachedBlueprint).spec)
     return
   }
 
