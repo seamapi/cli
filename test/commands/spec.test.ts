@@ -59,6 +59,25 @@ test('command spec: collects values for enum and boolean flags', () => {
   expect(flags.find(({ long }) => long === 'limit')?.values).toEqual([])
 })
 
+test('command spec: includes null among the values for a nullable flag', () => {
+  const blueprint = structuredClone(testBlueprint)
+  const parameter = blueprint.routes
+    .flatMap(({ endpoints }) => endpoints)
+    .find(({ path }) => path === '/devices/list')
+    ?.request.parameters.find(({ name }) => name === 'device_type')
+  if (parameter == null) throw new Error('Missing test parameter')
+  parameter.isNullable = true
+
+  const nullableSpec = getCommandSpec(blueprint, localCommandDefinitions)
+  const flags = findCommand(nullableSpec, ['devices', 'list'])?.flags ?? []
+
+  expect(flags.find(({ long }) => long === 'device-type')?.values).toEqual([
+    'august_lock',
+    'schlage_lock',
+    'null',
+  ])
+})
+
 test('command spec: groups every incomplete command path', () => {
   expect(findGroup(spec, [])?.subcommands.map(({ name }) => name)).toContain(
     'devices',

@@ -33,6 +33,11 @@ const enumList = parameter({
   itemEnumValues: [{ name: 'august_lock' }, { name: 'schlage_lock' }],
 })
 const object = parameter({ name: 'custom_metadata', format: 'object' })
+const nullableString = parameter({
+  name: 'name',
+  format: 'string',
+  isNullable: true,
+})
 
 test.each([
   [boolean, 'true', true],
@@ -55,6 +60,9 @@ test.each([
   [numberList, '1,2', [1, 2]],
   [enumList, 'august_lock,schlage_lock', ['august_lock', 'schlage_lock']],
   [object, '{"floor":2}', { floor: 2 }],
+  [nullableString, 'null', null],
+  [nullableString, null, null],
+  [string, 'null', 'null'],
 ] as Array<[Parameter, unknown, unknown]>)(
   'coerceParam: %o given %o becomes %o',
   (param, given, value) => {

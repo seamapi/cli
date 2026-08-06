@@ -156,6 +156,67 @@ test('interactForBlueprintObject: offers the submit choice when a required value
   expect(choices.map(({ value }) => value)).toContain('done')
 })
 
+test('interactForBlueprintObject: prompts in auto mode when an empty request has required parameters', async () => {
+  scriptPrompt(['name', 'Front Door'])
+
+  await expect(
+    interactForBlueprintObject(
+      {
+        command: ['devices', 'update'],
+        parameters: [
+          { name: 'name', isRequired: false, format: 'string' },
+        ] as unknown as Parameter[],
+        params: {},
+        hasRequiredParameters: true,
+      },
+      ctx('auto'),
+    ),
+  ).resolves.toEqual({ name: 'Front Door' })
+  expect(memoryPrompt.questions.map(({ kind }) => kind)).toEqual([
+    'autocomplete',
+    'text',
+  ])
+})
+
+test('interactForBlueprintObject: lets a nullable parameter be set to null', async () => {
+  const nullableParameters = [
+    { name: 'name', isRequired: false, isNullable: true, format: 'string' },
+  ] as unknown as Parameter[]
+  scriptPrompt(['name', 'null', 'done'])
+
+  await expect(
+    interactForBlueprintObject(
+      {
+        command: ['devices', 'update'],
+        parameters: nullableParameters,
+        params: {},
+      },
+      ctx('interactive'),
+    ),
+  ).resolves.toEqual({ name: null })
+
+  expect(memoryPrompt.questions[1]).toMatchObject({
+    kind: 'select',
+    choices: expect.arrayContaining([{ label: 'Set to null', value: 'null' }]),
+  })
+})
+
+test('interactForBlueprintObject: lets a supplied parameter be unset', async () => {
+  scriptPrompt(['name', 'unset', 'done'])
+
+  await expect(
+    interactForBlueprintObject(
+      args({ device_id: 'device1', name: 'Front Door' }),
+      ctx('interactive'),
+    ),
+  ).resolves.toEqual({ device_id: 'device1' })
+
+  expect(memoryPrompt.questions[1]).toMatchObject({
+    kind: 'select',
+    choices: expect.arrayContaining([{ label: 'Unset', value: 'unset' }]),
+  })
+})
+
 // `custom_metadata` and `custom_metadata_has` are both records, a format with
 // no branch of its own, so each has to be routed by name.
 test.for(['custom_metadata', 'custom_metadata_has'] as const)(

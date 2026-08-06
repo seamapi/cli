@@ -42,6 +42,7 @@ export const interactForBlueprintObject = async (
     command: string[]
     parameters: Parameter[]
     params: Record<string, any>
+    hasRequiredParameters?: boolean
     isSubProperty?: boolean
     subPropertyPath?: string
   },
@@ -60,12 +61,21 @@ export const interactForBlueprintObject = async (
   const isSupplied = (k: string): boolean => args.params[k] !== undefined
 
   const haveAllRequiredParams = required.every(isSupplied)
+  // Some request schemas require one of several parameters without marking
+  // any individual parameter as required. The request-level signal tells us
+  // that an entirely empty request still needs interaction.
+  const hasAnyParams = Object.values(args.params).some(
+    (value) => value !== undefined,
+  )
+  const satisfiesRequestRequirement =
+    args.hasRequiredParameters !== true || hasAnyParams
 
   const cmdPath = `/${args.command.join('/').replace(/-/g, '_')}`
 
   const shouldAutoSubmit =
     ctx.interactivity !== 'interactive' &&
     haveAllRequiredParams &&
+    satisfiesRequestRequirement &&
     !args.isSubProperty
   if (shouldAutoSubmit) {
     return args.params
@@ -99,7 +109,9 @@ export const interactForBlueprintObject = async (
     paramToEdit = await promptAutocomplete({
       message: parameterSelectionMessage,
       choices: [
-        ...(haveAllRequiredParams && !args.isSubProperty
+        ...(haveAllRequiredParams &&
+        satisfiesRequestRequirement &&
+        !args.isSubProperty
           ? [
               {
                 value: 'done',
@@ -171,6 +183,30 @@ export const interactForBlueprintObject = async (
   // Dismissing any prompt below returns to the parameter menu with the
   // parameter left as it was, rather than ending the whole command.
   try {
+    if (prop != null && (prop.isNullable || isSupplied(paramToEdit))) {
+      const action = await promptSelect({
+        message: withBackHint(`${paramToEdit}:`),
+        choices: [
+          { label: 'Enter a value', value: 'value' },
+          ...(prop.isNullable
+            ? [{ label: 'Set to null', value: 'null' as const }]
+            : []),
+          ...(isSupplied(paramToEdit)
+            ? [{ label: 'Unset', value: 'unset' as const }]
+            : []),
+        ],
+      })
+
+      if (action === 'null') {
+        args.params[paramToEdit] = null
+        return interactForBlueprintObject(args, ctx)
+      }
+      if (action === 'unset') {
+        delete args.params[paramToEdit]
+        return interactForBlueprintObject(args, ctx)
+      }
+    }
+
     if (paramToEdit === 'device_id') {
       args.params[paramToEdit] = await interactForDevice()
       return interactForBlueprintObject(args, ctx)

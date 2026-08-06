@@ -49,6 +49,12 @@ export const coerceArgParams = (
 }
 
 export const coerceParam = (parameter: Parameter, given: unknown): Coerced => {
+  // `null` is an explicit JSON value for nullable parameters, not the string
+  // "null" (or a one-item list containing it).
+  if (parameter.isNullable && (given === null || given === 'null')) {
+    return { value: null }
+  }
+
   if (parameter.format === 'list') return coerceList(parameter, given)
 
   // A repeated argument parses as an array, which only a list accepts.

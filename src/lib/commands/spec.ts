@@ -201,19 +201,21 @@ const toCommandFlag = (parameter: Parameter): CommandFlag => ({
 })
 
 const toFlagValues = (parameter: Parameter): string[] => {
+  let values: string[] = []
+
   if (parameter.format === 'enum') {
-    return parameter.values.map(({ name }) => name).filter(isSafeToken)
+    values = parameter.values.map(({ name }) => name).filter(isSafeToken)
+  } else if (parameter.format === 'list' && parameter.itemFormat === 'enum') {
+    values = parameter.itemEnumValues
+      .map(({ name }) => name)
+      .filter(isSafeToken)
+  } else if (parameter.format === 'boolean') {
+    // Nothing marks parameters as boolean-only flags, so minimist reads the
+    // next argument as the value.
+    values = ['true', 'false']
   }
 
-  if (parameter.format === 'list' && parameter.itemFormat === 'enum') {
-    return parameter.itemEnumValues.map(({ name }) => name).filter(isSafeToken)
-  }
-
-  // Nothing marks parameters as boolean-only flags, so minimist reads the next
-  // argument as the value.
-  if (parameter.format === 'boolean') return ['true', 'false']
-
-  return []
+  return parameter.isNullable ? [...values, 'null'] : values
 }
 
 /**
