@@ -17,6 +17,7 @@ export const interactForCommandParams = async (
       command: args.command,
       params: args.params,
       parameters: endpoint.request.parameters,
+      hasRequiredParameters: endpoint.request.hasRequiredParameters,
     },
     ctx,
   )
