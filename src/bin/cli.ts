@@ -1,65 +1,43 @@
 #!/usr/bin/env node
-import { randomBytes } from 'node:crypto'
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import chalk from 'chalk'
 import type { ParsedArgs } from 'minimist'
 
-import { findLocalCommand, getCommandSpec } from 'lib/command-spec.js'
-import {
-  completionShells,
-  isCompletionShell,
-  renderCompletion,
-} from 'lib/completion/index.js'
-import { getConfigStore } from 'lib/config/index.js'
-import {
-  assertEnvVarUnset,
-  endpointEnvVar,
-  EnvVarOverrideError,
-  getEndpointFromEnv,
-  getTokenFromEnv,
-  getWorkspaceIdFromEnv,
-  tokenEnvVar,
-  workspaceIdEnvVar,
-} from 'lib/env.js'
-import { getApiBlueprint } from 'lib/get-api-blueprint.js'
-import { getCommandBlueprintDef } from 'lib/get-command-blueprint-def.js'
-import { getToken } from 'lib/get-credentials.js'
-import { getResponseKey } from 'lib/get-response-key.js'
-import { getServer } from 'lib/get-server.js'
-import { interactForActionAttemptPoll } from 'lib/interact-for-action-attempt-poll.js'
-import { interactForCommandParams } from 'lib/interact-for-command-params.js'
-import { interactForCommandSelection } from 'lib/interact-for-command-selection.js'
-import { interactForLogin } from 'lib/interact-for-login.js'
-import { interactForServerSelection } from 'lib/interact-for-server-selection.js'
-import { interactForUseRemoteApiDefs } from 'lib/interact-for-use-remote-api-defs.js'
-import { interactForWorkspaceId } from 'lib/interact-for-workspace-id.js'
-import { createOutput } from 'lib/output/create-output.js'
-import { getOutput, setOutput } from 'lib/output/get-output.js'
-import { resolveOutputFormat } from 'lib/output/resolve-output-format.js'
-import { renderHelp } from 'lib/render-help.js'
-import type { ContextHelpers } from 'lib/types.js'
 import {
   cliFlags,
   getInteractivity,
-  type Interactivity,
-  NonInteractiveError,
   parseCliArgs,
-  toGivenArgName,
   toParameterName,
-  UsageError,
-} from 'lib/util/cli-args.js'
+} from 'lib/args/parse.js'
+import { assertKnownArgs } from 'lib/args/validate.js'
+import { getApiBlueprint } from 'lib/blueprint/index.js'
+import { printCompletion } from 'lib/commands/local/completion.js'
+import { runWizard } from 'lib/commands/local/wizard.js'
 import {
-  canPrompt,
-  PromptCancelledError,
-  promptConfirm,
-} from 'lib/util/prompt.js'
-import { readStdinJson } from 'lib/util/read-stdin-json.js'
-import { RequestSeamApi } from 'lib/util/request-seam-api.js'
-import { validateToken } from 'lib/validate-token.js'
+  acceptedParamsOf,
+  buildRegistry,
+  findLocalCommand,
+} from 'lib/commands/registry.js'
+import { getConfigStore } from 'lib/config/index.js'
+import { type CliContext, resolveAuth } from 'lib/context.js'
+import { tokenEnvVar } from 'lib/env.js'
+import { reportErrorAndExit } from 'lib/errors.js'
+import { createSeamApi, type SeamApi } from 'lib/http/api.js'
+import { interactForCommandSelection } from 'lib/interactions/index.js'
+import { getOutput, setOutput } from 'lib/output/get-output.js'
+import { createOutput } from 'lib/output/output.js'
+import { readStdinJson } from 'lib/output/read-stdin-json.js'
+import { resolveOutputFormat } from 'lib/output/resolve-output-format.js'
+import { canPrompt } from 'lib/prompt.js'
+import {
+  completionShells,
+  isCompletionShell,
+} from 'lib/render/completion/index.js'
+import { renderHelp } from 'lib/render/help.js'
 import seamapiCliVersion from 'lib/version.js'
 
-async function cli(args: ParsedArgs) {
+async function cli(args: ParsedArgs, argv: string[]) {
   const config = getConfigStore()
   const output = getOutput()
 
@@ -69,7 +47,8 @@ async function cli(args: ParsedArgs) {
   if (helpFlag != null) {
     // Help comes from the cached API definitions so that it works without
     // logging in, and offline once the cache is warm.
-    const spec = getCommandSpec(await getApiBlueprint(false, { update }))
+    const cachedBlueprint = await getApiBlueprint({ update })
+    const { spec } = buildRegistry(cachedBlueprint)
 
     // minimist reads the word after --help as its value, so 'seam --help
     // devices' asks about devices just as 'seam devices --help' does.
@@ -128,41 +107,28 @@ async function cli(args: ParsedArgs) {
       return
     }
 
-    assertKnownArgs(argParams, ['completion', shell])
+    const command = findLocalCommand(['completion', shell])
+    assertKnownArgs(argParams, ['completion', shell], {
+      accepted:
+        command == null ? new Set() : acceptedParamsOf(command.definition),
+      isLocal: true,
+    })
 
-    // Completions always come from the cached API definitions so that they
-    // can be generated without logging in. They may lag the definitions
-    // served by Seam when config use-remote-api-defs is enabled.
-    output.text(
-      renderCompletion(shell, await getApiBlueprint(false, { update })),
-    )
+    await printCompletion(shell, { update })
     return
   }
 
-  if (
-    args._[0] === 'config' &&
-    args._[1] === 'set' &&
-    args._[2] === 'fake-server'
-  ) {
-    assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
-    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
+  const localCommand = findLocalCommand(args._)
 
-    const randomstring = randomBytes(5).toString('hex')
-    const fakeApiUrl = `https://${randomstring}.fakeseamconnect.seam.vc`
+  // Commands declared not to need a token bypass the login gate. A partial
+  // path keeps the historical rule: only login and select server may be
+  // reached logged out.
+  const requiresAuth =
+    localCommand != null
+      ? localCommand.requiresAuth
+      : !(args._[0] === 'login' || isEqual(args._, ['select', 'server']))
 
-    config.set('server', fakeApiUrl)
-    output.info(`Server URL set to ${fakeApiUrl}`)
-
-    config.set(`${getServer()}.pat`, `seam_apikey1_token`)
-    output.info(`PAT set to use fakeseamconnect with "seam_apikey1_token"`)
-    return
-  }
-
-  if (
-    getToken() == null &&
-    args._[0] !== 'login' &&
-    !isEqual(args._, ['select', 'server'])
-  ) {
+  if (requiresAuth && resolveAuth(config).token == null) {
     output.error(`Not logged in. Please run "seam login" or set ${tokenEnvVar}`)
     process.exitCode = 1
     return
@@ -171,265 +137,78 @@ async function cli(args: ParsedArgs) {
   const useRemoteApiDefs =
     args['remote_api_defs'] ?? config.get('use_remote_api_defs')
 
-  const blueprint = await getApiBlueprint(useRemoteApiDefs ?? false, {
+  const blueprint = await getApiBlueprint({
+    useRemoteDefinitions: useRemoteApiDefs ?? false,
     update,
   })
 
-  // Params piped or redirected in, e.g., `seam devices list < params.json`.
-  // Params given as arguments take precedence over these.
-  const commandParams: Record<string, any> = { ...(await readStdinJson()) }
+  const registry = buildRegistry(blueprint)
 
-  const ctx: ContextHelpers = {
+  // Params piped or redirected in, e.g., `seam devices list < params.json`.
+  const pipedParams = await readStdinJson()
+  const stdinParams: Record<string, any> = { ...pipedParams }
+
+  const auth = resolveAuth(config)
+  let seamApi: Promise<SeamApi> | null = null
+
+  const ctx: CliContext = {
+    config,
+    auth,
+    output,
     blueprint,
     interactivity: getInteractivity(args, { canPrompt: canPrompt() }),
+    api: async () => await (seamApi ??= createSeamApi(auth)),
   }
 
-  const isNonInteractive = ctx.interactivity === 'non-interactive'
+  const selectableCommands = registry.spec.commands.map(({ path }) => path)
 
-  Object.assign(commandParams, argParams)
-
-  const selectedCommand = await interactForCommandSelection(args._, ctx)
-
-  // Hit 'back' on a top-level command path, so we start again
-  if (selectedCommand.slice(-1)[0] === '[Back]') {
-    return await cli({
-      ...args,
-      _: [],
+  let commandPath = args._
+  while (true) {
+    const selectedCommand = await interactForCommandSelection(commandPath, {
+      commands: selectableCommands,
+      interactivity: ctx.interactivity,
     })
-  }
 
-  // Check the arguments before the command acts on any of them, so a mistake
-  // is reported rather than half applied.
-  assertKnownArgs(argParams, selectedCommand, ctx)
+    // Hit 'back' on a top-level command path, so we start again
+    if (selectedCommand.at(-1) === '[Back]') {
+      commandPath = []
+      continue
+    }
 
-  if (isEqual(selectedCommand, ['login'])) {
-    // Nothing is stored while the environment overrides it, so refuse before
-    // storing anything rather than part way through.
-    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log in')
-    if (args['server']) {
-      assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
-    }
-    if (args['workspace_id']) {
-      assertEnvVarUnset(
-        workspaceIdEnvVar,
-        getWorkspaceIdFromEnv(),
-        'select a workspace',
+    const command = registry.find(selectedCommand)
+    if (command == null) {
+      throw new Error(
+        `No definition for command seam ${selectedCommand.join(' ')}`,
       )
     }
-    if (args['server']) {
-      config.set('server', args['server'])
-      config.delete('current_workspace_id')
-    }
-    if (args['token']) {
-      const token = String(args['token']).trim()
-      await validateToken(token, args['workspace_id'])
-      config.set(`${getServer()}.pat`, token)
-      config.delete('current_workspace_id')
-    }
-    if (args['workspace_id']) {
-      config.set(`current_workspace_id`, args['workspace_id'])
-    }
-    if (args['token'] || args['workspace_id'] || args['server']) {
-      return
-    }
-    if (isNonInteractive) {
-      throw new NonInteractiveError(
-        'Missing required parameter for login: --token',
-      )
-    }
-    await interactForLogin()
-    return
-  } else if (isEqual(selectedCommand, ['logout'])) {
-    assertEnvVarUnset(tokenEnvVar, getTokenFromEnv(), 'log out')
-    config.delete(`${getServer()}.pat`)
-    config.delete('current_workspace_id')
-    output.info('Logged out!')
-    return
-  } else if (isEqual(selectedCommand, ['config', 'reveal-location'])) {
-    output.text(config.path)
-    return
-  } else if (isEqual(selectedCommand, ['config', 'use-remote-api-defs'])) {
-    if (isNonInteractive) {
-      throw new NonInteractiveError(
-        'Cannot select whether to use remote API definitions in non-interactive mode',
-      )
-    }
-    await interactForUseRemoteApiDefs()
-    return
-  } else if (isEqual(selectedCommand, ['select', 'workspace'])) {
-    assertEnvVarUnset(
-      workspaceIdEnvVar,
-      getWorkspaceIdFromEnv(),
-      'select a workspace',
+
+    // Check the arguments before the command acts on any of them, so a
+    // mistake is reported rather than half applied.
+    assertKnownArgs(argParams, selectedCommand, {
+      accepted: acceptedParamsOf(command.definition),
+      isLocal: findLocalCommand(selectedCommand) != null,
+    })
+
+    const result = await command.execute(
+      { path: selectedCommand, argParams, stdinParams, args, argv },
+      ctx,
     )
-    if (isNonInteractive) {
-      throw new NonInteractiveError(
-        'Cannot select a workspace in non-interactive mode: pass --workspace-id to "seam login"',
-      )
+
+    if (result.kind === 'back') {
+      commandPath = result.toPath
+      continue
     }
-    await interactForWorkspaceId()
-    return
-  } else if (isEqual(selectedCommand, ['events', 'list'])) {
-    if (!commandParams['since']) {
-      const date = new Date()
-      date.setMonth(date.getMonth() - 1)
-      commandParams['since'] = date.toISOString()
-    }
-  } else if (isEqual(selectedCommand, ['select', 'server'])) {
-    assertEnvVarUnset(endpointEnvVar, getEndpointFromEnv(), 'select a server')
-    if (args['server']) {
-      config.set('server', args['server'])
-      config.delete('current_workspace_id')
-      return
-    }
-    if (isNonInteractive) {
-      throw new NonInteractiveError(
-        'Missing required parameter for select server: --server',
-      )
-    }
-    await interactForServerSelection()
-    return
-  } else if (isEqual(selectedCommand, ['health', 'get-health'])) {
-    await RequestSeamApi({
-      path: '/health/get_health',
-      params: {},
-    })
 
     return
-  }
-  // TODO - do this using the OpenAPI spec for the command rather than
-  // explicitly encoding the property names
-  if (commandParams['accepted_providers']) {
-    commandParams['accepted_providers'] =
-      commandParams['accepted_providers'].split(',')
-  }
-
-  const apiPath = `/${selectedCommand.join('/').replace(/-/g, '_')}`
-
-  const params = await interactForCommandParams(
-    { command: selectedCommand, params: commandParams },
-    ctx,
-  )
-
-  if (params === '[Back]') {
-    const previousCommands = [...selectedCommand]
-    previousCommands.pop()
-    return await cli({
-      ...args,
-      _: previousCommands,
-    })
-  }
-
-  if (apiPath.includes('/events/list') && params.between) {
-    delete params.since
-  }
-
-  const response = await RequestSeamApi({
-    path: apiPath,
-    params,
-    responseKey: getResponseKey(selectedCommand, ctx),
-  })
-
-  if (response.data?.connect_webview) {
-    await handleConnectWebviewResponse(
-      response.data.connect_webview,
-      ctx.interactivity,
-    )
-  }
-
-  if (response.data?.action_attempt && !isNonInteractive) {
-    await interactForActionAttemptPoll(response.data.action_attempt)
   }
 }
 
 const toCommandWord = (arg: string): string =>
   arg.toLowerCase().replace(/_/g, '-')
 
-/**
- * Report any argument the command does not accept, rather than acting on it.
- * An unrecognized argument is a mistake: forwarded to the API it would fail
- * somewhere less obvious or be quietly ignored, and on a command the CLI
- * handles itself it would go nowhere at all.
- *
- * Only arguments are checked. Params read from stdin are passed through as
- * given, so a caller may send whatever the API itself accepts.
- *
- * `ctx` is only needed to look up an endpoint's parameters, so commands the
- * CLI declares itself can be checked before any blueprint is loaded.
- */
-const assertKnownArgs = (
-  argParams: Record<string, any>,
-  command: string[],
-  ctx?: ContextHelpers,
-): void => {
-  const local = findLocalCommand(command)
-
-  let accepted: Set<string>
-  if (local != null) {
-    accepted = new Set(
-      local.flags.flatMap(({ long }) =>
-        long == null ? [] : [toParameterName(long)],
-      ),
-    )
-  } else if (ctx != null) {
-    accepted = new Set(
-      getCommandBlueprintDef(command, ctx).request.parameters.map(
-        ({ name }) => name,
-      ),
-    )
-  } else {
-    throw new Error(`No definition for command seam ${command.join(' ')}`)
-  }
-
-  const unknown = Object.keys(argParams).filter((key) => !accepted.has(key))
-  if (unknown.length === 0) return
-
-  // Name an endpoint command by its path, as missing params are named, and a
-  // command the CLI handles itself by the words that run it.
-  const target =
-    local == null
-      ? `/${command.join('/').replace(/-/g, '_')}`
-      : command.join(' ')
-
-  throw new UsageError(
-    `Unknown ${
-      unknown.length === 1 ? 'parameter' : 'parameters'
-    } for ${target}: ${unknown.map(toGivenArgName).join(' ')}`,
-    {
-      hint: `Run 'seam ${command.join(' ')} --help' to see what it accepts.`,
-    },
-  )
-}
-
-const handleConnectWebviewResponse = async (
-  connectWebview: any,
-  interactivity: Interactivity,
-) => {
-  const url = connectWebview.url
-
-  if (
-    interactivity !== 'non-interactive' &&
-    process.env['INSIDE_WEB_BROWSER'] !== '1'
-  ) {
-    const action = await promptConfirm({
-      message: 'Would you like to open the webview in your browser?',
-      initialValue: false,
-    })
-
-    if (action) {
-      const { default: open } = await import('open')
-      await open(url)
-    }
-  }
-}
-
 const run = async (argv: string[]) => {
   if (argv[0] === 'wizard') {
-    const { default: wizard } = await import('@seamapi/wizard')
-    await wizard({
-      argv: argv.slice(1),
-      commandName: 'seam wizard',
-    })
+    await runWizard(argv.slice(1))
     return
   }
 
@@ -444,30 +223,9 @@ const run = async (argv: string[]) => {
     }),
   )
 
-  await cli(args)
+  await cli(args, argv)
 }
 
 run(process.argv.slice(2)).catch((e: unknown) => {
-  const output = getOutput()
-  process.exitCode = 1
-
-  if (e instanceof UsageError) {
-    output.error(chalk.red(e.message))
-    if (e.hint !== '') output.error(e.hint)
-    return
-  }
-
-  if (e instanceof NonInteractiveError || e instanceof EnvVarOverrideError) {
-    output.error(chalk.red(e.message))
-    return
-  }
-
-  if (e instanceof PromptCancelledError) {
-    output.error(chalk.gray(e.message))
-    return
-  }
-
-  const error = e instanceof Error ? e : new Error(String(e))
-  output.error(chalk.red(`CLI Error: ${error.message}`))
-  if (error.stack != null) output.error(chalk.gray(error.stack))
+  reportErrorAndExit(e, getOutput())
 })

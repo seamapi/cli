@@ -1,4 +1,4 @@
-import { createOutput, type Output } from './create-output.js'
+import { createOutput, type Output } from './output.js'
 
 let output: Output | null = null
 

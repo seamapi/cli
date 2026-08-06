@@ -1,4 +1,4 @@
-import type { OutputFormat } from './create-output.js'
+import type { OutputFormat } from './output.js'
 
 export interface ResolveOutputFormatOptions {
   /** Whether stdout is a terminal. */
