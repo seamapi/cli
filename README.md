@@ -221,6 +221,32 @@ $ SEAM_CLI_TOKEN=$SEAM_API_KEY seam login
 Cannot log in while SEAM_CLI_TOKEN is set: it overrides what would be stored. Unset SEAM_CLI_TOKEN to log in.
 ```
 
+### Files
+
+Everything the CLI keeps is under one XDG-conforming root named `seam`, so
+that every Seam tool writes to the same place, one file per tool:
+
+- `~/.config/seam/cli.json`: settings, e.g., the selected server,
+- `~/.local/state/seam/cli.json`: auth state, e.g., the stored token
+  and the selected workspace,
+- `~/.cache/seam`: downloaded API definitions, safe to delete.
+
+The exact directories follow the platform, e.g., `~/Library/Preferences/seam`
+on macOS. Print the settings file with `seam config reveal-location`.
+
+Settings and auth state are kept apart so that the settings file may be
+shared or checked over without carrying credentials with it. Both are read
+and written through one interface, exported as `ConfigStore`, along with the
+paths above and the keys auth is stored under:
+
+```ts
+import { getStateFilePath, getTokenKey, defaultServer } from '@seamapi/cli'
+```
+
+The [Seam wizard](https://github.com/seamapi/wizard) uses that contract to
+keep its own `wizard.json` beside `cli.json` and to reuse a login the
+developer already has.
+
 ## Help
 
 Pass `--help` to any command to see what it accepts. Without a command, it

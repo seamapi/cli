@@ -1,6 +1,12 @@
 import { randomBytes } from 'node:crypto'
 
-import { type ConfigStore, getConfigStore } from 'lib/config/index.js'
+import {
+  type ConfigStore,
+  currentWorkspaceIdKey,
+  getConfigStore,
+  getTokenKey,
+  patKey,
+} from 'lib/config/index.js'
 import { type AuthContext, resolveAuth } from 'lib/context.js'
 import {
   assertEnvVarUnset,
@@ -77,18 +83,18 @@ export const login = async (
 
   if (server != null) {
     config.set('server', server)
-    config.delete('current_workspace_id')
+    config.delete(currentWorkspaceIdKey)
     auth = resolveAuth(config)
   }
 
   if (token != null) {
     await validate(token, workspaceId)
-    config.set(`${auth.server}.pat`, token)
-    config.delete('current_workspace_id')
+    config.set(getTokenKey(auth.server), token)
+    config.delete(currentWorkspaceIdKey)
   }
 
   if (workspaceId != null) {
-    config.set('current_workspace_id', workspaceId)
+    config.set(currentWorkspaceIdKey, workspaceId)
   }
 }
 
@@ -99,18 +105,18 @@ export const storeToken = (
 ): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log in')
-  config.set(`${auth.server}.pat`, token)
+  config.set(getTokenKey(auth.server), token)
 }
 
 /** Remove the stored token and workspace selection. */
 export const logout = (config: ConfigStore = getConfigStore()): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log out')
-  config.delete(`${auth.server}.pat`)
+  config.delete(getTokenKey(auth.server))
   // Configs written before tokens were stored per server may still hold an
   // un-namespaced token, so drop that too.
-  config.delete('pat')
-  config.delete('current_workspace_id')
+  config.delete(patKey)
+  config.delete(currentWorkspaceIdKey)
 }
 
 /**
@@ -124,7 +130,7 @@ export const selectServer = (
 ): void => {
   assertMutable(resolveAuth(config), 'server', 'select a server')
   config.set('server', server)
-  config.delete('current_workspace_id')
+  config.delete(currentWorkspaceIdKey)
 }
 
 /** Store the workspace requests are made against. */
@@ -133,7 +139,7 @@ export const selectWorkspace = (
   config: ConfigStore = getConfigStore(),
 ): void => {
   assertMutable(resolveAuth(config), 'workspaceId', 'select a workspace')
-  config.set('current_workspace_id', workspaceId)
+  config.set(currentWorkspaceIdKey, workspaceId)
 }
 
 /**
@@ -154,8 +160,8 @@ export const selectFakeServer = ({
   const server = `https://${urlSeed}.fakeseamconnect.seam.vc`
   const token = 'seam_apikey1_token'
   config.set('server', server)
-  config.set(`${server}.pat`, token)
-  config.delete('current_workspace_id')
+  config.set(getTokenKey(server), token)
+  config.delete(currentWorkspaceIdKey)
 
   return { server, token }
 }

@@ -1,6 +1,11 @@
 import type { Interactivity } from './args/parse.js'
 import type { ApiBlueprint } from './blueprint/index.js'
-import { type ConfigStore, getConfigStore } from './config/index.js'
+import {
+  type ConfigStore,
+  currentWorkspaceIdKey,
+  getConfigStore,
+  getTokenKey,
+} from './config/index.js'
 import {
   getEndpointFromEnv,
   getTokenFromEnv,
@@ -39,10 +44,12 @@ export const resolveAuth = (
     envServer ?? (typeof storedServer === 'string' ? storedServer : null)
 
   const envToken = getTokenFromEnv()
-  const storedToken = readString(config.get(`${server ?? defaultServer}.pat`))
+  const storedToken = readString(
+    config.get(getTokenKey(server ?? defaultServer)),
+  )
 
   const envWorkspaceId = getWorkspaceIdFromEnv()
-  const storedWorkspaceId = readString(config.get('current_workspace_id'))
+  const storedWorkspaceId = readString(config.get(currentWorkspaceIdKey))
 
   return {
     server: server ?? defaultServer,

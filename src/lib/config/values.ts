@@ -4,8 +4,20 @@
  * Pure transforms shared by the persistent store and the legacy migration.
  */
 
-const currentWorkspaceIdKey = 'current_workspace_id'
-const patKey = 'pat'
+/** The key the selected workspace is stored under. */
+export const currentWorkspaceIdKey = 'current_workspace_id'
+
+/** The key a token is stored under, within the server it belongs to. */
+export const patKey = 'pat'
+
+/**
+ * The key the token for a given server is stored under.
+ *
+ * Tokens are stored per server so that switching servers does not send one
+ * server's token to another. The server is the whole first segment, e.g.,
+ * `https://connect.getseam.com.pat`.
+ */
+export const getTokenKey = (server: string): string => `${server}.${patKey}`
 
 /** Whether a key holds auth state rather than a setting. */
 export const isStateKey = (key: string): boolean => {

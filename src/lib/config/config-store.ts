@@ -1,14 +1,11 @@
-import { join } from 'node:path'
-
 import Configstore from 'configstore'
-import envPaths from 'env-paths'
+
+import { getConfigFilePath, getStateFilePath } from 'lib/paths.js'
 
 import { migrateConfigStore } from './migrate.js'
 import { isStateKey, mergeConfig, splitConfig } from './values.js'
 
-const configFileName = 'cli.json'
 const legacyConfigStoreId = 'seam-cli'
-const paths = envPaths('seam', { suffix: '' })
 
 /**
  * What a config store can do, regardless of where it keeps the values.
@@ -47,10 +44,10 @@ export const resetConfigStore = (): void => {
 
 const createConfigStore = (): PersistentConfigStore => {
   const settingsStore = new Configstore(legacyConfigStoreId, undefined, {
-    configPath: getConfigPath(),
+    configPath: getConfigFilePath(),
   })
   const stateStore = new Configstore(legacyConfigStoreId, undefined, {
-    configPath: getStateConfigPath(),
+    configPath: getStateFilePath(),
   })
 
   migrateConfigStore(
@@ -118,14 +115,6 @@ export class PersistentConfigStore implements ConfigStore {
   private getStore(key: string): Configstore {
     return isStateKey(key) ? this.stateStore : this.settingsStore
   }
-}
-
-const getConfigPath = (): string => {
-  return join(paths.config, configFileName)
-}
-
-const getStateConfigPath = (): string => {
-  return join(paths.log, configFileName)
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
