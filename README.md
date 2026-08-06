@@ -15,24 +15,39 @@ prompted for, with suggestions pulled from your workspace. Pass
 
 ## Installation
 
+### npm
+
 Install the CLI globally using [npm] with
 
 ```
 $ npm install --global @seamapi/cli
 ```
 
-Alternatively, download a standalone binary for your platform from the
-[latest GitHub release]. The macOS binaries are signed with the Seam Labs, Inc.
-Apple Developer ID and notarized by Apple, so macOS runs them without
-a Gatekeeper prompt.
+### Homebrew
 
-On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
+Install the CLI from [Homebrew] with
+
+```
+$ brew install --cask seam
+```
+
+### Standalone binary
+
+Download a standalone binary for your platform from the [latest GitHub
+release]. The macOS binaries are signed with the Seam Labs, Inc. Apple
+Developer ID and notarized by Apple, so macOS runs them without a Gatekeeper
+prompt.
+
+### Arch Linux
+
+Install the [`seam-bin`][aur] package from the AUR with
 
 ```
 $ paru -S seam-bin
 ```
 
 [aur]: https://aur.archlinux.org/packages/seam-bin
+[Homebrew]: https://formulae.brew.sh/cask/seam
 [latest GitHub release]: https://github.com/seamapi/cli/releases/latest
 [npm]: https://www.npmjs.com/
 [Seam Wizard]: https://github.com/seamapi/wizard
