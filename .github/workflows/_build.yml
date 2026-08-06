@@ -105,7 +105,7 @@ jobs:
             release/*
 
   macos:
-    name: macOS binaries
+    name: macOS
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
@@ -282,11 +282,13 @@ jobs:
               codesign --display --verbose=2 --entitlements - "$signed"
             done
 
-            # How Gatekeeper sees the binary. Reported rather than enforced: the
-            # notary service already accepted it, and the ticket is fetched over
-            # the network, so a rejection here is not conclusive.
-            spctl --assess --type exec --verbose=4 "$binary" ||
-              echo "::warning title=Gatekeeper assessment failed::spctl rejected ${binary}."
+            # Whether the notary service published a ticket for this code.
+            # Reported rather than enforced: notarytool already accepted the
+            # submission, and the ticket is fetched over the network, so a
+            # failure here is not conclusive. Gatekeeper itself cannot be
+            # asked, since spctl only assesses an app bundle.
+            codesign --test-requirement="=notarized" --verify --verbose "$binary" ||
+              echo "::warning title=Gatekeeper assessment failed::codesign rejected ${binary}."
           else
             echo '::warning title=Unsigned macOS binaries::Built with sign: false. These binaries are not signed by Seam and must not be released.'
           fi
