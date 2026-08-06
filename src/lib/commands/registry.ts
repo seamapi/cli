@@ -5,7 +5,7 @@ import type { ApiBlueprint } from 'lib/blueprint/index.js'
 import type { CliContext } from 'lib/context.js'
 
 import { executeApiCommand } from './api-command.js'
-import { completionCommands } from './local/completion.js'
+import { createCompletionCommands } from './local/completion.js'
 import { configRevealLocationCommand } from './local/config-reveal-location.js'
 import { configSetFakeServerCommand } from './local/config-set-fake-server.js'
 import { configUseRemoteApiDefsCommand } from './local/config-use-remote-api-defs.js'
@@ -65,6 +65,10 @@ export interface CommandRegistry {
  * blueprint. The single source of truth: the spec, the picker, and the
  * dispatcher all consume this list.
  */
+const completionCommands = createCompletionCommands(
+  (blueprint) => buildRegistry(blueprint).spec,
+)
+
 export const localCommands: Command[] = [
   ...completionCommands,
   configRevealLocationCommand,
