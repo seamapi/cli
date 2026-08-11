@@ -1,0 +1,22 @@
+---
+name: Prune
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 15 * * 3'
+
+jobs:
+  tag:
+    name: Prune Branches
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 30
+    permissions:
+      pull-requests: read
+      contents: write
+    steps:
+      - name: Prune stale branches
+        uses: balvajs/delete-stale-branches@v2
+        with:
+          dry-run: false
+          days-to-delete: 7
