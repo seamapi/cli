@@ -4,7 +4,6 @@ import {
   login,
   logout,
   selectEndpoint,
-  selectFakeEndpoint,
   selectWorkspace,
   storeToken,
 } from 'lib/auth/operations.js'
@@ -213,25 +212,3 @@ test(`selectWorkspace: refuses while ${workspaceIdEnvVar} is set`, () => {
   }).toThrow(`Cannot select a workspace while ${workspaceIdEnvVar} is set`)
 })
 
-test('selectFakeEndpoint: stores the endpoint and its well-known token', () => {
-  const store = createMemoryConfigStore({ current_workspace_id: 'workspace1' })
-
-  const { endpoint: fakeEndpoint } = selectFakeEndpoint({
-    urlSeed: 'abc123',
-    config: store,
-  })
-
-  expect(fakeEndpoint).toBe('https://abc123.fakeseamconnect.seam.vc')
-  expect(store.get('endpoint')).toBe(fakeEndpoint)
-  expect(store.get(`${fakeEndpoint}.pat`)).toBe('seam_apikey1_token')
-  expect(store.has('current_workspace_id')).toBe(false)
-})
-
-test(`selectFakeEndpoint: refuses while ${endpointEnvVar} is set`, () => {
-  process.env[endpointEnvVar] = endpoint
-  const store = createMemoryConfigStore()
-
-  expect(() =>
-    selectFakeEndpoint({ urlSeed: 'abc123', config: store }),
-  ).toThrow(`Cannot select an endpoint while ${endpointEnvVar} is set`)
-})

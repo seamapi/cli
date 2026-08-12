@@ -1,5 +1,3 @@
-import { randomBytes } from 'node:crypto'
-
 import { type ConfigStore, getConfigStore } from 'lib/config/index.js'
 import { type AuthContext, resolveAuth } from 'lib/context.js'
 import {
@@ -132,29 +130,6 @@ export const selectWorkspace = (
 ): void => {
   assertMutable(resolveAuth(config), 'workspaceId', 'select a workspace')
   config.set('current_workspace_id', workspaceId)
-}
-
-/**
- * Point the CLI at a fake Seam Connect endpoint and store the well-known
- * token it accepts. Returns the generated endpoint URL for reporting.
- */
-export const selectFakeEndpoint = ({
-  urlSeed = randomBytes(5).toString('hex'),
-  config = getConfigStore(),
-}: {
-  urlSeed?: string
-  config?: ConfigStore
-} = {}): { endpoint: string; token: string } => {
-  const auth = resolveAuth(config)
-  assertMutable(auth, 'endpoint', 'select an endpoint')
-  assertMutable(auth, 'token', 'log in')
-
-  const endpoint = `https://${urlSeed}.fakeseamconnect.seam.vc`
-  const token = 'seam_apikey1_token'
-  storeEndpoint(endpoint, config)
-  config.set(`${endpoint}.pat`, token)
-
-  return { endpoint, token }
 }
 
 /** Store whether API definitions come from the endpoint instead of npm. */
