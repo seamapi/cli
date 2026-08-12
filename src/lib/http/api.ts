@@ -1,4 +1,4 @@
-import { type SeamHttp, SeamHttpRequest } from '@seamapi/http/connect'
+import { type SeamHttp, SeamHttpRequest } from '@seamapi/http'
 
 import type { AuthContext } from 'lib/context.js'
 

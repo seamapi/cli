@@ -9,7 +9,7 @@ import { resolveAuth } from 'lib/context.js'
 export const createRemoteBlueprint = async (): Promise<Blueprint> => {
   const [{ createBlueprint }, { getOpenapiSchema }] = await Promise.all([
     import('@seamapi/blueprint'),
-    import('@seamapi/http/connect'),
+    import('@seamapi/http'),
   ])
   const openapi = await getOpenapiSchema(resolveAuth().endpoint)
 
