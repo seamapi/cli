@@ -211,4 +211,3 @@ test(`selectWorkspace: refuses while ${workspaceIdEnvVar} is set`, () => {
     selectWorkspace('workspace1', store)
   }).toThrow(`Cannot select a workspace while ${workspaceIdEnvVar} is set`)
 })
-

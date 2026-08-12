@@ -8,10 +8,7 @@ export async function interactForEndpointSelection() {
   const config = getConfigStore()
   assertMutable(resolveAuth(config), 'endpoint', 'select an endpoint')
 
-  const endpoints = [
-    'http://localhost:3020',
-    'https://connect.getseam.com',
-  ]
+  const endpoints = ['http://localhost:3020', 'https://connect.getseam.com']
 
   // Searchable, as selecting a device or a command is.
   const endpoint = await promptAutocomplete({
