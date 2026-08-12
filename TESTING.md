@@ -74,7 +74,7 @@ request is the product. "The prompt offered these choices with these hints" is
 behavior: the choices are what the user sees
 (`blueprint-object.test.ts` asserting on the recorded `choices`
 is the good in-repo example). "`resolveAuth` called `getConfigStore`" is
-implementation: the contract is _what server comes back_, not how it was
+implementation: the contract is _what endpoint comes back_, not how it was
 looked up.
 
 Even at a real boundary, prefer **capture-then-assert** over

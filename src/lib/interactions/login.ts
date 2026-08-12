@@ -19,9 +19,9 @@ export const interactForLogin = async () => {
   // Refuse before prompting: nothing typed here could be stored.
   assertMutable(auth, 'token', 'log in')
 
-  if (auth.server.includes('localhost')) {
+  if (auth.endpoint.includes('localhost')) {
     output.info(
-      `You're using a local Seam Connect instance, you can enter the API Key to your local user, you can create a new user from:\n\n${auth.server}/admin/create_user_with_api_key`,
+      `You're using a local Seam Connect instance, you can enter the API Key to your local user, you can create a new user from:\n\n${auth.endpoint}/admin/create_user_with_api_key`,
     )
   } else {
     output.info(

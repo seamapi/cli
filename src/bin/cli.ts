@@ -122,12 +122,12 @@ async function cli(args: ParsedArgs, argv: string[]) {
   const localCommand = findLocalCommand(args._)
 
   // Commands declared not to need a token bypass the login gate. A partial
-  // path keeps the historical rule: only login and select server may be
+  // path keeps the historical rule: only login and select endpoint may be
   // reached logged out.
   const requiresAuth =
     localCommand != null
       ? localCommand.requiresAuth
-      : !(args._[0] === 'login' || isEqual(args._, ['select', 'server']))
+      : !(args._[0] === 'login' || isEqual(args._, ['select', 'endpoint']))
 
   if (requiresAuth && resolveAuth(config).token == null) {
     output.error(`Not logged in. Please run "seam login" or set ${tokenEnvVar}`)

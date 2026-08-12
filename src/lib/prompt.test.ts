@@ -28,13 +28,13 @@ test('searchChoices: matches every term against the label and hint', () => {
 })
 
 test('searchChoices: matches any part of a name, not only its start', () => {
-  const servers = [
+  const endpoints = [
     { label: 'http://localhost:3020' },
     { label: 'https://connect.getseam.com' },
     { label: 'https://fakeseamconnect.seam.vc' },
   ]
 
-  expect(search('fake', servers)).toEqual([servers[2]])
+  expect(search('fake', endpoints)).toEqual([endpoints[2]])
 })
 
 test('searchChoices: offers every choice until something is typed', () => {

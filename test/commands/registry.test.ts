@@ -30,13 +30,7 @@ test('registry: every visible local command is in the spec', () => {
   }
 })
 
-test('registry: hidden commands are findable without being offered', () => {
-  const fakeServer = registry.find(['config', 'set', 'fake-server'])
-  expect(fakeServer?.hidden).toBe(true)
-  expect(fakeServer?.requiresAuth).toBe(false)
-})
-
-test('registry: only commands for logging in and selecting a server skip auth', () => {
+test('registry: only commands for logging in and selecting an endpoint skip auth', () => {
   const noAuth = localCommands
     .filter(({ requiresAuth }) => !requiresAuth)
     .map(({ definition }) => definition.path.join(' '))
@@ -45,9 +39,8 @@ test('registry: only commands for logging in and selecting a server skip auth', 
     'completion bash',
     'completion fish',
     'completion zsh',
-    'config set fake-server',
     'login',
-    'select server',
+    'select endpoint',
     'wizard',
   ])
 })
@@ -68,6 +61,6 @@ test('acceptedParamsOf: names the parameters behind the flags', () => {
   expect(login).toBeDefined()
   if (login == null) return
   expect(acceptedParamsOf(login.definition)).toEqual(
-    new Set(['server', 'token', 'workspace_id']),
+    new Set(['endpoint', 'token', 'workspace_id']),
   )
 })
