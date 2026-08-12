@@ -97,7 +97,7 @@ beforeAll(async () => {
   )
 
   // A pre-seeded blueprint cache holding the fixture blueprint, so tests
-  // that pin parameter handling run against known API definitions and
+  // that pin parameter handling run against a known API schema and
   // never touch the npm registry.
   const packageJson = await readFile(join(projectRoot, 'package.json'), 'utf8')
   const pkg = JSON.parse(packageJson) as {

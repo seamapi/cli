@@ -10,9 +10,9 @@ import {
 /**
  * Print the completion script for a shell.
  *
- * Completions always come from the cached API definitions so that they can
- * be generated without logging in. They may lag the definitions served by
- * Seam when config use-remote-api-defs is enabled.
+ * Completions always come from the cached API schema so that they can
+ * be generated without logging in. They may lag the schema served by
+ * Seam when config use-remote-schema is enabled.
  *
  * Called by the entry before any auth or blueprint context exists, and by
  * the registered command's executor — one implementation for both.

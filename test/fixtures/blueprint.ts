@@ -2,7 +2,7 @@ import type { Blueprint } from '@seamapi/blueprint'
 
 /**
  * A blueprint with just enough shape to derive a command spec from, standing
- * in for the API definitions bundled with the CLI.
+ * in for the API schema bundled with the CLI.
  */
 export const testBlueprint = {
   routes: [

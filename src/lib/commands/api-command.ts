@@ -94,7 +94,7 @@ export const executeApiCommand = async (
 
 /**
  * Per-endpoint request policy that is not derivable from the API
- * definitions. Keep this table small and explicit.
+ * schema. Keep this table small and explicit.
  */
 const applyEndpointDefaults = (
   path: string[],

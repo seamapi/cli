@@ -58,7 +58,7 @@ export const getBlueprint = async (
     // over failing, unless an update was explicitly requested.
     if (cache != null && !update) return cache.blueprint
     throw new Error(
-      `Could not check for Seam API definition updates: ${toErrorMessage(error)}`,
+      `Could not check for Seam API schema updates: ${toErrorMessage(error)}`,
     )
   }
 
@@ -73,13 +73,13 @@ export const getBlueprint = async (
   let blueprint: Blueprint
   try {
     blueprint = await withLoading(
-      `Downloading Seam API definitions (${typesPackageName}@${manifest.version})`,
+      `Downloading Seam API schema (${typesPackageName}@${manifest.version})`,
       async () => await generateBlueprint(manifest, cacheDirectory),
     )
   } catch (error) {
     if (cache != null && !update) return cache.blueprint
     throw new Error(
-      `Could not update Seam API definitions: ${toErrorMessage(error)}`,
+      `Could not update Seam API schema: ${toErrorMessage(error)}`,
     )
   }
 

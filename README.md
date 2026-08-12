@@ -306,14 +306,14 @@ System packages install completion loaders instead: small scripts packaged
 under `completions/` in the published package, and released as
 `seam-completions-v<version>.tar.gz` on each [GitHub release]. A loader runs
 `seam completion` the first time the shell completes a seam command, so
-installed completions always match the CLI's current Seam API definitions and
+installed completions always match the CLI's current Seam API schema and
 never go stale between package updates. The `seam-bin` AUR package installs
 the loaders for all three shells.
 
-Completions are generated from the cached Seam API definitions, so they may
+Completions are generated from the cached Seam API schema, so they may
 briefly lag a newly released API. Pass `--update` to refresh the cache first,
-e.g., `seam completion bash --update`. They do not reflect definitions served
-by another Seam API endpoint when `seam config use-remote-api-defs` is enabled.
+e.g., `seam completion bash --update`. They do not reflect the schema served
+by another Seam API endpoint when `seam config use-remote-schema` is enabled.
 
 If completions do not appear after installing them system wide:
 

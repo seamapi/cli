@@ -63,7 +63,7 @@ async function cli(args: ParsedArgs, argv: string[]) {
 
   const helpFlag = args['help'] ?? args['h']
   if (helpFlag != null) {
-    // Help comes from the cached API definitions so that it works without
+    // Help comes from the cached API schema so that it works without
     // logging in, and offline once the cache is warm.
     const cachedBlueprint = await getApiBlueprint({ update })
     const { spec } = buildRegistry(cachedBlueprint)
@@ -157,11 +157,10 @@ async function cli(args: ParsedArgs, argv: string[]) {
     return
   }
 
-  const useRemoteApiDefs =
-    args['remote_api_defs'] ?? config.getUseRemoteApiDefs()
+  const useRemoteSchema = args['remote_schema'] ?? config.getUseRemoteSchema()
 
   const blueprint = await getApiBlueprint({
-    useRemoteDefinitions: useRemoteApiDefs ?? false,
+    useRemoteSchema: useRemoteSchema ?? false,
     update,
   })
 

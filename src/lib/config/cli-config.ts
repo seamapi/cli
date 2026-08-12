@@ -17,8 +17,8 @@ export interface CliConfig {
   getWorkspace: () => string | null
   setWorkspace: (workspaceId: string) => void
   unsetWorkspace: () => void
-  getUseRemoteApiDefs: () => boolean | null
-  setUseRemoteApiDefs: (useRemoteApiDefs: boolean) => void
+  getUseRemoteSchema: () => boolean | null
+  setUseRemoteSchema: (useRemoteSchema: boolean) => void
 }
 
 export const createCliConfig = (store: ConfigStore): CliConfig => ({
@@ -64,13 +64,17 @@ export const createCliConfig = (store: ConfigStore): CliConfig => ({
     store.delete('current_workspace_id')
   },
 
-  getUseRemoteApiDefs: () => {
-    const useRemoteApiDefs = store.get('use_remote_api_defs')
-    return typeof useRemoteApiDefs === 'boolean' ? useRemoteApiDefs : null
+  getUseRemoteSchema: () => {
+    // `use_remote_api_defs` is what an older CLI called the same setting.
+    const useRemoteSchema =
+      store.get('use_remote_schema') ?? store.get('use_remote_api_defs')
+    return typeof useRemoteSchema === 'boolean' ? useRemoteSchema : null
   },
 
-  setUseRemoteApiDefs: (useRemoteApiDefs) => {
-    store.set('use_remote_api_defs', useRemoteApiDefs)
+  /** Store the setting, dropping any value left under the legacy key. */
+  setUseRemoteSchema: (useRemoteSchema) => {
+    store.set('use_remote_schema', useRemoteSchema)
+    store.delete('use_remote_api_defs')
   },
 })
 
