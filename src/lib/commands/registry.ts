@@ -7,7 +7,6 @@ import type { CliContext } from 'lib/context.js'
 import { executeApiCommand } from './api-command.js'
 import { createCompletionCommands } from './local/completion.js'
 import { configRevealLocationCommand } from './local/config-reveal-location.js'
-import { configSetFakeEndpointCommand } from './local/config-set-fake-endpoint.js'
 import { configUseRemoteApiDefsCommand } from './local/config-use-remote-api-defs.js'
 import { healthCommand } from './local/health.js'
 import { loginCommand } from './local/login.js'
@@ -72,7 +71,6 @@ const completionCommands = createCompletionCommands(
 export const localCommands: Command[] = [
   ...completionCommands,
   configRevealLocationCommand,
-  configSetFakeEndpointCommand,
   configUseRemoteApiDefsCommand,
   healthCommand,
   loginCommand,

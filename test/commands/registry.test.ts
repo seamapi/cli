@@ -30,12 +30,6 @@ test('registry: every visible local command is in the spec', () => {
   }
 })
 
-test('registry: hidden commands are findable without being offered', () => {
-  const fakeEndpoint = registry.find(['config', 'set', 'fake-endpoint'])
-  expect(fakeEndpoint?.hidden).toBe(true)
-  expect(fakeEndpoint?.requiresAuth).toBe(false)
-})
-
 test('registry: only commands for logging in and selecting an endpoint skip auth', () => {
   const noAuth = localCommands
     .filter(({ requiresAuth }) => !requiresAuth)
@@ -45,7 +39,6 @@ test('registry: only commands for logging in and selecting an endpoint skip auth
     'completion bash',
     'completion fish',
     'completion zsh',
-    'config set fake-endpoint',
     'login',
     'select endpoint',
     'wizard',
