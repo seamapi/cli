@@ -3,14 +3,14 @@ import { join } from 'node:path'
 import Configstore from 'configstore'
 import envPaths from 'env-paths'
 
+import { type CliConfig, createCliConfig } from './cli-config.js'
 import { migrateConfigStore } from './migrate.js'
-import { createSeamConfig, type SeamConfig } from './seam-config.js'
 import { isStateKey, mergeConfig, splitConfig } from './values.js'
 
 const configFileName = 'cli.json'
 const legacyConfigStoreId = 'seam-cli'
 
-/** Every directory Seam keeps files in, for the CLI and for what it mounts. */
+/** Every directory the CLI keeps files in, and what it mounts keeps its own. */
 export const rootPaths = envPaths('seam', { suffix: '' })
 
 /**
@@ -31,15 +31,15 @@ export interface ConfigStore {
   clear: () => void
 }
 
-let config: SeamConfig | null = null
+let config: CliConfig | null = null
 
-export const getConfig = (): SeamConfig => {
-  config ??= createSeamConfig(createConfigStore())
+export const getConfig = (): CliConfig => {
+  config ??= createCliConfig(createConfigStore())
   return config
 }
 
 /** Replace the config, e.g., with an in-memory one for a test. */
-export const setConfig = (nextConfig: SeamConfig): void => {
+export const setConfig = (nextConfig: CliConfig): void => {
   config = nextConfig
 }
 

@@ -1,3 +1,4 @@
+export { type CliConfig, createCliConfig } from './cli-config.js'
 export {
   type ConfigStore,
   getConfig,
@@ -10,4 +11,3 @@ export {
   createMemoryConfig,
   createMemoryConfigStore,
 } from './memory-config-store.js'
-export { createSeamConfig, type SeamConfig } from './seam-config.js'

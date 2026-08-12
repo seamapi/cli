@@ -1,4 +1,4 @@
-import { getConfig, type SeamConfig } from 'lib/config/index.js'
+import { type CliConfig, getConfig } from 'lib/config/index.js'
 import { type AuthContext, resolveAuth } from 'lib/context.js'
 import {
   assertEnvVarUnset,
@@ -60,7 +60,7 @@ export interface LoginOptions {
  */
 export const login = async (
   { endpoint, token, workspaceId }: LoginOptions,
-  config: SeamConfig = getConfig(),
+  config: CliConfig = getConfig(),
   validate: typeof validateToken = validateToken,
 ): Promise<void> => {
   let auth = resolveAuth(config)
@@ -92,7 +92,7 @@ export const login = async (
 /** Store the token for the current endpoint, e.g., one just prompted for. */
 export const storeToken = (
   token: string,
-  config: SeamConfig = getConfig(),
+  config: CliConfig = getConfig(),
 ): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log in')
@@ -100,7 +100,7 @@ export const storeToken = (
 }
 
 /** Remove the stored token and workspace selection. */
-export const logout = (config: SeamConfig = getConfig()): void => {
+export const logout = (config: CliConfig = getConfig()): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log out')
   config.unsetToken(auth.endpoint)
@@ -114,7 +114,7 @@ export const logout = (config: SeamConfig = getConfig()): void => {
  */
 export const selectEndpoint = (
   endpoint: string,
-  config: SeamConfig = getConfig(),
+  config: CliConfig = getConfig(),
 ): void => {
   assertMutable(resolveAuth(config), 'endpoint', 'select an endpoint')
   config.setEndpoint(endpoint)
@@ -123,7 +123,7 @@ export const selectEndpoint = (
 /** Store the workspace requests are made against. */
 export const selectWorkspace = (
   workspaceId: string,
-  config: SeamConfig = getConfig(),
+  config: CliConfig = getConfig(),
 ): void => {
   assertMutable(resolveAuth(config), 'workspaceId', 'select a workspace')
   config.setWorkspace(workspaceId)
@@ -132,7 +132,7 @@ export const selectWorkspace = (
 /** Store whether API definitions come from the endpoint instead of npm. */
 export const setUseRemoteApiDefs = (
   useRemoteApiDefs: boolean,
-  config: SeamConfig = getConfig(),
+  config: CliConfig = getConfig(),
 ): void => {
   config.setUseRemoteApiDefs(useRemoteApiDefs)
 }

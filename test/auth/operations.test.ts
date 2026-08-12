@@ -7,11 +7,11 @@ import {
   selectWorkspace,
   storeToken,
 } from 'lib/auth/operations.js'
+import { createCliConfig } from 'lib/config/cli-config.js'
 import {
   createMemoryConfig,
   createMemoryConfigStore,
 } from 'lib/config/memory-config-store.js'
-import { createSeamConfig } from 'lib/config/seam-config.js'
 import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
 
 const endpoint = 'https://connect.example.com'
@@ -153,7 +153,7 @@ test('logout: removes the stored token, legacy token, and workspace', () => {
     pat: 'seam_apikey1_legacy',
     current_workspace_id: 'workspace1',
   })
-  const config = createSeamConfig(store)
+  const config = createCliConfig(store)
 
   logout(config)
 
@@ -187,7 +187,7 @@ test('selectEndpoint: stores the endpoint and clears the workspace', () => {
 
 test('selectEndpoint: drops an endpoint left under the legacy key', () => {
   const store = createMemoryConfigStore({ server: 'https://old.example.com' })
-  const config = createSeamConfig(store)
+  const config = createCliConfig(store)
 
   selectEndpoint(endpoint, config)
 

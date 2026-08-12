@@ -1,6 +1,6 @@
 import type { Interactivity } from './args/parse.js'
 import type { ApiBlueprint } from './blueprint/index.js'
-import { getConfig, type SeamConfig } from './config/index.js'
+import { type CliConfig, getConfig } from './config/index.js'
 import {
   getEndpointFromEnv,
   getTokenFromEnv,
@@ -30,7 +30,7 @@ export interface AuthContext {
   workspaceIdSource: Exclude<ValueSource, 'default'> | null
 }
 
-export const resolveAuth = (config: SeamConfig = getConfig()): AuthContext => {
+export const resolveAuth = (config: CliConfig = getConfig()): AuthContext => {
   const envEndpoint = getEndpointFromEnv()
   const storedEndpoint = config.getEndpoint()
   const endpoint = envEndpoint ?? storedEndpoint
@@ -63,7 +63,7 @@ export const resolveAuth = (config: SeamConfig = getConfig()): AuthContext => {
  * shape it acts on, and how it may interact with the user.
  */
 export interface CliContext {
-  config: SeamConfig
+  config: CliConfig
   auth: AuthContext
   output: Output
   blueprint: ApiBlueprint

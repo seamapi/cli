@@ -1,5 +1,5 @@
+import { type CliConfig, createCliConfig } from './cli-config.js'
 import type { ConfigStore } from './config-store.js'
-import { createSeamConfig, type SeamConfig } from './seam-config.js'
 
 /**
  * A real {@link ConfigStore} held in memory, for tests.
@@ -68,4 +68,4 @@ export const createMemoryConfigStore = (
  */
 export const createMemoryConfig = (
   initialValues: Record<string, unknown> = {},
-): SeamConfig => createSeamConfig(createMemoryConfigStore(initialValues))
+): CliConfig => createCliConfig(createMemoryConfigStore(initialValues))

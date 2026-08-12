@@ -4,19 +4,8 @@
  * Pure transforms shared by the persistent store and the legacy migration.
  */
 
-export const endpointKey = 'endpoint'
-
-/** What the endpoint was called before, still read by `getEndpoint`. */
-export const legacyEndpointKey = 'server'
-
-export const currentWorkspaceIdKey = 'current_workspace_id'
-
-export const patKey = 'pat'
-
-export const useRemoteApiDefsKey = 'use_remote_api_defs'
-
-/** Tokens are stored per endpoint, e.g. `https://connect.getseam.com.pat`. */
-export const getTokenKey = (endpoint: string): string => `${endpoint}.${patKey}`
+const currentWorkspaceIdKey = 'current_workspace_id'
+const patKey = 'pat'
 
 /** Whether a key holds auth state rather than a setting. */
 export const isStateKey = (key: string): boolean => {
