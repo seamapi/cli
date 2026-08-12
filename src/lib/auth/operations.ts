@@ -1,4 +1,4 @@
-import { type ConfigStore, getConfigStore } from 'lib/config/index.js'
+import { type CliConfig, getConfig } from 'lib/config/index.js'
 import { type AuthContext, resolveAuth } from 'lib/context.js'
 import {
   assertEnvVarUnset,
@@ -57,7 +57,7 @@ export const assertMutable = (
  */
 export const login = async (
   token: string,
-  config: ConfigStore = getConfigStore(),
+  config: CliConfig = getConfig(),
   validate: typeof validateToken = validateToken,
 ): Promise<void> => {
   const auth = resolveAuth(config)
@@ -68,30 +68,27 @@ export const login = async (
 
   await validate(token, auth.workspaceId ?? undefined)
 
-  config.set(`${auth.endpoint}.pat`, token)
+  config.setToken(auth.endpoint, token)
   // The selection belongs to whoever was logged in before.
-  config.delete('current_workspace_id')
+  config.unsetWorkspace()
 }
 
 /** Store the token for the current endpoint, e.g., one just prompted for. */
 export const storeToken = (
   token: string,
-  config: ConfigStore = getConfigStore(),
+  config: CliConfig = getConfig(),
 ): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log in')
-  config.set(`${auth.endpoint}.pat`, token)
+  config.setToken(auth.endpoint, token)
 }
 
 /** Remove the stored token and workspace selection. */
-export const logout = (config: ConfigStore = getConfigStore()): void => {
+export const logout = (config: CliConfig = getConfig()): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log out')
-  config.delete(`${auth.endpoint}.pat`)
-  // Configs written before tokens were stored per endpoint may still hold an
-  // un-namespaced token, so drop that too.
-  config.delete('pat')
-  config.delete('current_workspace_id')
+  config.unsetToken(auth.endpoint)
+  config.unsetWorkspace()
 }
 
 /**
@@ -101,36 +98,25 @@ export const logout = (config: ConfigStore = getConfigStore()): void => {
  */
 export const selectEndpoint = (
   endpoint: string,
-  config: ConfigStore = getConfigStore(),
+  config: CliConfig = getConfig(),
 ): void => {
   assertMutable(resolveAuth(config), 'endpoint', 'select an endpoint')
-  storeEndpoint(endpoint, config)
+  config.setEndpoint(endpoint)
 }
 
 /** Store the workspace requests are made against. */
 export const selectWorkspace = (
   workspaceId: string,
-  config: ConfigStore = getConfigStore(),
+  config: CliConfig = getConfig(),
 ): void => {
   assertMutable(resolveAuth(config), 'workspaceId', 'select a workspace')
-  config.set('current_workspace_id', workspaceId)
+  config.setWorkspace(workspaceId)
 }
 
 /** Store whether API definitions come from the endpoint instead of npm. */
 export const setUseRemoteApiDefs = (
   useRemoteApiDefs: boolean,
-  config: ConfigStore = getConfigStore(),
+  config: CliConfig = getConfig(),
 ): void => {
-  config.set('use_remote_api_defs', useRemoteApiDefs)
-}
-
-/**
- * Write the endpoint, dropping what belonged to the previous one: the
- * workspace selection, and any value left under the legacy `server` key that
- * {@link resolveAuth} would otherwise still fall back to.
- */
-const storeEndpoint = (endpoint: string, config: ConfigStore): void => {
-  config.set('endpoint', endpoint)
-  config.delete('server')
-  config.delete('current_workspace_id')
+  config.setUseRemoteApiDefs(useRemoteApiDefs)
 }

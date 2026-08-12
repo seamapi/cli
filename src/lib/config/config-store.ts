@@ -3,12 +3,15 @@ import { join } from 'node:path'
 import Configstore from 'configstore'
 import envPaths from 'env-paths'
 
+import { type CliConfig, createCliConfig } from './cli-config.js'
 import { migrateConfigStore } from './migrate.js'
 import { isStateKey, mergeConfig, splitConfig } from './values.js'
 
 const configFileName = 'cli.json'
 const legacyConfigStoreId = 'seam-cli'
-const paths = envPaths('seam', { suffix: '' })
+
+/** Every directory the CLI keeps files in, and what it mounts keeps its own. */
+export const rootPaths = envPaths('seam', { suffix: '' })
 
 /**
  * What a config store can do, regardless of where it keeps the values.
@@ -28,21 +31,21 @@ export interface ConfigStore {
   clear: () => void
 }
 
-let configStore: ConfigStore | null = null
+let config: CliConfig | null = null
 
-export const getConfigStore = (): ConfigStore => {
-  configStore ??= createConfigStore()
-  return configStore
+export const getConfig = (): CliConfig => {
+  config ??= createCliConfig(createConfigStore())
+  return config
 }
 
-/** Replace the store, e.g., with an in-memory one for a test. */
-export const setConfigStore = (store: ConfigStore): void => {
-  configStore = store
+/** Replace the config, e.g., with an in-memory one for a test. */
+export const setConfig = (nextConfig: CliConfig): void => {
+  config = nextConfig
 }
 
-/** Drop the current store so the next read builds the real one. */
-export const resetConfigStore = (): void => {
-  configStore = null
+/** Drop the current config so the next read builds the real one. */
+export const resetConfig = (): void => {
+  config = null
 }
 
 const createConfigStore = (): PersistentConfigStore => {
@@ -121,11 +124,11 @@ export class PersistentConfigStore implements ConfigStore {
 }
 
 const getConfigPath = (): string => {
-  return join(paths.config, configFileName)
+  return join(rootPaths.config, configFileName)
 }
 
 const getStateConfigPath = (): string => {
-  return join(paths.log, configFileName)
+  return join(rootPaths.log, configFileName)
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {

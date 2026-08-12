@@ -1,6 +1,6 @@
 import type { Interactivity } from './args/parse.js'
 import type { ApiBlueprint } from './blueprint/index.js'
-import { type ConfigStore, getConfigStore } from './config/index.js'
+import { type CliConfig, getConfig } from './config/index.js'
 import {
   getEndpointFromEnv,
   getTokenFromEnv,
@@ -32,30 +32,21 @@ export interface AuthContext {
   workspaceIdSource: Exclude<ValueSource, 'default'> | null
 }
 
-export const resolveAuth = (
-  config: ConfigStore = getConfigStore(),
-): AuthContext => {
+export const resolveAuth = (config: CliConfig = getConfig()): AuthContext => {
   const { endpoint: flagEndpoint, workspaceId: flagWorkspaceId } =
     getAuthOverrides()
 
   const envEndpoint = getEndpointFromEnv()
-  // Configs written before the endpoint was called one still hold it under
-  // `server`, so fall back to that key rather than silently resetting them.
-  const storedEndpoint = config.get('endpoint') ?? config.get('server')
-  const endpoint =
-    flagEndpoint ??
-    envEndpoint ??
-    (typeof storedEndpoint === 'string' ? storedEndpoint : null)
+  const storedEndpoint = config.getEndpoint()
+  const endpoint = flagEndpoint ?? envEndpoint ?? storedEndpoint
 
   const envToken = getTokenFromEnv()
   // The token is stored per endpoint, so an overridden endpoint is read with
   // the token belonging to it rather than the one it replaced.
-  const storedToken = readString(
-    config.get(`${endpoint ?? defaultEndpoint}.pat`),
-  )
+  const storedToken = config.getToken(endpoint ?? defaultEndpoint)
 
   const envWorkspaceId = getWorkspaceIdFromEnv()
-  const storedWorkspaceId = readString(config.get('current_workspace_id'))
+  const storedWorkspaceId = config.getWorkspace()
   const workspaceId = flagWorkspaceId ?? envWorkspaceId ?? storedWorkspaceId
 
   return {
@@ -88,19 +79,11 @@ export const resolveAuth = (
  * shape it acts on, and how it may interact with the user.
  */
 export interface CliContext {
-  config: ConfigStore
+  config: CliConfig
   auth: AuthContext
   output: Output
   blueprint: ApiBlueprint
   interactivity: Interactivity
   /** The Seam API, constructed on first use and shared for the run. */
   api: () => Promise<SeamApi>
-}
-
-const readString = (value: unknown): string | null => {
-  if (typeof value !== 'string') return null
-
-  const trimmedValue = value.trim()
-
-  return trimmedValue === '' ? null : trimmedValue
 }

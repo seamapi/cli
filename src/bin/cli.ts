@@ -21,7 +21,7 @@ import {
   findLocalCommand,
   findLocalCommandTakingPositional,
 } from 'lib/commands/registry.js'
-import { getConfigStore } from 'lib/config/index.js'
+import { getConfig } from 'lib/config/index.js'
 import { type CliContext, resolveAuth } from 'lib/context.js'
 import { tokenEnvVar } from 'lib/env.js'
 import { reportErrorAndExit } from 'lib/errors.js'
@@ -41,7 +41,7 @@ import { renderHelp } from 'lib/render/help.js'
 import seamapiCliVersion from 'lib/version.js'
 
 async function cli(args: ParsedArgs, argv: string[]) {
-  const config = getConfigStore()
+  const config = getConfig()
   const output = getOutput()
 
   // Scoped to this one command, and read wherever auth resolves, so they are
@@ -158,7 +158,7 @@ async function cli(args: ParsedArgs, argv: string[]) {
   }
 
   const useRemoteApiDefs =
-    args['remote_api_defs'] ?? config.get('use_remote_api_defs')
+    args['remote_api_defs'] ?? config.getUseRemoteApiDefs()
 
   const blueprint = await getApiBlueprint({
     useRemoteDefinitions: useRemoteApiDefs ?? false,
