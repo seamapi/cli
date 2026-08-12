@@ -10,18 +10,18 @@ export interface GetApiBlueprintOptions {
    * Build from the OpenAPI document the configured endpoint is currently
    * running, instead of the published npm types.
    */
-  useRemoteDefinitions?: boolean
-  /** Force an update of the cached Seam API definitions. */
+  useRemoteSchema?: boolean
+  /** Force an update of the cached Seam API schema. */
   update?: boolean
 }
 
 export const getApiBlueprint = async ({
-  useRemoteDefinitions = false,
+  useRemoteSchema = false,
   update = false,
 }: GetApiBlueprintOptions = {}): Promise<ApiBlueprint> => {
-  // Remote definitions describe whatever the endpoint is currently running, so
-  // build them directly from that endpoint's OpenAPI document.
-  if (useRemoteDefinitions) return await createRemoteBlueprint()
+  // The remote schema describes whatever the endpoint is currently running, so
+  // build it directly from that endpoint's OpenAPI document.
+  if (useRemoteSchema) return await createRemoteBlueprint()
 
   return await getBlueprint({ update })
 }

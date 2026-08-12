@@ -114,9 +114,9 @@ export const globalFlags: CommandFlag[] = [
     isRequired: false,
   },
   {
-    long: 'remote-api-defs',
+    long: 'remote-schema',
     short: null,
-    description: 'Use the API definitions served by the Seam API.',
+    description: 'Use the schema served by the Seam API.',
     values: [],
     takesValue: false,
     isRequired: false,
@@ -124,7 +124,7 @@ export const globalFlags: CommandFlag[] = [
   {
     long: 'update',
     short: null,
-    description: 'Force an update of the cached Seam API definitions.',
+    description: 'Force an update of the cached Seam API schema.',
     values: [],
     takesValue: false,
     isRequired: false,
@@ -156,7 +156,7 @@ export const flagTokens = (flag: CommandFlag): string[] => {
 }
 
 /**
- * Derive the command spec from the API definitions, merged with the commands
+ * Derive the command spec from the API schema, merged with the commands
  * the CLI declares itself (see `commands/registry.ts`, the single source of
  * those declarations).
  */
@@ -251,7 +251,7 @@ const toFlagValues = (parameter: Parameter): string[] => {
 
 /**
  * Whether a word is safe to write into a shell script. Command, flag, and
- * enum names come from the API definitions and are embedded unquoted or
+ * enum names come from the API schema and are embedded unquoted or
  * single-quoted in completion scripts, so never emit one that a shell could
  * read as syntax.
  */
@@ -298,7 +298,7 @@ const toCommandGroups = (commands: CommandDefinition[]): CommandGroup[] => {
     }
   }
 
-  // Groups have no description of their own in the API definitions, so name
+  // Groups have no description of their own in the API schema, so name
   // the commands they hold instead. Leave the list whole: help wraps it, and
   // completion shortens it to fit a menu column.
   const summarizeGroup = (key: string): string =>

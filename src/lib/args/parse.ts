@@ -35,7 +35,7 @@ export const cliFlags: string[] = [
   'h',
   'help',
   'json',
-  'remote_api_defs',
+  'remote_schema',
   'update',
   'version',
   'workspace_id',

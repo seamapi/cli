@@ -113,10 +113,10 @@ export const selectWorkspace = (
   config.setWorkspace(workspaceId)
 }
 
-/** Store whether API definitions come from the endpoint instead of npm. */
-export const setUseRemoteApiDefs = (
-  useRemoteApiDefs: boolean,
+/** Store whether the API schema comes from the endpoint instead of npm. */
+export const setUseRemoteSchema = (
+  useRemoteSchema: boolean,
   config: CliConfig = getConfig(),
 ): void => {
-  config.setUseRemoteApiDefs(useRemoteApiDefs)
+  config.setUseRemoteSchema(useRemoteSchema)
 }
