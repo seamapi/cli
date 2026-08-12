@@ -1,8 +1,13 @@
 export {
   type ConfigStore,
-  getConfigStore,
+  getConfig,
   type PersistentConfigStore,
-  resetConfigStore,
-  setConfigStore,
+  resetConfig,
+  rootPaths,
+  setConfig,
 } from './config-store.js'
-export { createMemoryConfigStore } from './memory-config-store.js'
+export {
+  createMemoryConfig,
+  createMemoryConfigStore,
+} from './memory-config-store.js'
+export { createSeamConfig, type SeamConfig } from './seam-config.js'

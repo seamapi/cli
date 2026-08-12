@@ -3,9 +3,9 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import type { Blueprint, TypesModuleInput } from '@seamapi/blueprint'
-import envPaths from 'env-paths'
 import { extract } from 'tar'
 
+import { rootPaths } from 'lib/config/index.js'
 import { withLoading } from 'lib/output/with-loading.js'
 
 import {
@@ -38,8 +38,7 @@ export const getBlueprint = async (
   options: GetBlueprintOptions = {},
 ): Promise<Blueprint> => {
   const update = options.update ?? false
-  const cacheDirectory =
-    options.cacheDirectory ?? envPaths('seam', { suffix: '' }).cache
+  const cacheDirectory = options.cacheDirectory ?? rootPaths.cache
   const cacheFile = getCacheFile(cacheDirectory)
   const blueprintVersion = await getBlueprintVersion()
 

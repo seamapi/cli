@@ -1,11 +1,11 @@
 import { assertMutable, selectEndpoint } from 'lib/auth/operations.js'
-import { getConfigStore } from 'lib/config/index.js'
+import { getConfig } from 'lib/config/index.js'
 import { resolveAuth } from 'lib/context.js'
 import { getOutput } from 'lib/output/get-output.js'
 import { promptAutocomplete } from 'lib/prompt.js'
 
 export async function interactForEndpointSelection() {
-  const config = getConfigStore()
+  const config = getConfig()
   assertMutable(resolveAuth(config), 'endpoint', 'select an endpoint')
 
   const endpoints = ['http://localhost:3020', 'https://connect.getseam.com']

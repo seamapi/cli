@@ -4,11 +4,14 @@ import Configstore from 'configstore'
 import envPaths from 'env-paths'
 
 import { migrateConfigStore } from './migrate.js'
+import { createSeamConfig, type SeamConfig } from './seam-config.js'
 import { isStateKey, mergeConfig, splitConfig } from './values.js'
 
 const configFileName = 'cli.json'
 const legacyConfigStoreId = 'seam-cli'
-const paths = envPaths('seam', { suffix: '' })
+
+/** Every directory Seam keeps files in, for the CLI and for what it mounts. */
+export const rootPaths = envPaths('seam', { suffix: '' })
 
 /**
  * What a config store can do, regardless of where it keeps the values.
@@ -28,21 +31,21 @@ export interface ConfigStore {
   clear: () => void
 }
 
-let configStore: ConfigStore | null = null
+let config: SeamConfig | null = null
 
-export const getConfigStore = (): ConfigStore => {
-  configStore ??= createConfigStore()
-  return configStore
+export const getConfig = (): SeamConfig => {
+  config ??= createSeamConfig(createConfigStore())
+  return config
 }
 
-/** Replace the store, e.g., with an in-memory one for a test. */
-export const setConfigStore = (store: ConfigStore): void => {
-  configStore = store
+/** Replace the config, e.g., with an in-memory one for a test. */
+export const setConfig = (nextConfig: SeamConfig): void => {
+  config = nextConfig
 }
 
-/** Drop the current store so the next read builds the real one. */
-export const resetConfigStore = (): void => {
-  configStore = null
+/** Drop the current config so the next read builds the real one. */
+export const resetConfig = (): void => {
+  config = null
 }
 
 const createConfigStore = (): PersistentConfigStore => {
@@ -121,11 +124,11 @@ export class PersistentConfigStore implements ConfigStore {
 }
 
 const getConfigPath = (): string => {
-  return join(paths.config, configFileName)
+  return join(rootPaths.config, configFileName)
 }
 
 const getStateConfigPath = (): string => {
-  return join(paths.log, configFileName)
+  return join(rootPaths.log, configFileName)
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {

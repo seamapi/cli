@@ -1,4 +1,5 @@
 import type { ConfigStore } from './config-store.js'
+import { createSeamConfig, type SeamConfig } from './seam-config.js'
 
 /**
  * A real {@link ConfigStore} held in memory, for tests.
@@ -60,3 +61,11 @@ export class MemoryConfigStore implements ConfigStore {
 export const createMemoryConfigStore = (
   initialValues: Record<string, unknown> = {},
 ): ConfigStore => new MemoryConfigStore(initialValues)
+
+/**
+ * A config held in memory, for tests. Values may be seeded by key, e.g., to
+ * stand for a config an older CLI wrote.
+ */
+export const createMemoryConfig = (
+  initialValues: Record<string, unknown> = {},
+): SeamConfig => createSeamConfig(createMemoryConfigStore(initialValues))
