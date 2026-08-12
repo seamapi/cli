@@ -131,6 +131,7 @@ const commandSections = (
 ): Section[] => {
   const name = ['seam', ...command.path].join(' ')
   const hasFlags = command.flags.length > 0
+  const { positional } = command
 
   return [
     {
@@ -139,7 +140,26 @@ const commandSections = (
         (line) => line !== '',
       ),
     },
-    { header: 'Usage', content: `${name} [options]` },
+    {
+      header: 'Usage',
+      content:
+        positional == null
+          ? `${name} [options]`
+          : `${name} <${positional.name}> [options]`,
+    },
+    ...(positional == null
+      ? []
+      : [
+          {
+            header: 'Arguments',
+            content: [
+              {
+                name: `{underline <${positional.name}>}`,
+                summary: positional.description,
+              },
+            ],
+          },
+        ]),
     // The command's own parameters are what the request is made of, so keep
     // them apart from the options every seam command takes.
     ...(hasFlags ? [optionSection(command.flags, 'Parameters')] : []),

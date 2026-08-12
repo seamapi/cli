@@ -38,6 +38,8 @@ export interface Command {
 /** Everything a single run of a command was given. */
 export interface Invocation {
   path: string[]
+  /** The value written after the command path, when the command takes one. */
+  positional?: string | undefined
   /** Params given as arguments, held to what the command accepts. */
   argParams: Record<string, unknown>
   /** Params piped in as JSON, passed through as given. */
@@ -92,6 +94,24 @@ export const localCommandDefinitions: CommandDefinition[] = localCommands
  */
 export const findLocalCommand = (path: string[]): Command | undefined =>
   localCommands.find((command) => isSamePath(command.definition.path, path))
+
+/**
+ * The local command the given words invoke with a value after its path, e.g.,
+ * `select endpoint` for `select endpoint https://connect.getseam.com`, or
+ * `undefined` when the words are not a command taking one.
+ *
+ * Only commands declaring a positional match, so a stray word after any other
+ * command stays what it has always been: no command at all.
+ */
+export const findLocalCommandTakingPositional = (
+  words: string[],
+): Command | undefined =>
+  localCommands.find(
+    ({ definition }) =>
+      definition.positional != null &&
+      words.length === definition.path.length + 1 &&
+      isSamePath(definition.path, words.slice(0, -1)),
+  )
 
 /** Parameter names a command accepts as arguments. */
 export const acceptedParamsOf = (definition: CommandDefinition): Set<string> =>
