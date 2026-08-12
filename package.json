@@ -7,16 +7,12 @@
   "types": "index.d.ts",
   "exports": {
     ".": {
-      "import": {
-        "types": "./index.d.ts",
-        "default": "./index.js"
-      }
+      "types": "./index.d.ts",
+      "default": "./index.js"
     },
     "./cli": {
-      "import": {
-        "types": "./bin/cli.d.ts",
-        "default": "./bin/cli.js"
-      }
+      "types": "./bin/cli.d.ts",
+      "default": "./bin/cli.js"
     }
   },
   "module": "index.js",
@@ -76,13 +72,13 @@
     "report": "vitest run --coverage"
   },
   "engines": {
-    "node": ">=22.11.0",
+    "node": ">=22.12.0",
     "npm": ">=10.0.0"
   },
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "^24.11.0 || ^22.11.0",
+      "version": "^24.11.0 || ^22.12.0",
       "onFail": "warn"
     },
     "packageManager": {

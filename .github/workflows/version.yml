@@ -33,3 +33,16 @@ jobs:
         uses: ./.github/actions/setup
       - name: Cut ${{ github.event.inputs.version }} version
         run: npm version --sign-git-tag=true ${{ github.event.inputs.version }}
+      - name: Record prerelease channel
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          case "$VERSION" in
+            *-*) channel="${VERSION#*-}"; channel="${channel%%.*}" ;;
+            *) echo "Stable release, no channel note required."; exit 0 ;;
+          esac
+          git fetch origin "+refs/notes/semantic-release:refs/notes/semantic-release" || true
+          git notes --ref semantic-release add --force \
+            --message "{\"channels\":[\"$channel\"]}" "v$VERSION^{commit}"
+          git push origin refs/notes/semantic-release
+          echo "Recorded v$VERSION on the '$channel' channel."
