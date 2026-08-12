@@ -1,6 +1,5 @@
 import { assertMutable, selectEndpoint } from 'lib/auth/operations.js'
 import type { Command } from 'lib/commands/registry.js'
-import { stringFlag } from 'lib/commands/spec.js'
 import { NonInteractiveError } from 'lib/errors.js'
 import { interactForEndpointSelection } from 'lib/interactions/index.js'
 
@@ -9,19 +8,24 @@ export const selectEndpointCommand: Command = {
     path: ['select', 'endpoint'],
     kind: 'cli',
     title: 'Select the Seam API endpoint.',
-    description: '',
-    flags: [stringFlag('endpoint', 'Seam API endpoint to select.')],
+    description:
+      'Stores the endpoint every later command runs against. To use one for a single command instead, pass --endpoint to that command.',
+    flags: [],
+    positional: {
+      name: 'url',
+      description: 'Seam API endpoint to select.',
+    },
   },
   requiresAuth: false,
-  execute: async ({ args }, ctx) => {
+  execute: async ({ positional }, ctx) => {
     assertMutable(ctx.auth, 'endpoint', 'select an endpoint')
-    if (args['endpoint']) {
-      selectEndpoint(args['endpoint'], ctx.config)
+    if (positional != null) {
+      selectEndpoint(positional, ctx.config)
       return { kind: 'done' }
     }
     if (ctx.interactivity === 'non-interactive') {
       throw new NonInteractiveError(
-        'Missing required parameter for select endpoint: --endpoint',
+        'Missing required argument for select endpoint: <url>',
       )
     }
     await interactForEndpointSelection()

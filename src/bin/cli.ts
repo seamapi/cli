@@ -8,9 +8,10 @@ import {
   cliFlags,
   getInteractivity,
   parseCliArgs,
+  toAuthOverrides,
   toParameterName,
 } from 'lib/args/parse.js'
-import { assertKnownArgs } from 'lib/args/validate.js'
+import { assertKnownArgs, assertNoAuthOverrides } from 'lib/args/validate.js'
 import { getApiBlueprint } from 'lib/blueprint/index.js'
 import { printCompletion } from 'lib/commands/local/completion.js'
 import { runWizard } from 'lib/commands/local/wizard.js'
@@ -18,6 +19,7 @@ import {
   acceptedParamsOf,
   buildRegistry,
   findLocalCommand,
+  findLocalCommandTakingPositional,
 } from 'lib/commands/registry.js'
 import { getConfigStore } from 'lib/config/index.js'
 import { type CliContext, resolveAuth } from 'lib/context.js'
@@ -29,6 +31,7 @@ import { getOutput, setOutput } from 'lib/output/get-output.js'
 import { createOutput } from 'lib/output/output.js'
 import { readStdinJson } from 'lib/output/read-stdin-json.js'
 import { resolveOutputFormat } from 'lib/output/resolve-output-format.js'
+import { setAuthOverrides } from 'lib/overrides.js'
 import { canPrompt } from 'lib/prompt.js'
 import {
   completionShells,
@@ -40,6 +43,21 @@ import seamapiCliVersion from 'lib/version.js'
 async function cli(args: ParsedArgs, argv: string[]) {
   const config = getConfigStore()
   const output = getOutput()
+
+  // Scoped to this one command, and read wherever auth resolves, so they are
+  // in place before anything asks what the endpoint or the workspace is.
+  const authOverrides = toAuthOverrides(args)
+  setAuthOverrides(authOverrides)
+
+  // A command may take one value after its path, e.g., the URL in 'seam
+  // select endpoint <url>'. Split it off before the path is normalized, or
+  // lowercasing the path would rewrite the value along with it.
+  const commandWords = args._.map(toCommandWord)
+  const commandTakingPositional = findLocalCommandTakingPositional(commandWords)
+  const positional =
+    commandTakingPositional == null ? undefined : String(args._.at(-1))
+  args._ =
+    commandTakingPositional == null ? commandWords : commandWords.slice(0, -1)
 
   const update = args['update'] === true
 
@@ -74,8 +92,6 @@ async function cli(args: ParsedArgs, argv: string[]) {
     output.text(seamapiCliVersion)
     return
   }
-
-  args._ = args._.map(toCommandWord)
 
   // Argument keys name parameters however they are written, so normalize each
   // one to the name the API gives it. Replace the key rather than adding the
@@ -120,6 +136,12 @@ async function cli(args: ParsedArgs, argv: string[]) {
   }
 
   const localCommand = findLocalCommand(args._)
+
+  // Before the login gate, so a command that selects reports the flag it
+  // cannot take rather than whatever the flag pointed it at.
+  if (localCommand != null) {
+    assertNoAuthOverrides(localCommand.definition, authOverrides)
+  }
 
   // Commands declared not to need a token bypass the login gate. A partial
   // path keeps the historical rule: only login and select endpoint may be
@@ -185,13 +207,14 @@ async function cli(args: ParsedArgs, argv: string[]) {
 
     // Check the arguments before the command acts on any of them, so a
     // mistake is reported rather than half applied.
+    assertNoAuthOverrides(command.definition, authOverrides)
     assertKnownArgs(argParams, selectedCommand, {
       accepted: acceptedParamsOf(command.definition),
       isLocal: findLocalCommand(selectedCommand) != null,
     })
 
     const result = await command.execute(
-      { path: selectedCommand, argParams, stdinParams, args, argv },
+      { path: selectedCommand, positional, argParams, stdinParams, args, argv },
       ctx,
     )
 
@@ -204,8 +227,10 @@ async function cli(args: ParsedArgs, argv: string[]) {
   }
 }
 
-const toCommandWord = (arg: string): string =>
-  arg.toLowerCase().replace(/_/g, '-')
+// minimist reads a numeric word as a number, so a command path is only a
+// path once every word is one.
+const toCommandWord = (arg: string | number): string =>
+  String(arg).toLowerCase().replace(/_/g, '-')
 
 const run = async (argv: string[]) => {
   if (argv[0] === 'wizard') {

@@ -23,6 +23,17 @@ export interface CommandFlag {
  */
 export type CommandKind = 'cli' | 'api'
 
+/**
+ * A value written after the command rather than behind a flag, e.g., the URL
+ * in `seam select endpoint <url>`. At most one, always required: it is the
+ * one thing the command is about.
+ */
+export interface CommandPositional {
+  /** Name shown in the usage line, without the angle brackets. */
+  name: string
+  description: string
+}
+
 export interface CommandDefinition {
   path: string[]
   kind: CommandKind
@@ -31,6 +42,8 @@ export interface CommandDefinition {
   /** Longer prose about the command, empty when there is none to add. */
   description: string
   flags: CommandFlag[]
+  /** The value the command takes after its path, when it takes one. */
+  positional?: CommandPositional
 }
 
 export interface Subcommand {
@@ -56,6 +69,15 @@ export interface CommandSpec {
 }
 
 export const globalFlags: CommandFlag[] = [
+  {
+    long: 'endpoint',
+    short: null,
+    description:
+      'Seam API endpoint to run this one command against, instead of the selected one.',
+    values: [],
+    takesValue: true,
+    isRequired: false,
+  },
   {
     long: 'help',
     short: 'h',
@@ -113,6 +135,15 @@ export const globalFlags: CommandFlag[] = [
     description: 'Print the CLI version.',
     values: [],
     takesValue: false,
+    isRequired: false,
+  },
+  {
+    long: 'workspace-id',
+    short: null,
+    description:
+      'Workspace to run this one command against, instead of the selected one.',
+    values: [],
+    takesValue: true,
     isRequired: false,
   },
 ]

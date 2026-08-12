@@ -1,5 +1,7 @@
 import parseArgs, { type ParsedArgs } from 'minimist'
 
+import type { AuthOverrides } from 'lib/overrides.js'
+
 /**
  * How the CLI should behave when properties are not given as arguments.
  *
@@ -29,12 +31,14 @@ export const interactivityFlags: string[] = [
  */
 export const cliFlags: string[] = [
   ...interactivityFlags,
+  'endpoint',
   'h',
   'help',
   'json',
   'remote_api_defs',
   'update',
   'version',
+  'workspace_id',
 ]
 
 export interface ParseCliArgsOptions {
@@ -53,8 +57,18 @@ export const parseCliArgs = (
 ): ParsedArgs =>
   parseArgs(argv, {
     // A page cursor and a code are opaque even before the endpoint's own
-    // parameter types are known, so always keep them exactly as given.
-    string: ['code', 'page-cursor', 'page_cursor', ...stringKeys],
+    // parameter types are known, so always keep them exactly as given. The
+    // overrides are read as given for the same reason: a URL or an id is
+    // never a number, however it happens to be spelled.
+    string: [
+      'code',
+      'endpoint',
+      'page-cursor',
+      'page_cursor',
+      'workspace-id',
+      'workspace_id',
+      ...stringKeys,
+    ],
     boolean: ['non-interactive', 'interactive', 'json'],
     // Deliberately not aliased to -n, which is reserved for a future
     // --dry-run flag.
@@ -74,6 +88,37 @@ export const toArgParams = (args: ParsedArgs): Record<string, unknown> => {
     argParams[name] = value
   }
   return argParams
+}
+
+/**
+ * The auth overrides among the parsed arguments.
+ *
+ * Both scope a single command: they change what it resolves to and are never
+ * stored, so they read like the environment variables they take precedence
+ * over, down to treating a blank value as though it were not given.
+ */
+export const toAuthOverrides = (args: ParsedArgs): AuthOverrides => {
+  // Read by the name each key names, as every other argument is, so the
+  // overrides may be written `--workspace-id`, `--workspace_id`, or in caps,
+  // and so they resolve whenever they are read.
+  const byName: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(args)) {
+    if (key === '_') continue
+    byName[toParameterName(key)] = value
+  }
+
+  return {
+    endpoint: readOverride(byName['endpoint']),
+    workspaceId: readOverride(byName['workspace_id']),
+  }
+}
+
+const readOverride = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null
+
+  const trimmedValue = value.trim()
+
+  return trimmedValue === '' ? null : trimmedValue
 }
 
 export interface GetInteractivityOptions {
