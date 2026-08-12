@@ -3,15 +3,28 @@ import { afterEach, beforeEach, expect, test } from 'vitest'
 import { createMemoryConfig } from 'lib/config/memory-config-store.js'
 import { resolveAuth } from 'lib/context.js'
 import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
+import { resetAuthOverrides, setAuthOverrides } from 'lib/overrides.js'
 
 const endpoint = 'https://connect.example.com'
 
 const config = createMemoryConfig
 
+/** The flags for one command, as `bin/cli.ts` sets them from the arguments. */
+const overrideWith = (overrides: {
+  endpoint?: string
+  workspaceId?: string
+}): void => {
+  setAuthOverrides({
+    endpoint: overrides.endpoint ?? null,
+    workspaceId: overrides.workspaceId ?? null,
+  })
+}
+
 const clearEnv = (): void => {
   delete process.env[endpointEnvVar]
   delete process.env[tokenEnvVar]
   delete process.env[workspaceIdEnvVar]
+  resetAuthOverrides()
 }
 
 beforeEach(clearEnv)
@@ -44,6 +57,58 @@ test('resolveAuth: the stored endpoint wins over the legacy key', () => {
   )
 
   expect(auth.endpoint).toBe(endpoint)
+})
+
+test('resolveAuth: --endpoint wins over the stored endpoint', () => {
+  overrideWith({ endpoint: 'http://localhost:3020' })
+
+  const auth = resolveAuth(config({ endpoint }))
+
+  expect(auth.endpoint).toBe('http://localhost:3020')
+  expect(auth.endpointSource).toBe('flag')
+})
+
+test(`resolveAuth: --endpoint wins over ${endpointEnvVar}`, () => {
+  process.env[endpointEnvVar] = 'http://localhost:3020'
+  overrideWith({ endpoint: 'http://localhost:9999' })
+
+  const auth = resolveAuth(config({ endpoint }))
+
+  expect(auth.endpoint).toBe('http://localhost:9999')
+  expect(auth.endpointSource).toBe('flag')
+})
+
+test('resolveAuth: reads the token stored for an overridden endpoint', () => {
+  overrideWith({ endpoint: 'http://localhost:3020' })
+
+  const auth = resolveAuth(
+    config({
+      endpoint,
+      [`${endpoint}.pat`]: 'seam_apikey1_stored',
+      'http://localhost:3020.pat': 'seam_apikey1_local',
+    }),
+  )
+
+  expect(auth.token).toBe('seam_apikey1_local')
+})
+
+test('resolveAuth: --workspace-id wins over the stored selection', () => {
+  overrideWith({ workspaceId: 'workspace2' })
+
+  const auth = resolveAuth(config({ current_workspace_id: 'workspace1' }))
+
+  expect(auth.workspaceId).toBe('workspace2')
+  expect(auth.workspaceIdSource).toBe('flag')
+})
+
+test(`resolveAuth: --workspace-id wins over ${workspaceIdEnvVar}`, () => {
+  process.env[workspaceIdEnvVar] = 'workspace2'
+  overrideWith({ workspaceId: 'workspace3' })
+
+  const auth = resolveAuth(config({ current_workspace_id: 'workspace1' }))
+
+  expect(auth.workspaceId).toBe('workspace3')
+  expect(auth.workspaceIdSource).toBe('flag')
 })
 
 test(`resolveAuth: ${endpointEnvVar} wins over the stored endpoint`, () => {

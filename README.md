@@ -181,6 +181,40 @@ Missing required parameter for /locks/unlock_door: --device-id
 An error exits non-zero. A request that fails reports its `error` on stdout,
 so it can be inspected from a pipe; anything else is written to stderr only.
 
+### Selecting an endpoint and a workspace
+
+Two settings say where commands go, and one command each stores them:
+
+```bash
+# Every later command runs against this endpoint
+seam select endpoint https://connect.getseam.com
+
+# ...and this workspace
+seam select workspace $MY_WORKSPACE
+```
+
+Run either without a value to pick one interactively.
+
+To send a single command somewhere else, pass `--endpoint` or
+`--workspace-id` to that command. They override what is selected for that one
+invocation and store nothing:
+
+```bash
+# List devices in another workspace, without switching to it
+seam devices list --workspace-id $OTHER_WORKSPACE
+
+# Run one command against a local Seam Connect instance
+seam devices list --endpoint http://localhost:3020
+
+# Log in to another endpoint: the token is stored for that endpoint,
+# and the selected one is left alone
+seam login --endpoint http://localhost:3020 --token $LOCAL_KEY
+```
+
+Because the two flags never store anything, they are refused on the commands
+that do: `seam select endpoint --endpoint <url>` is an error, and the value
+belongs after the command instead.
+
 ### Environment variables
 
 Everything `seam login`, `seam select workspace`, and `seam select endpoint`
@@ -191,8 +225,9 @@ store may be given in the environment instead:
 - `SEAM_CLI_ENDPOINT`: the Seam API endpoint requests are made to.
 
 Any of them, all of them, or none of them may be set. Each one wins over the
-corresponding stored value, which makes them useful for CI, for a single
-command, or for working against another workspace in one shell.
+corresponding stored value and is in turn overridden by `--endpoint` or
+`--workspace-id`, which makes them useful for CI or for working against
+another workspace for a whole shell.
 
 ```bash
 # One command against another workspace
@@ -207,8 +242,8 @@ SEAM_CLI_ENDPOINT=http://localhost:3020 seam devices list
 ```
 
 An API Key is scoped to a single workspace, so it needs no workspace id. A
-Personal Access Token works across workspaces, so it needs one from either
-`SEAM_CLI_WORKSPACE_ID` or `seam select workspace`.
+Personal Access Token works across workspaces, so it needs one from
+`--workspace-id`, `SEAM_CLI_WORKSPACE_ID`, or `seam select workspace`.
 
 The command that would store an overridden value fails rather than storing
 something the environment ignores: `seam login` and `seam logout` while

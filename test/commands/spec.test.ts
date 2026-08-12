@@ -21,9 +21,7 @@ test('command spec: falls back to the first sentence for an untitled endpoint', 
 
 test('command spec: includes commands handled by the CLI itself', () => {
   expect(findCommand(spec, ['login'])?.flags.map(({ long }) => long)).toEqual([
-    'endpoint',
     'token',
-    'workspace-id',
   ])
   expect(findCommand(spec, ['select', 'workspace'])).toBeDefined()
   expect(findCommand(spec, ['completion', 'zsh'])).toBeDefined()

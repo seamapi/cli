@@ -547,6 +547,82 @@ test('cli: uses the stored endpoint without SEAM_CLI_ENDPOINT', async () => {
   expect(requests).toHaveLength(0)
 })
 
+test('cli: --endpoint scopes one command without storing it', async () => {
+  requests = []
+  const settingsFile = join(otherEndpointConfigHome, 'seam', 'cli.json')
+  const before = await readFile(settingsFile, 'utf8')
+
+  const { exitCode } = await runCli(
+    ['devices', 'list', '--endpoint', endpoint],
+    { configHome: otherEndpointConfigHome },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.path).toBe('/devices/list')
+  expect(await readFile(settingsFile, 'utf8')).toBe(before)
+})
+
+test('cli: --endpoint wins over SEAM_CLI_ENDPOINT', async () => {
+  requests = []
+  const { exitCode } = await runCli(
+    ['devices', 'list', '--endpoint', endpoint],
+    {
+      configHome: otherEndpointConfigHome,
+      // Nothing is listening here: reaching the fake proves the flag won.
+      env: { SEAM_CLI_ENDPOINT: 'http://localhost:1' },
+    },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.path).toBe('/devices/list')
+})
+
+test('cli: --workspace-id scopes one command without storing it', async () => {
+  requests = []
+  // A Personal Access Token is what carries a workspace on the wire.
+  const { exitCode } = await runCli(
+    ['devices', 'list', '--workspace-id', 'workspace_from_flag'],
+    { env: { SEAM_CLI_TOKEN: 'seam_at1_from_env' } },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.headers['seam-workspace']).toBe('workspace_from_flag')
+  expect(await readStoredState(stateHome)).not.toHaveProperty(
+    'current_workspace_id',
+  )
+})
+
+test('cli: --workspace-id wins over SEAM_CLI_WORKSPACE_ID', async () => {
+  requests = []
+  const { exitCode } = await runCli(
+    ['devices', 'list', '--workspace-id', 'workspace_from_flag'],
+    {
+      env: {
+        SEAM_CLI_TOKEN: 'seam_at1_from_env',
+        SEAM_CLI_WORKSPACE_ID: 'workspace_from_env',
+      },
+    },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.headers['seam-workspace']).toBe('workspace_from_flag')
+})
+
+test('cli: --endpoint is not sent to the API as a parameter', async () => {
+  requests = []
+  const { exitCode } = await runCli([
+    'devices',
+    'list',
+    '--endpoint',
+    endpoint,
+    '--limit',
+    '3',
+  ])
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({ limit: 3 })
+})
+
 test('cli: refuses to log in while SEAM_CLI_TOKEN is set', async () => {
   const { stdout, stderr, exitCode } = await runCli(
     ['login', '--token', 'seam_apikey1_stored'],
@@ -571,21 +647,9 @@ test('cli: refuses to select a workspace while SEAM_CLI_WORKSPACE_ID is set', as
   )
 })
 
-test('cli: refuses to log in with a workspace while SEAM_CLI_WORKSPACE_ID is set', async () => {
-  const { stderr, exitCode } = await runCli(
-    ['login', '--token', 'seam_apikey1_stored', '--workspace-id', 'workspace1'],
-    { env: { SEAM_CLI_WORKSPACE_ID: 'workspace_from_env' } },
-  )
-
-  expect(exitCode).toBe(1)
-  expect(stderr).toContain(
-    'Cannot select a workspace while SEAM_CLI_WORKSPACE_ID is set',
-  )
-})
-
 test('cli: refuses to select an endpoint while SEAM_CLI_ENDPOINT is set', async () => {
   const { stdout, stderr, exitCode } = await runCli(
-    ['select', 'endpoint', '--endpoint', 'https://connect.example.com'],
+    ['select', 'endpoint', 'https://connect.example.com'],
     { env: { SEAM_CLI_ENDPOINT: endpoint } },
   )
 
@@ -594,6 +658,70 @@ test('cli: refuses to select an endpoint while SEAM_CLI_ENDPOINT is set', async 
   expect(stderr).toContain(
     'Cannot select an endpoint while SEAM_CLI_ENDPOINT is set',
   )
+})
+
+test('cli: select endpoint stores the url given after it', async () => {
+  // A dedicated config home: the endpoint is shared by every other test.
+  const home = await mkdtemp(join(tmpdir(), 'seam-cli-select-'))
+  await mkdir(join(home, 'seam'), { recursive: true })
+
+  const { exitCode } = await runCli(
+    ['select', 'endpoint', 'https://Connect.Example.com'],
+    { configHome: home },
+  )
+
+  expect(exitCode).toBe(0)
+  // Stored exactly as given: the command path is normalized, the value is not.
+  expect(
+    JSON.parse(await readFile(join(home, 'seam', 'cli.json'), 'utf8')),
+  ).toEqual({ endpoint: 'https://Connect.Example.com' })
+})
+
+test('cli: select workspace stores the id given after it', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'seam-cli-select-'))
+  await mkdir(join(home, 'seam'), { recursive: true })
+  await writeFile(
+    join(home, 'seam', 'cli.json'),
+    JSON.stringify({ [endpoint]: { pat: 'seam_apikey1_token' } }),
+  )
+
+  const { exitCode } = await runCli(['select', 'workspace', 'workspace_1'], {
+    stateHome: home,
+  })
+
+  expect(exitCode).toBe(0)
+  expect(await readStoredState(home)).toMatchObject({
+    current_workspace_id: 'workspace_1',
+  })
+})
+
+test('cli: select endpoint without a url fails when it cannot prompt', async () => {
+  const { stderr, exitCode } = await runCli([
+    'select',
+    'endpoint',
+    '--non-interactive',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain(
+    'Missing required argument for select endpoint: <url>',
+  )
+})
+
+test('cli: refuses the overrides on the commands that select', async () => {
+  const { stderr, exitCode } = await runCli([
+    'select',
+    'endpoint',
+    'https://connect.example.com',
+    '--endpoint',
+    'https://other.example.com',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain(
+    '--endpoint cannot be used with seam select endpoint',
+  )
+  expect(stderr).toContain("Run 'seam select endpoint <url>'")
 })
 
 test('cli: logout removes the stored token and workspace', async () => {

@@ -4,6 +4,7 @@ import {
   acceptedParamsOf,
   buildRegistry,
   findLocalCommand,
+  findLocalCommandTakingPositional,
   localCommands,
 } from 'lib/commands/registry.js'
 import { testBlueprint } from 'test/fixtures/blueprint.js'
@@ -60,7 +61,26 @@ test('acceptedParamsOf: names the parameters behind the flags', () => {
   const login = findLocalCommand(['login'])
   expect(login).toBeDefined()
   if (login == null) return
-  expect(acceptedParamsOf(login.definition)).toEqual(
-    new Set(['endpoint', 'token', 'workspace_id']),
-  )
+  expect(acceptedParamsOf(login.definition)).toEqual(new Set(['token']))
+})
+
+test('registry: the select commands take a value after their path', () => {
+  expect(
+    findLocalCommandTakingPositional(['select', 'endpoint', 'a-url']),
+  ).toBeDefined()
+  expect(
+    findLocalCommandTakingPositional(['select', 'workspace', 'workspace1'])
+      ?.definition.path,
+  ).toEqual(['select', 'workspace'])
+})
+
+test('registry: a stray word after any other command is not a positional', () => {
+  expect(findLocalCommandTakingPositional(['login', 'a-token'])).toBeUndefined()
+  expect(
+    findLocalCommandTakingPositional(['devices', 'list', 'extra']),
+  ).toBeUndefined()
+  // The command alone takes nothing: there is no word after its path.
+  expect(
+    findLocalCommandTakingPositional(['select', 'endpoint']),
+  ).toBeUndefined()
 })

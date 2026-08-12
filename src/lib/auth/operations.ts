@@ -44,49 +44,33 @@ export const assertMutable = (
   assertEnvVarUnset(envVar, value, action)
 }
 
-export interface LoginOptions {
-  endpoint?: string | undefined
-  token?: string | undefined
-  workspaceId?: string | undefined
-}
-
 /**
- * Store the given credentials, validating the token first.
+ * Store a token, validating it first.
  *
- * The token is stored under the endpoint it will be used with, so a given
- * endpoint is stored and re-resolved before the token key is derived.
+ * The token is stored under the endpoint it will be used with, which
+ * `--endpoint` or the environment may have pointed elsewhere for this one
+ * command: logging in to another endpoint stores a token for it without
+ * selecting it. The workspace is only what the token is validated against,
+ * as a Personal Access Token is meaningless without one.
  *
  * Validation reaches the network, so a test may inject its own `validate`.
  */
 export const login = async (
-  { endpoint, token, workspaceId }: LoginOptions,
+  token: string,
   config: CliConfig = getConfig(),
   validate: typeof validateToken = validateToken,
 ): Promise<void> => {
-  let auth = resolveAuth(config)
+  const auth = resolveAuth(config)
 
   // Nothing is stored while the environment overrides it, so refuse before
-  // storing anything rather than part way through.
+  // validating rather than after reaching the network.
   assertMutable(auth, 'token', 'log in')
-  if (endpoint != null) assertMutable(auth, 'endpoint', 'select an endpoint')
-  if (workspaceId != null) {
-    assertMutable(auth, 'workspaceId', 'select a workspace')
-  }
 
-  if (endpoint != null) {
-    config.setEndpoint(endpoint)
-    auth = resolveAuth(config)
-  }
+  await validate(token, auth.workspaceId ?? undefined)
 
-  if (token != null) {
-    await validate(token, workspaceId)
-    config.setToken(auth.endpoint, token)
-    config.unsetWorkspace()
-  }
-
-  if (workspaceId != null) {
-    config.setWorkspace(workspaceId)
-  }
+  config.setToken(auth.endpoint, token)
+  // The selection belongs to whoever was logged in before.
+  config.unsetWorkspace()
 }
 
 /** Store the token for the current endpoint, e.g., one just prompted for. */
