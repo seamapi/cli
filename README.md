@@ -183,12 +183,12 @@ so it can be inspected from a pipe; anything else is written to stderr only.
 
 ### Environment variables
 
-Everything `seam login`, `seam select workspace`, and `seam select server`
+Everything `seam login`, `seam select workspace`, and `seam select endpoint`
 store may be given in the environment instead:
 
 - `SEAM_CLI_TOKEN`: a Personal Access Token or API Key,
 - `SEAM_CLI_WORKSPACE_ID`: the workspace requests are made against,
-- `SEAM_CLI_ENDPOINT`: the Seam API server requests are made to.
+- `SEAM_CLI_ENDPOINT`: the Seam API endpoint requests are made to.
 
 Any of them, all of them, or none of them may be set. Each one wins over the
 corresponding stored value, which makes them useful for CI, for a single
@@ -213,7 +213,7 @@ Personal Access Token works across workspaces, so it needs one from either
 The command that would store an overridden value fails rather than storing
 something the environment ignores: `seam login` and `seam logout` while
 `SEAM_CLI_TOKEN` is set, `seam select workspace` while
-`SEAM_CLI_WORKSPACE_ID` is set, and `seam select server` while
+`SEAM_CLI_WORKSPACE_ID` is set, and `seam select endpoint` while
 `SEAM_CLI_ENDPOINT` is set. Unset the variable to use those commands.
 
 ```bash
@@ -278,7 +278,7 @@ the loaders for all three shells.
 Completions are generated from the cached Seam API definitions, so they may
 briefly lag a newly released API. Pass `--update` to refresh the cache first,
 e.g., `seam completion bash --update`. They do not reflect definitions served
-by another Seam API server when `seam config use-remote-api-defs` is enabled.
+by another Seam API endpoint when `seam config use-remote-api-defs` is enabled.
 
 If completions do not appear after installing them system wide:
 

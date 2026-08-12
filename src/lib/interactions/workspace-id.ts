@@ -15,7 +15,7 @@ export const interactForWorkspaceId = async (personalAccessToken?: string) => {
 
   const seam = personalAccessToken
     ? SeamHttpWithoutWorkspace.fromPersonalAccessToken(personalAccessToken, {
-        endpoint: resolveAuth(config).server,
+        endpoint: resolveAuth(config).endpoint,
       })
     : await getSeamMultiWorkspace()
 

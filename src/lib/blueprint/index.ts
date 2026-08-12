@@ -7,7 +7,7 @@ export type ApiBlueprint = Blueprint
 
 export interface GetApiBlueprintOptions {
   /**
-   * Build from the OpenAPI document the configured server is currently
+   * Build from the OpenAPI document the configured endpoint is currently
    * running, instead of the published npm types.
    */
   useRemoteDefinitions?: boolean
@@ -19,8 +19,8 @@ export const getApiBlueprint = async ({
   useRemoteDefinitions = false,
   update = false,
 }: GetApiBlueprintOptions = {}): Promise<ApiBlueprint> => {
-  // Remote definitions describe whatever the server is currently running, so
-  // build them directly from the server's OpenAPI document.
+  // Remote definitions describe whatever the endpoint is currently running, so
+  // build them directly from that endpoint's OpenAPI document.
   if (useRemoteDefinitions) return await createRemoteBlueprint()
 
   return await getBlueprint({ update })

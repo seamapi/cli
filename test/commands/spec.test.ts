@@ -21,7 +21,7 @@ test('command spec: falls back to the first sentence for an untitled endpoint', 
 
 test('command spec: includes commands handled by the CLI itself', () => {
   expect(findCommand(spec, ['login'])?.flags.map(({ long }) => long)).toEqual([
-    'server',
+    'endpoint',
     'token',
     'workspace-id',
   ])

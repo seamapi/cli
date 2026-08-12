@@ -29,7 +29,7 @@ let stateHome: string
 let configHome: string
 let cacheHome: string
 let loggedOutStateHome: string
-let otherServerConfigHome: string
+let otherEndpointConfigHome: string
 let requests: Array<{
   path: string
   body: unknown
@@ -77,7 +77,7 @@ beforeAll(async () => {
   await mkdir(join(stateHome, 'seam'), { recursive: true })
   await writeFile(
     join(configHome, 'seam', 'cli.json'),
-    JSON.stringify({ server: endpoint }),
+    JSON.stringify({ endpoint }),
   )
   await writeFile(
     join(stateHome, 'seam', 'cli.json'),
@@ -88,12 +88,12 @@ beforeAll(async () => {
   loggedOutStateHome = join(home, 'logged-out-state')
   await mkdir(join(loggedOutStateHome, 'seam'), { recursive: true })
 
-  // Settings pointing at a server nothing is listening on.
-  otherServerConfigHome = join(home, 'other-server-config')
-  await mkdir(join(otherServerConfigHome, 'seam'), { recursive: true })
+  // Settings pointing at an endpoint nothing is listening on.
+  otherEndpointConfigHome = join(home, 'other-endpoint-config')
+  await mkdir(join(otherEndpointConfigHome, 'seam'), { recursive: true })
   await writeFile(
-    join(otherServerConfigHome, 'seam', 'cli.json'),
-    JSON.stringify({ server: 'http://localhost:1' }),
+    join(otherEndpointConfigHome, 'seam', 'cli.json'),
+    JSON.stringify({ endpoint: 'http://localhost:1' }),
   )
 
   // A pre-seeded blueprint cache holding the fixture blueprint, so tests
@@ -257,15 +257,15 @@ test('cli: reports an unknown argument rather than sending it', async () => {
 test('cli: reports an unknown argument to a command it handles itself', async () => {
   const { stdout, stderr, exitCode } = await runCli([
     'select',
-    'server',
-    '--serverr',
+    'endpoint',
+    '--endpointt',
     'https://example.com',
   ])
 
   expect(exitCode).toBe(1)
   expect(stdout).toBe('')
-  expect(stderr).toContain('Unknown parameter for select server: --serverr')
-  expect(stderr).toContain("Run 'seam select server --help'")
+  expect(stderr).toContain('Unknown parameter for select endpoint: --endpointt')
+  expect(stderr).toContain("Run 'seam select endpoint --help'")
 })
 
 test('cli: reports an unknown argument to a command taking none', async () => {
@@ -526,10 +526,10 @@ test('cli: SEAM_CLI_WORKSPACE_ID sets the workspace for the request', async () =
   expect(requests[0]?.headers['seam-workspace']).toBe('workspace_from_env')
 })
 
-test('cli: SEAM_CLI_ENDPOINT wins over the stored server', async () => {
+test('cli: SEAM_CLI_ENDPOINT wins over the stored endpoint', async () => {
   requests = []
   const { exitCode } = await runCli(['devices', 'list'], {
-    configHome: otherServerConfigHome,
+    configHome: otherEndpointConfigHome,
     env: { SEAM_CLI_ENDPOINT: endpoint },
   })
 
@@ -537,10 +537,10 @@ test('cli: SEAM_CLI_ENDPOINT wins over the stored server', async () => {
   expect(requests[0]?.path).toBe('/devices/list')
 })
 
-test('cli: uses the stored server without SEAM_CLI_ENDPOINT', async () => {
+test('cli: uses the stored endpoint without SEAM_CLI_ENDPOINT', async () => {
   requests = []
   const { exitCode } = await runCli(['devices', 'list'], {
-    configHome: otherServerConfigHome,
+    configHome: otherEndpointConfigHome,
   })
 
   expect(exitCode).toBe(1)
@@ -583,16 +583,16 @@ test('cli: refuses to log in with a workspace while SEAM_CLI_WORKSPACE_ID is set
   )
 })
 
-test('cli: refuses to select a server while SEAM_CLI_ENDPOINT is set', async () => {
+test('cli: refuses to select an endpoint while SEAM_CLI_ENDPOINT is set', async () => {
   const { stdout, stderr, exitCode } = await runCli(
-    ['select', 'server', '--server', 'https://connect.example.com'],
+    ['select', 'endpoint', '--endpoint', 'https://connect.example.com'],
     { env: { SEAM_CLI_ENDPOINT: endpoint } },
   )
 
   expect(exitCode).toBe(1)
   expect(stdout).toBe('')
   expect(stderr).toContain(
-    'Cannot select a server while SEAM_CLI_ENDPOINT is set',
+    'Cannot select an endpoint while SEAM_CLI_ENDPOINT is set',
   )
 })
 
@@ -606,7 +606,7 @@ test('cli: logout removes the stored token and workspace', async () => {
     stateFile,
     JSON.stringify({
       [endpoint]: { pat: 'seam_apikey1_token' },
-      // A token stored before tokens were kept per server.
+      // A token stored before tokens were kept per endpoint.
       pat: 'seam_apikey1_legacy',
       current_workspace_id: 'workspace1',
     }),
@@ -703,7 +703,7 @@ test('cli: logout leaves the cli unauthenticated', async () => {
   expect(stderr).toContain('Not logged in')
 })
 
-test('cli: logout keeps a token stored for another server', async () => {
+test('cli: logout keeps a token stored for another endpoint', async () => {
   const home = await createLoggedInStateHome()
   await writeFile(
     join(home, 'seam', 'cli.json'),

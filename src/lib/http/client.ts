@@ -13,7 +13,7 @@ export const getSeam = async (
 ): Promise<SeamHttp> => {
   const token = getRequiredToken(auth)
 
-  const options = { endpoint: auth.server }
+  const options = { endpoint: auth.endpoint }
 
   if (isPersonalAccessToken(token)) {
     return SeamHttp.fromPersonalAccessToken(
@@ -38,7 +38,7 @@ export const getSeamMultiWorkspace = async (
   auth: AuthContext = resolveAuth(),
 ): Promise<SeamHttpWithoutWorkspace | SeamHttp> => {
   const token = getRequiredToken(auth)
-  const options = { endpoint: auth.server }
+  const options = { endpoint: auth.endpoint }
 
   if (isPersonalAccessToken(token)) {
     return SeamHttpWithoutWorkspace.fromPersonalAccessToken(token, options)
