@@ -1,7 +1,4 @@
-import {
-  isSeamHttpApiError,
-  type SeamHttpApiError,
-} from '@seamapi/http'
+import { isSeamHttpApiError, type SeamHttpApiError } from '@seamapi/http'
 import chalk from 'chalk'
 
 import type { Output } from 'lib/output/output.js'
