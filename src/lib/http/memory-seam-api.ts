@@ -1,7 +1,7 @@
 import {
   SeamHttpApiError,
   SeamHttpInvalidInputError,
-} from '@seamapi/http/connect'
+} from '@seamapi/http'
 
 import type { ApiRequestOptions, SeamApi, SeamApiRequest } from './api.js'
 

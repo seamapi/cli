@@ -1,4 +1,4 @@
-import { SeamHttpWithoutWorkspace } from '@seamapi/http/connect'
+import { SeamHttpWithoutWorkspace } from '@seamapi/http'
 
 import { assertMutable, selectWorkspace } from 'lib/auth/operations.js'
 import { getConfig } from 'lib/config/index.js'

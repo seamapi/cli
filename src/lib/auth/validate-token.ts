@@ -3,7 +3,7 @@ import {
   isPersonalAccessToken,
   SeamHttp,
   SeamHttpWithoutWorkspace,
-} from '@seamapi/http/connect'
+} from '@seamapi/http'
 
 import { resolveAuth } from 'lib/context.js'
 

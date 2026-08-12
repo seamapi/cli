@@ -1,4 +1,4 @@
-import type { ActionAttemptsGetResponse } from '@seamapi/http/connect'
+import type { ActionAttemptsGetResponse } from '@seamapi/http'
 
 import { getSeam } from 'lib/http/client.js'
 import { getOutput } from 'lib/output/get-output.js'

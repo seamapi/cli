@@ -1,4 +1,4 @@
-import { isApiKey, isPersonalAccessToken } from '@seamapi/http/connect'
+import { isApiKey, isPersonalAccessToken } from '@seamapi/http'
 import chalk from 'chalk'
 
 import { assertMutable, storeToken } from 'lib/auth/operations.js'

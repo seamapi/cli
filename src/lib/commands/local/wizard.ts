@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 
-import { isApiKey } from '@seamapi/http/connect'
+import { isApiKey } from '@seamapi/http'
 import type { StorageAdapter, WizardAdapter, WizardAuth } from '@seamapi/wizard'
 import Configstore from 'configstore'
 
