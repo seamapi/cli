@@ -36,7 +36,7 @@ const outputSection = {
   content: [
     'Only the response is written to stdout, so it is safe to pipe. Prompts, progress, and other information are written to stderr.',
     'The response is trimmed to the response key and pagination.',
-    'Request params may be piped or redirected in as a JSON object. Params given as arguments win over params read from stdin.',
+    'Request params may be piped or redirected in as a JSON object, or passed inline with --raw. Params given as arguments win over raw or stdin params.',
   ],
 }
 

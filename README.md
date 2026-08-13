@@ -138,8 +138,8 @@ one yourself. Run `seam <command> --help` to see whether a command paginates.
 
 ### JSON
 
-Request params may be piped or redirected in as a JSON object. Params given as
-arguments win over params read from stdin.
+Request params may be piped or redirected in as a JSON object, or passed
+inline with `--raw`. Params given as arguments win over raw or stdin params.
 
 An argument the command does not accept is an error, so a typo is reported
 rather than sent. Params read from stdin are passed through as given, so
@@ -151,6 +151,9 @@ seam locks unlock-door < params.json
 
 # Or from another program
 echo '{"device_id": "'"$MY_DOOR"'"}' | seam locks unlock-door
+
+# Pass request params inline as JSON
+seam devices list --raw '{"search":"bar"}'
 
 # --device-id wins over any device_id in params.json
 seam devices list --limit 5 < params.json

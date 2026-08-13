@@ -317,6 +317,19 @@ test('cli: sends an argument once, however it is written', async () => {
   expect(requests[0]?.body).toEqual({ limit: 5 })
 })
 
+test('cli: accepts inline raw json params', async () => {
+  requests = []
+  const { exitCode } = await runCli([
+    'devices',
+    'list',
+    '--raw',
+    '{"limit":2,"nope":true}',
+  ])
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({ limit: 2, nope: true })
+})
+
 test('cli: does not hold params read from stdin to the command', async () => {
   requests = []
   const { exitCode } = await runCli(['devices', 'list'], {
