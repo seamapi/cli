@@ -29,10 +29,7 @@ import { createSeamApi, type SeamApi } from 'lib/http/api.js'
 import { interactForCommandSelection } from 'lib/interactions/index.js'
 import { getOutput, setOutput } from 'lib/output/get-output.js'
 import { createOutput } from 'lib/output/output.js'
-import {
-  parseJsonParams,
-  readStdinJson,
-} from 'lib/output/read-stdin-json.js'
+import { parseJsonParams, readStdinJson } from 'lib/output/read-stdin-json.js'
 import { resolveOutputFormat } from 'lib/output/resolve-output-format.js'
 import { setAuthOverrides } from 'lib/overrides.js'
 import { canPrompt } from 'lib/prompt.js'
@@ -172,9 +169,7 @@ async function cli(args: ParsedArgs, argv: string[]) {
   // Params piped or redirected in, e.g., `seam devices list < params.json`.
   const pipedParams = await readStdinJson()
   const rawParams =
-    args['raw'] == null
-      ? null
-      : parseJsonParams(String(args['raw']), '--raw')
+    args['raw'] == null ? null : parseJsonParams(String(args['raw']), '--raw')
   // Inline raw params take precedence over piped params, while ordinary
   // command arguments still take precedence over both.
   const stdinParams: Record<string, any> = {
