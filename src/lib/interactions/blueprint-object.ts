@@ -305,7 +305,7 @@ export const interactForBlueprintObject = async (
         args.params[paramToEdit] = await interactForBlueprintObject(
           {
             command: args.command,
-            params: {},
+            params: toObjectParams(args.params[paramToEdit]),
             parameters: prop.parameters,
             isSubProperty: true,
             subPropertyPath: paramToEdit,
@@ -332,3 +332,15 @@ export const interactForBlueprintObject = async (
     `Didn't know how to handle Blueprint parameter for property: "${paramToEdit}"`,
   )
 }
+
+/**
+ * An object parameter's value as the params its editor starts from, so
+ * editing is prefilled with what was given and leaving the editor keeps it.
+ *
+ * Params read from stdin are passed through as given, so the value is not
+ * necessarily an object: anything else has nothing to edit and starts empty.
+ */
+const toObjectParams = (value: unknown): Record<string, any> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, any>)
+    : {}

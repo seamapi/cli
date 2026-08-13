@@ -240,6 +240,129 @@ test.for(['custom_metadata', 'custom_metadata_has'] as const)(
   },
 )
 
+// An object parameter is edited by the same menu one level down, so it has to
+// start from the value it was given rather than from nothing.
+const objectParameters = [
+  {
+    name: 'user_identity',
+    isRequired: false,
+    format: 'object',
+    parameters: [
+      { name: 'full_name', isRequired: true, format: 'string' },
+      { name: 'user_identity_key', isRequired: false, format: 'string' },
+    ],
+  },
+] as unknown as Parameter[]
+
+const userIdentity = {
+  full_name: 'Jane Doe',
+  user_identity_key: 'jane',
+}
+
+const objectArgs = (params: Record<string, any>) => ({
+  command: ['access_grants', 'create'],
+  parameters: objectParameters,
+  params,
+})
+
+const editorChoices = (): Array<{ value: string; hint?: string }> => {
+  const question = memoryPrompt.questions.find(
+    ({ message }) => message === withBackHint('Editing "user_identity"'),
+  )
+  if (question?.choices == null) throw new Error('The editor was not opened')
+  return question.choices as Array<{ value: string; hint?: string }>
+}
+
+test('interactForBlueprintObject: prefills an object parameter editor with the given value', async () => {
+  // Pick the parameter, choose to enter a value, then leave its editor.
+  scriptPrompt(['user_identity', 'value', 'back', 'done'])
+
+  await interactForBlueprintObject(
+    objectArgs({ user_identity: { ...userIdentity } }),
+    ctx('interactive'),
+  )
+
+  expect(
+    editorChoices().find(({ value }) => value === 'full_name'),
+  ).toMatchObject({ hint: '[Jane Doe]' })
+})
+
+test('interactForBlueprintObject: leaving an object parameter editor keeps the given value', async () => {
+  scriptPrompt(['user_identity', 'value', 'back', 'done'])
+
+  await expect(
+    interactForBlueprintObject(
+      objectArgs({ user_identity: { ...userIdentity } }),
+      ctx('interactive'),
+    ),
+  ).resolves.toEqual({ user_identity: userIdentity })
+})
+
+test('interactForBlueprintObject: dismissing an object parameter editor keeps the given value', async () => {
+  scriptPrompt(['user_identity', 'value', cancelPrompt, 'done'])
+
+  await expect(
+    interactForBlueprintObject(
+      objectArgs({ user_identity: { ...userIdentity } }),
+      ctx('interactive'),
+    ),
+  ).resolves.toEqual({ user_identity: userIdentity })
+})
+
+test('interactForBlueprintObject: edits an object parameter from the value it was given', async () => {
+  // Pick the parameter, enter its editor, edit one sub-property, save.
+  scriptPrompt([
+    'user_identity',
+    'value',
+    'user_identity_key',
+    'value',
+    'jane-2',
+    'done',
+    'done',
+  ])
+
+  await expect(
+    interactForBlueprintObject(
+      objectArgs({ user_identity: { ...userIdentity } }),
+      ctx('interactive'),
+    ),
+  ).resolves.toEqual({
+    user_identity: {
+      full_name: userIdentity.full_name,
+      user_identity_key: 'jane-2',
+    },
+  })
+})
+
+test('interactForBlueprintObject: an object parameter given nothing starts empty', async () => {
+  scriptPrompt(['user_identity', 'full_name', 'Jane Doe', 'done', 'done'])
+
+  await expect(
+    interactForBlueprintObject(objectArgs({}), ctx('interactive')),
+  ).resolves.toEqual({ user_identity: { full_name: 'Jane Doe' } })
+})
+
+// Params read from stdin are passed through as given, so an object parameter
+// can arrive as something with no properties to edit.
+test.for([['a string', 'nope'] as const, ['a list', ['nope']] as const])(
+  'interactForBlueprintObject: an object parameter given %s starts empty',
+  async ([, given]) => {
+    scriptPrompt(['user_identity', 'value', 'back', 'done'])
+
+    await interactForBlueprintObject(
+      objectArgs({ user_identity: given }),
+      ctx('interactive'),
+    )
+
+    expect(editorChoices().map(({ value }) => value)).toEqual([
+      'full_name',
+      'user_identity_key',
+      'empty',
+      'back',
+    ])
+  },
+)
+
 test('interactForBlueprintObject: dismissing the parameter menu leaves the command', async () => {
   scriptPrompt([cancelPrompt])
 
