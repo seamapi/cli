@@ -45,8 +45,9 @@ suggestions.
 
 Pass `--interactive` (or `-i`) to always be prompted to review and edit
 properties before the request is made. The prompt is prefilled with whatever
-you passed as arguments, so this is the way to add optional properties, or to
-check a request before making it.
+you passed as arguments or piped in as JSON, and each property you open is
+prefilled with the value it has, ready to edit rather than retype. This is the
+way to add optional properties, or to check a request before making it.
 
 For scripts and CI, pass `--non-interactive` (or `-y`) to never be prompted.
 The command must then be complete: if the command itself is ambiguous, or any

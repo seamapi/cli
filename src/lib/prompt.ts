@@ -24,11 +24,15 @@ export interface PromptTextOptions {
   message: string
   placeholder?: string
   defaultValue?: string
+  /** Editable text the prompt opens with, for editing a value in place. */
+  initialValue?: string | undefined
   validate?: (value: string | undefined) => string | undefined
 }
 
 export interface PromptNumberOptions {
   message: string
+  /** Editable text the prompt opens with, for editing a value in place. */
+  initialValue?: number | undefined
   validate?: (value: number) => string | undefined
 }
 
@@ -42,6 +46,15 @@ export interface PromptConfirmOptions {
 export interface PromptSelectOptions<Value> {
   message: string
   choices: Array<PromptChoice<Value>>
+  /** The choice to open on, for editing a value in place. */
+  initialValue?: Value | undefined
+}
+
+export interface PromptMultiselectOptions<Value> {
+  message: string
+  choices: Array<PromptChoice<Value>>
+  /** The choices to open selected, for editing a value in place. */
+  initialValues?: Value[] | undefined
 }
 
 /**
@@ -60,7 +73,7 @@ export interface PromptClient {
   select: <Value>(options: PromptSelectOptions<Value>) => Promise<Value>
   autocomplete: <Value>(options: PromptSelectOptions<Value>) => Promise<Value>
   autocompleteMultiselect: <Value>(
-    options: PromptSelectOptions<Value>,
+    options: PromptMultiselectOptions<Value>,
   ) => Promise<Value[]>
 }
 
@@ -133,6 +146,37 @@ const toOptions = <Value>(
         : { label, value, hint }) as Option<Value>,
   )
 
+/**
+ * A value as the choice a list prompt opens on: the value when the list
+ * offers it, and otherwise nothing.
+ *
+ * A value the list does not offer, such as an id passed as an argument that
+ * is not among the resources fetched, would leave clack holding a selection
+ * with no choice behind it — so the prompt opens on its first choice, the
+ * same as one with no value to start from.
+ */
+export const offeredValue = <Value>(
+  choices: Array<PromptChoice<Value>>,
+  value: Value | undefined,
+): Value | undefined =>
+  choices.some((choice) => choice.value === value) ? value : undefined
+
+/** Every one of the values a list prompt offers, in the order given. */
+export const offeredValues = <Value>(
+  choices: Array<PromptChoice<Value>>,
+  values: Value[] | undefined,
+): Value[] =>
+  (values ?? []).filter((value) => offeredValue(choices, value) !== undefined)
+
+// Options a clack prompt is given cannot carry an explicit undefined: it
+// declares each optional field without it, and the CLI type-checks with
+// exactOptionalPropertyTypes.
+const optional = <Key extends string, Value>(
+  key: Key,
+  value: Value | undefined,
+): Partial<Record<Key, Value>> =>
+  value === undefined ? {} : ({ [key]: value } as Record<Key, Value>)
+
 export class TerminalPromptClient implements PromptClient {
   /**
    * Prompts read raw keypresses and render an interface, so they need a
@@ -145,7 +189,14 @@ export class TerminalPromptClient implements PromptClient {
 
   text = async (options: PromptTextOptions): Promise<string> => {
     installArrowKeyAliases()
-    return unwrap(await text({ ...options, output }))
+    const { initialValue, ...rest } = options
+    return unwrap(
+      await text({
+        ...rest,
+        ...optional('initialValue', initialValue),
+        output,
+      }),
+    )
   }
 
   number = async (options: PromptNumberOptions): Promise<number> => {
@@ -153,6 +204,7 @@ export class TerminalPromptClient implements PromptClient {
     const value = unwrap(
       await text({
         message: options.message,
+        ...optional('initialValue', options.initialValue?.toString()),
         validate: (value) => {
           if (value == null || value.trim() === '') return 'Enter a number'
           const parsed = Number(value)
@@ -178,6 +230,10 @@ export class TerminalPromptClient implements PromptClient {
       await select<Value>({
         message: options.message,
         options: toOptions(options.choices),
+        ...optional(
+          'initialValue',
+          offeredValue(options.choices, options.initialValue),
+        ),
         output,
       }),
     )
@@ -191,6 +247,10 @@ export class TerminalPromptClient implements PromptClient {
       await autocomplete<Value>({
         message: options.message,
         options: toOptions(options.choices),
+        ...optional(
+          'initialValue',
+          offeredValue(options.choices, options.initialValue),
+        ),
         // Search a list by any part of a name or hint, rather than only by
         // the label, which is all clack matches for itself.
         filter: searchChoices,
@@ -200,13 +260,14 @@ export class TerminalPromptClient implements PromptClient {
   }
 
   autocompleteMultiselect = async <Value>(
-    options: PromptSelectOptions<Value>,
+    options: PromptMultiselectOptions<Value>,
   ): Promise<Value[]> => {
     installArrowKeyAliases()
     return unwrap(
       await autocompleteMultiselect<Value>({
         message: options.message,
         options: toOptions(options.choices),
+        initialValues: offeredValues(options.choices, options.initialValues),
         filter: searchChoices,
         output,
       }),
@@ -273,7 +334,7 @@ export const promptAutocomplete = async <Value>(
 }
 
 export const promptAutocompleteMultiselect = async <Value>(
-  options: PromptSelectOptions<Value>,
+  options: PromptMultiselectOptions<Value>,
 ): Promise<Value[]> => {
   ensureInteractive()
   return await client.autocompleteMultiselect(options)
