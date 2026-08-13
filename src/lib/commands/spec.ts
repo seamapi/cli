@@ -105,6 +105,14 @@ export const globalFlags: CommandFlag[] = [
     isRequired: false,
   },
   {
+    long: 'raw',
+    short: null,
+    description: 'Pass request parameters as an inline JSON object.',
+    values: [],
+    takesValue: true,
+    isRequired: false,
+  },
+  {
     long: 'non-interactive',
     short: 'y',
     description:

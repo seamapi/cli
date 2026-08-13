@@ -45,8 +45,9 @@ suggestions.
 
 Pass `--interactive` (or `-i`) to always be prompted to review and edit
 properties before the request is made. The prompt is prefilled with whatever
-you passed as arguments, so this is the way to add optional properties, or to
-check a request before making it.
+you passed as arguments or piped in as JSON, and each property you open is
+prefilled with the value it has, ready to edit rather than retype. This is the
+way to add optional properties, or to check a request before making it.
 
 For scripts and CI, pass `--non-interactive` (or `-y`) to never be prompted.
 The command must then be complete: if the command itself is ambiguous, or any
@@ -137,8 +138,8 @@ one yourself. Run `seam <command> --help` to see whether a command paginates.
 
 ### JSON
 
-Request params may be piped or redirected in as a JSON object. Params given as
-arguments win over params read from stdin.
+Request params may be piped or redirected in as a JSON object, or passed
+inline with `--raw`. Params given as arguments win over raw or stdin params.
 
 An argument the command does not accept is an error, so a typo is reported
 rather than sent. Params read from stdin are passed through as given, so
@@ -150,6 +151,9 @@ seam locks unlock-door < params.json
 
 # Or from another program
 echo '{"device_id": "'"$MY_DOOR"'"}' | seam locks unlock-door
+
+# Pass request params inline as JSON
+seam devices list --raw '{"search":"bar"}'
 
 # --device-id wins over any device_id in params.json
 seam devices list --limit 5 < params.json

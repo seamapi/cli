@@ -12,11 +12,14 @@ export const interactForResource = async <Resource>({
   fetchResources,
   toChoice,
   message = `Select a ${resourceName}:`,
+  initialValue,
 }: {
   resourceName: string
   fetchResources: () => Promise<Resource[]>
   toChoice: (resource: Resource) => ResourceChoice
   message?: string | undefined
+  /** The resource already chosen, for the list to open on. */
+  initialValue?: string | undefined
 }) => {
   const resources = await withLoading(
     `Fetching ${resourceName.replace(/_/g, ' ')}s...`,
@@ -30,5 +33,6 @@ export const interactForResource = async <Resource>({
       const { title, value, description } = toChoice(resource)
       return { label: title, value, hint: description }
     }),
+    initialValue,
   })
 }

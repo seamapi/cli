@@ -207,32 +207,47 @@ export const interactForBlueprintObject = async (
       }
     }
 
+    const current = args.params[paramToEdit]
+
     if (paramToEdit === 'device_id') {
-      args.params[paramToEdit] = await interactForDevice()
+      args.params[paramToEdit] = await interactForDevice(toText(current))
       return interactForBlueprintObject(args, ctx)
     } else if (paramToEdit === 'access_code_id') {
-      args.params[paramToEdit] = await interactForAccessCode(args.params as any)
+      args.params[paramToEdit] = await interactForAccessCode(
+        args.params as any,
+        toText(current),
+      )
       return interactForBlueprintObject(args, ctx)
     } else if (paramToEdit === 'connected_account_id') {
-      const connectedAccountId = await interactForConnectedAccount()
+      const connectedAccountId = await interactForConnectedAccount(
+        toText(current),
+      )
       args.params[paramToEdit] = connectedAccountId
       return interactForBlueprintObject(args, ctx)
     } else if (
       paramToEdit === 'user_identity_id' ||
       paramToEdit === 'user_identity_ids'
     ) {
-      const userIdentityId = await interactForUserIdentity()
+      const userIdentityId = await interactForUserIdentity(
+        paramToEdit === 'user_identity_ids'
+          ? toTextList(current)[0]
+          : toText(current),
+      )
       args.params[paramToEdit] =
         paramToEdit === 'user_identity_ids' ? [userIdentityId] : userIdentityId
       return interactForBlueprintObject(args, ctx)
     } else if (paramToEdit.endsWith('acs_system_id')) {
-      args.params[paramToEdit] = await interactForAcsSystem()
+      args.params[paramToEdit] = await interactForAcsSystem({
+        initialValue: toText(current),
+      })
       return interactForBlueprintObject(args, ctx)
     } else if (paramToEdit.endsWith('acs_user_id')) {
-      args.params[paramToEdit] = await interactForAcsUser()
+      args.params[paramToEdit] = await interactForAcsUser(toText(current))
       return interactForBlueprintObject(args, ctx)
     } else if (paramToEdit.endsWith('acs_entrance_id')) {
-      args.params['acs_entrance_id'] = await interactForAcsEntrance()
+      args.params['acs_entrance_id'] = await interactForAcsEntrance(
+        toText(args.params['acs_entrance_id']),
+      )
       return interactForBlueprintObject(args, ctx)
     } else if (
       paramToEdit.endsWith('_at') ||
@@ -240,14 +255,14 @@ export const interactForBlueprintObject = async (
       paramToEdit.endsWith('_before') ||
       paramToEdit.endsWith('_after')
     ) {
-      args.params[paramToEdit] = await interactForTimestamp()
+      args.params[paramToEdit] = await interactForTimestamp(toText(current))
       return interactForBlueprintObject(args, ctx)
     } else if (
       paramToEdit === 'custom_metadata' ||
       paramToEdit === 'custom_metadata_has'
     ) {
       args.params[paramToEdit] = await interactForCustomMetadata(
-        args.params[paramToEdit] || {},
+        toRecord(current),
       )
       return interactForBlueprintObject(args, ctx)
     }
@@ -256,10 +271,11 @@ export const interactForBlueprintObject = async (
       if (['string', 'id', 'datetime'].includes(prop.format)) {
         let value
         if (prop.format === 'datetime') {
-          value = await interactForTimestamp()
+          value = await interactForTimestamp(toText(current))
         } else {
           value = await promptText({
             message: withBackHint(`${paramToEdit}:`),
+            initialValue: toText(current),
           })
         }
         args.params[paramToEdit] = value
@@ -271,13 +287,14 @@ export const interactForBlueprintObject = async (
             label: v.name,
             value: v.name,
           })),
+          initialValue: toText(current),
         })
         args.params[paramToEdit] = value
         return interactForBlueprintObject(args, ctx)
       } else if (prop.format === 'boolean') {
         const value = await promptConfirm({
           message: withBackHint(`${paramToEdit}:`),
-          initialValue: true,
+          initialValue: toBoolean(current) ?? true,
           active: 'true',
           inactive: 'false',
         })
@@ -292,12 +309,13 @@ export const interactForBlueprintObject = async (
             label: v.name,
             value: v.name,
           })),
+          initialValues: toTextList(current),
         })
         args.params[paramToEdit] = value
         return interactForBlueprintObject(args, ctx)
       } else if (prop.format === 'list') {
         args.params[paramToEdit] = await interactForArray(
-          args.params[paramToEdit] || [],
+          toTextList(current),
           `Edit the list for ${paramToEdit}`,
         )
         return interactForBlueprintObject(args, ctx)
@@ -305,7 +323,7 @@ export const interactForBlueprintObject = async (
         args.params[paramToEdit] = await interactForBlueprintObject(
           {
             command: args.command,
-            params: {},
+            params: toRecord(current),
             parameters: prop.parameters,
             isSubProperty: true,
             subPropertyPath: paramToEdit,
@@ -316,6 +334,7 @@ export const interactForBlueprintObject = async (
       } else if (prop.format === 'number') {
         const value = await promptNumber({
           message: withBackHint(`${paramToEdit}:`),
+          initialValue: toNumber(current),
         })
 
         args.params[paramToEdit] = value
@@ -332,3 +351,33 @@ export const interactForBlueprintObject = async (
     `Didn't know how to handle Blueprint parameter for property: "${paramToEdit}"`,
   )
 }
+
+/*
+ * A parameter's current value in the shape its editor starts from, so that
+ * editing a parameter that already has a value continues from that value
+ * instead of from nothing — whether it came from an argument, from the JSON
+ * piped in, or from an earlier trip through this menu.
+ *
+ * Params are passed through as given, so a value need not match the format
+ * its parameter documents: the JSON piped in is arbitrary, and a schema can
+ * change under a script. A value the editor cannot start from is left out of
+ * it, which opens the editor as an unset parameter does, rather than
+ * rendering a value of the wrong type as text to edit.
+ */
+
+const toText = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined
+
+const toNumber = (value: unknown): number | undefined =>
+  typeof value === 'number' ? value : undefined
+
+const toBoolean = (value: unknown): boolean | undefined =>
+  typeof value === 'boolean' ? value : undefined
+
+const toTextList = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item) => typeof item === 'string') : []
+
+const toRecord = (value: unknown): Record<string, any> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, any>)
+    : {}
