@@ -1,12 +1,18 @@
 import { join } from 'node:path'
 
 import { isApiKey } from '@seamapi/http'
-import type { StorageAdapter, WizardAdapter, WizardAuth } from '@seamapi/wizard'
+import type {
+  default as wizard,
+  StorageAdapter,
+  WizardAdapter,
+  WizardAuth,
+} from '@seamapi/wizard'
 import Configstore from 'configstore'
 
 import type { Command } from 'lib/commands/registry.js'
 import { type CliConfig, getConfig, rootPaths } from 'lib/config/index.js'
 import { resolveAuth } from 'lib/context.js'
+import { UsageError } from 'lib/errors.js'
 
 /**
  * Run the Seam setup wizard.
@@ -14,8 +20,37 @@ import { resolveAuth } from 'lib/context.js'
  * Intercepted by the entry before argument parsing so the wizard owns its
  * own argv; the registered executor covers selecting it interactively.
  */
-export const runWizard = async (argv: string[]): Promise<void> => {
-  const { default: wizard } = await import('@seamapi/wizard')
+type Wizard = typeof wizard
+type WizardModule = { default: Wizard }
+type LoadWizard = () => Promise<WizardModule>
+
+const loadWizard: LoadWizard = async () => await import('@seamapi/wizard')
+
+export const runWizard = async (
+  argv: string[],
+  load: LoadWizard = loadWizard,
+): Promise<void> => {
+  let wizard: Wizard
+  try {
+    const module = await load()
+    wizard = module.default
+  } catch (error) {
+    if (isMissingWizard(error)) {
+      throw new UsageError(
+        [
+          'The Seam Wizard is not available in this installation.',
+          '',
+          'This is most likely because the packaging source does not allow software that includes dependencies with non-commercial licenses, including the Claude SDK used by the Wizard.',
+          '',
+          'To use the Wizard, install the Seam CLI from npm:',
+          '',
+          '  npm i -g seam',
+        ].join('\n'),
+      )
+    }
+    throw error
+  }
+
   await wizard({
     argv,
     commandName: 'seam wizard',
@@ -38,6 +73,13 @@ export const wizardCommand: Command = {
     return { kind: 'done' }
   },
 }
+
+const isMissingWizard = (error: unknown): boolean =>
+  error instanceof Error &&
+  'code' in error &&
+  (error.code === 'ERR_MODULE_NOT_FOUND' ||
+    error.code === 'MODULE_NOT_FOUND') &&
+  error.message.includes("'@seamapi/wizard'")
 
 const wizardFileName = 'wizard.json'
 

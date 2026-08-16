@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
-import { createWizardAdapter } from 'lib/commands/local/wizard.js'
+import { createWizardAdapter, runWizard } from 'lib/commands/local/wizard.js'
 import { createMemoryConfig } from 'lib/config/index.js'
 import { defaultEndpoint } from 'lib/context.js'
 import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
@@ -47,6 +47,28 @@ const createAdapter = ({
     statePath: join(directory, 'state', 'wizard.json'),
   })
 }
+
+test('wizard: explains how to install the optional dependency', async () => {
+  const missingWizard = Object.assign(
+    new Error("Cannot find package '@seamapi/wizard'"),
+    { code: 'ERR_MODULE_NOT_FOUND' },
+  )
+
+  await expect(
+    runWizard([], async () => await Promise.reject(missingWizard)),
+  ).rejects.toMatchObject({
+    name: 'UsageError',
+    message: expect.stringContaining('npm i -g seam'),
+  })
+})
+
+test('wizard: does not hide errors raised while loading the wizard', async () => {
+  const loadError = new Error('Wizard failed while loading')
+
+  await expect(
+    runWizard([], async () => await Promise.reject(loadError)),
+  ).rejects.toBe(loadError)
+})
 
 test('wizard adapter: hands over an API key for the project to use', async () => {
   const adapter = createAdapter({ token: 'seam_apikey1_token' })
