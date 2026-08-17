@@ -13,7 +13,10 @@ import {
 } from 'lib/args/parse.js'
 import { assertKnownArgs, assertNoAuthOverrides } from 'lib/args/validate.js'
 import { getApiBlueprint } from 'lib/blueprint/index.js'
-import { printCompletion } from 'lib/commands/local/completion.js'
+import {
+  printCompletion,
+  printCompletionLoader,
+} from 'lib/commands/local/completion.js'
 import { runWizard } from 'lib/commands/local/wizard.js'
 import {
   acceptedParamsOf,
@@ -129,6 +132,11 @@ async function cli(args: ParsedArgs, argv: string[]) {
         command == null ? new Set() : acceptedParamsOf(command.definition),
       isLocal: true,
     })
+
+    if (args['loader'] === true) {
+      printCompletionLoader(shell)
+      return
+    }
 
     const cachedBlueprint = await getApiBlueprint({ update })
     printCompletion(shell, buildRegistry(cachedBlueprint).spec)

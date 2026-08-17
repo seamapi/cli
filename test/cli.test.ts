@@ -282,6 +282,15 @@ test('cli: takes the arguments a command it handles itself accepts', async () =>
   expect(stdout).toContain('complete -F _seam_completion seam')
 })
 
+test('cli: prints an embedded completion loader without generating completions', async () => {
+  const { stdout, exitCode } = await runCli(['completion', 'bash', '--loader'])
+
+  expect(exitCode).toBe(0)
+  expect(stdout).toContain('bash completion loader for the seam command')
+  expect(stdout).toContain('seam completion bash')
+  expect(stdout).not.toContain('complete -F _seam_completion seam')
+})
+
 test('cli: names every unknown argument at once', async () => {
   requests = []
   const { stderr, exitCode } = await runCli([

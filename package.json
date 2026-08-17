@@ -41,7 +41,6 @@
     "index.js.map",
     "index.d.ts",
     "bin",
-    "completions",
     "lib",
     "src",
     "!test",
