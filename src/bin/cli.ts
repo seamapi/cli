@@ -252,7 +252,9 @@ const run = async (argv: string[]) => {
     return
   }
 
-  const args = parseCliArgs(argv)
+  const args = parseCliArgs(argv, {
+    booleanKeys: argv[0]?.toLowerCase() === 'completion' ? ['loader'] : [],
+  })
 
   const isTty = process.stdout.isTTY === true
 

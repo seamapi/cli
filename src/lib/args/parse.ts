@@ -50,11 +50,13 @@ export interface ParseCliArgsOptions {
    * lose leading zeroes or turn exponent notation into a digit string.
    */
   stringKeys?: string[]
+  /** Argument keys that must not consume the following positional word. */
+  booleanKeys?: string[]
 }
 
 export const parseCliArgs = (
   argv: string[],
-  { stringKeys = [] }: ParseCliArgsOptions = {},
+  { stringKeys = [], booleanKeys = [] }: ParseCliArgsOptions = {},
 ): ParsedArgs =>
   parseArgs(argv, {
     // A page cursor and a code are opaque even before the endpoint's own
@@ -70,7 +72,7 @@ export const parseCliArgs = (
       'workspace_id',
       ...stringKeys,
     ],
-    boolean: ['non-interactive', 'interactive', 'json'],
+    boolean: ['non-interactive', 'interactive', 'json', ...booleanKeys],
     // Deliberately not aliased to -n, which is reserved for a future
     // --dry-run flag.
     alias: { 'non-interactive': 'y', interactive: 'i' },

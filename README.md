@@ -307,11 +307,11 @@ seam completion zsh > "${fpath[1]}/_seam"
 ```
 
 System packages install completion loaders instead. The network-free loaders
-are embedded in the CLI and printed with `seam completion <shell> --loader`.
+are embedded in the CLI and printed with `seam completion --loader <shell>`.
 For example, a package can install the Bash loader with:
 
 ```sh
-seam completion bash --loader > /usr/share/bash-completion/completions/seam
+seam completion --loader bash > /usr/share/bash-completion/completions/seam
 ```
 
 A loader runs `seam completion` the first time the shell completes a Seam

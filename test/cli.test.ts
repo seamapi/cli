@@ -283,7 +283,7 @@ test('cli: takes the arguments a command it handles itself accepts', async () =>
 })
 
 test('cli: prints an embedded completion loader without generating completions', async () => {
-  const { stdout, exitCode } = await runCli(['completion', 'bash', '--loader'])
+  const { stdout, exitCode } = await runCli(['completion', '--loader', 'bash'])
 
   expect(exitCode).toBe(0)
   expect(stdout).toContain('bash completion loader for the seam command')

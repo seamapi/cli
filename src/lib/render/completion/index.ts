@@ -24,7 +24,7 @@ export const renderCompletion = (
 
 /**
  * Render the completion loader installed by system packages. The loader is
- * embedded in the CLI and printed by `seam completion <shell> --loader`.
+ * embedded in the CLI and printed by `seam completion --loader <shell>`.
  *
  * The loader runs 'seam completion' the first time the shell completes a seam
  * command, so installed completions always match the CLI's current Seam API
