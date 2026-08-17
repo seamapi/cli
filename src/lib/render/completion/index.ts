@@ -11,13 +11,6 @@ export type CompletionShell = (typeof completionShells)[number]
 export const isCompletionShell = (shell: unknown): shell is CompletionShell =>
   completionShells.includes(shell as CompletionShell)
 
-/** File name to install the completion script for each shell as. */
-export const completionFileNames: Record<CompletionShell, string> = {
-  bash: 'seam.bash',
-  fish: 'seam.fish',
-  zsh: 'seam.zsh',
-}
-
 const renderers: Record<CompletionShell, (spec: CommandSpec) => string> = {
   bash: renderBashCompletion,
   fish: renderFishCompletion,
@@ -30,7 +23,8 @@ export const renderCompletion = (
 ): string => renderers[shell](spec)
 
 /**
- * Render the completion loader installed by system packages.
+ * Render the completion loader installed by system packages. The loader is
+ * embedded in the CLI and printed by `seam completion <shell> --loader`.
  *
  * The loader runs 'seam completion' the first time the shell completes a seam
  * command, so installed completions always match the CLI's current Seam API

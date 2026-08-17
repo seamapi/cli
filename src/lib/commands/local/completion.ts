@@ -5,6 +5,7 @@ import { getOutput } from 'lib/output/get-output.js'
 import {
   type CompletionShell,
   renderCompletion,
+  renderCompletionStub,
 } from 'lib/render/completion/index.js'
 
 /**
@@ -24,6 +25,11 @@ export const printCompletion = (
   getOutput().text(renderCompletion(shell, spec))
 }
 
+/** Print the network-free loader installed in a shell completion directory. */
+export const printCompletionLoader = (shell: CompletionShell): void => {
+  getOutput().text(renderCompletionStub(shell))
+}
+
 type BuildSpec = (blueprint: ApiBlueprint) => CommandSpec
 
 const completionCommand = (
@@ -35,11 +41,25 @@ const completionCommand = (
     kind: 'cli',
     title: `Print the ${shell} completion script.`,
     description: '',
-    flags: [],
+    flags: [
+      {
+        long: 'loader',
+        short: null,
+        description:
+          'Print the dynamic, network-free loader for installation by a package manager.',
+        values: [],
+        takesValue: false,
+        isRequired: false,
+      },
+    ],
   },
   requiresAuth: false,
-  execute: async (_invocation, ctx) => {
-    printCompletion(shell, buildSpec(ctx.blueprint))
+  execute: async (invocation, ctx) => {
+    if (invocation.args['loader'] === true) {
+      printCompletionLoader(shell)
+    } else {
+      printCompletion(shell, buildSpec(ctx.blueprint))
+    }
     return { kind: 'done' }
   },
 })
