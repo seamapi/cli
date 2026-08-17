@@ -125,9 +125,9 @@ jobs:
             install -d "\${pkgdir}/usr/share/bash-completion/completions"
             install -d "\${pkgdir}/usr/share/fish/vendor_completions.d"
             install -d "\${pkgdir}/usr/share/zsh/site-functions"
-            "\${pkgdir}/usr/bin/seam" completion bash --loader > "\${pkgdir}/usr/share/bash-completion/completions/seam"
-            "\${pkgdir}/usr/bin/seam" completion fish --loader > "\${pkgdir}/usr/share/fish/vendor_completions.d/seam.fish"
-            "\${pkgdir}/usr/bin/seam" completion zsh --loader > "\${pkgdir}/usr/share/zsh/site-functions/_seam"
+            "\${pkgdir}/usr/bin/seam" completion --loader bash > "\${pkgdir}/usr/share/bash-completion/completions/seam"
+            "\${pkgdir}/usr/bin/seam" completion --loader fish > "\${pkgdir}/usr/share/fish/vendor_completions.d/seam.fish"
+            "\${pkgdir}/usr/bin/seam" completion --loader zsh > "\${pkgdir}/usr/share/zsh/site-functions/_seam"
             install -Dm644 LICENSE.txt "\${pkgdir}/usr/share/licenses/\${pkgname}/LICENSE"
           }
           PKGBUILD
