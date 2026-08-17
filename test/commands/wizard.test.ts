@@ -58,7 +58,9 @@ test('wizard: explains how to install the optional dependency', async () => {
     runWizard([], async () => await Promise.reject(missingWizard)),
   ).rejects.toMatchObject({
     name: 'UsageError',
-    message: expect.stringContaining('npm i -g seam'),
+    message: expect.stringMatching(
+      /brew uninstall --cask seam[\s\S]*brew install --cask seamapi\/tap\/seam-cli[\s\S]*npm i -g seam/,
+    ),
   })
 })
 
