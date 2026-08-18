@@ -15,12 +15,20 @@ prompted for, with suggestions pulled from your workspace. Pass
 
 ## Installation
 
+If you use Zsh, the completions only work if you enable compinit in your .zshrc with
+
+```sh
+autoload -Uz compinit
+compinit
+```
+
 ### npm
 
 Install the CLI globally using [npm] with
 
 ```
 $ npm install --global @seamapi/cli
+$ seam completion --install
 ```
 
 ### Homebrew
@@ -28,7 +36,14 @@ $ npm install --global @seamapi/cli
 Install the CLI from [Homebrew] with
 
 ```
-$ brew install --cask seam
+$ brew install --cask seamapi/tap/seam-cli
+```
+
+The Seam CLI may also be installed from Homebrew Core,
+but it does not include the Seam Wizard.
+
+```
+$ brew install seam
 ```
 
 ### Standalone binary
@@ -38,12 +53,20 @@ release]. The macOS binaries are signed with the Seam Labs, Inc. Apple
 Developer ID and notarized by Apple, so macOS runs them without a Gatekeeper
 prompt.
 
+Then install the shell completions with
+
+```
+$ seam completion --install
+```
+
 ### Arch Linux
 
 Install the [`seam-bin`][aur] package from the AUR with
 
 ```
-$ paru -S seam-bin
+$ git clone https://aur.archlinux.org/seam-bin.git
+$ cd seam-bin
+$ makepkg -si
 ```
 
 [aur]: https://aur.archlinux.org/packages/seam-bin
