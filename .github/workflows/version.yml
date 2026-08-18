@@ -41,8 +41,7 @@ jobs:
             *-*) channel="${VERSION#*-}"; channel="${channel%%.*}" ;;
             *) echo "Stable release, no channel note required."; exit 0 ;;
           esac
-          git fetch origin "+refs/notes/semantic-release:refs/notes/semantic-release" || true
-          git notes --ref semantic-release add --force \
+          git notes --ref "semantic-release-v$VERSION" add --force \
             --message "{\"channels\":[\"$channel\"]}" "v$VERSION^{commit}"
-          git push origin refs/notes/semantic-release
+          git push origin "refs/notes/semantic-release-v$VERSION"
           echo "Recorded v$VERSION on the '$channel' channel."
