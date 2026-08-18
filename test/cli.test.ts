@@ -291,6 +291,86 @@ test('cli: prints an embedded completion loader without generating completions',
   expect(stdout).not.toContain('complete -F _seam_completion seam')
 })
 
+test('cli: installs completions into a shell config', async () => {
+  const shellHome = await mkdtemp(join(tmpdir(), 'seam-cli-shell-'))
+  await writeFile(join(shellHome, '.zshrc'), 'export EDITOR=vim\n', 'utf8')
+
+  const { stderr, exitCode } = await runCli(
+    ['completion', '--install', 'zsh', '--no-json'],
+    { env: { HOME: shellHome, ZDOTDIR: shellHome } },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(stderr).toContain(join(shellHome, '.zshrc'))
+
+  const config = await readFile(join(shellHome, '.zshrc'), 'utf8')
+  expect(config).toContain('export EDITOR=vim')
+  expect(config).toContain(
+    'eval "$(seam completion --loader zsh 2> /dev/null)"',
+  )
+})
+
+test('cli: installs a completion file for fish', async () => {
+  const shellHome = await mkdtemp(join(tmpdir(), 'seam-cli-shell-'))
+
+  const { exitCode } = await runCli(['completion', '--install', 'fish'], {
+    env: { HOME: shellHome, XDG_CONFIG_HOME: shellHome },
+  })
+
+  expect(exitCode).toBe(0)
+  const completions = await readFile(
+    join(shellHome, 'fish', 'completions', 'seam.fish'),
+    'utf8',
+  )
+  expect(completions).toContain('seam completion fish')
+})
+
+test('cli: prints a loader holding no completions of its own', async () => {
+  const shellHome = await mkdtemp(join(tmpdir(), 'seam-cli-shell-'))
+
+  const { stdout, exitCode } = await runCli(
+    ['completion', '--loader', 'bash'],
+    {
+      env: { HOME: shellHome, SHELL: '/bin/bash' },
+    },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(stdout).toContain('complete -F _seam_completion_loader seam')
+  expect(stdout).not.toContain('_seam_subcommands')
+})
+
+test('cli: reports a shell it cannot install completions for', async () => {
+  const { stderr, exitCode } = await runCli([
+    'completion',
+    '--install',
+    'nushell',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Unknown shell for seam completion: nushell')
+})
+
+test('cli: refuses to both install and print completions', async () => {
+  const { stderr, exitCode } = await runCli([
+    'completion',
+    '--install',
+    '--loader',
+    'zsh',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Only one of --install, --loader')
+})
+
+test('cli: names the shell to print a completion script for', async () => {
+  const { stderr, exitCode } = await runCli(['completion'])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Missing required argument for seam completion')
+  expect(stderr).toContain('seam completion --loader [bash|fish|zsh]')
+})
+
 test('cli: names every unknown argument at once', async () => {
   requests = []
   const { stderr, exitCode } = await runCli([

@@ -41,6 +41,11 @@ export const renderCompletion = (
 export const renderCompletionStub = (shell: CompletionShell): string =>
   stubs[shell]
 
+export const renderCompletionEval = (shell: CompletionShell): string => {
+  const loader = `seam completion --loader ${shell} 2> /dev/null`
+  return shell === 'fish' ? `${loader} | source` : `eval "$(${loader})"`
+}
+
 /**
  * First line of each generated completion script, which the loaders require
  * before evaluating one. Must match the output of {@link renderCompletion}.
@@ -63,13 +68,21 @@ const stubs: Record<CompletionShell, string> = {
 #
 # Install to /usr/share/bash-completion/completions/seam
 
-if command -v seam > /dev/null 2>&1; then
-  __seam_completion_script="$(seam completion bash 2> /dev/null)"
+_seam_completion_loader() {
+  local script
+  script="$(seam completion bash 2> /dev/null)"
   # Evaluate only a completion script, never anything else the CLI printed.
-  case "$__seam_completion_script" in
-    '${completionScriptSentinels.bash}'*) eval "$__seam_completion_script" ;;
+  case "$script" in
+    '${completionScriptSentinels.bash}'*) eval "$script" ;;
+    *) return 1 ;;
   esac
-  unset __seam_completion_script
+  return 124
+}
+
+if ((BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 1))); then
+  complete -F _seam_completion_loader seam
+else
+  _seam_completion_loader || :
 fi
 `,
   fish: `${stubHeader('fish')}
@@ -89,15 +102,23 @@ ${stubHeader('zsh')}
 #
 # Install to a directory in fpath as _seam
 
-local __seam_completion_script
-__seam_completion_script="$(seam completion zsh 2> /dev/null)"
+_seam() {
+  local script
+  script="$(seam completion zsh 2> /dev/null)"
+  # Evaluate only a completion script, never anything else the CLI printed.
+  # The script ends by dispatching on funcstack, so evaluating it while this
+  # _seam runs both redefines _seam and completes the in-flight request.
+  if [[ "$script" == '${completionScriptSentinels.zsh}'* ]]; then
+    eval "$script"
+  fi
+}
 
-# Evaluate only a completion script, never anything else the CLI printed.
-# The script ends by dispatching on funcstack, so evaluating it while this
-# autoloaded _seam runs both redefines _seam and completes the in-flight
-# request.
-if [[ "$__seam_completion_script" == '${completionScriptSentinels.zsh}'* ]]; then
-  eval "$__seam_completion_script"
+if (( $+functions[compdef] )); then
+  compdef _seam seam
+fi
+
+if (( \${funcstack[(I)_seam]} )); then
+  _seam "$@"
 fi
 `,
 }

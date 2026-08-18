@@ -32,10 +32,14 @@ On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
 $ paru -S seam-bin
 ```
 
+The AUR and Homebrew packages install [shell completion] themselves. After an
+npm or manual install, run `seam completion --install`.
+
 [aur]: https://aur.archlinux.org/packages/seam-bin
 [latest GitHub release]: https://github.com/seamapi/cli/releases/latest
 [npm]: https://www.npmjs.com/
 [Seam Wizard]: https://github.com/seamapi/wizard
+[shell completion]: #shell-completion
 
 ## Usage
 
@@ -283,7 +287,14 @@ seam devices list --help
 The CLI can print a completion script for bash, fish, and zsh that completes
 commands, flags, and flag values such as device types.
 
-Load completions into the current shell with
+Install them into the shell you are in, or one you name, with
+
+```bash
+seam completion --install
+seam completion --install zsh
+```
+
+Load completions into the current shell instead with
 
 ```bash
 # bash
