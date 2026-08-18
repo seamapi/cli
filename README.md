@@ -15,27 +15,65 @@ prompted for, with suggestions pulled from your workspace. Pass
 
 ## Installation
 
+If you use Zsh, the completions only work if you enable compinit in your .zshrc with
+
+```sh
+autoload -Uz compinit
+compinit
+```
+
+### npm
+
 Install the CLI globally using [npm] with
 
 ```
 $ npm install --global @seamapi/cli
+$ seam completion --install
 ```
 
-Alternatively, download a standalone binary for your platform from the
-[latest GitHub release]. The macOS binaries are signed with the Seam Labs, Inc.
-Apple Developer ID and notarized by Apple, so macOS runs them without
-a Gatekeeper prompt.
+### Homebrew
 
-On Arch Linux, install the [`seam-bin`][aur] package from the AUR with
+Install the CLI from [Homebrew] with
 
 ```
-$ paru -S seam-bin
+$ brew install --cask seamapi/tap/seam-cli
+```
+
+The Seam CLI may also be installed from Homebrew Core,
+but it does not include the Seam Wizard.
+
+```
+$ brew install seam
+```
+
+### Standalone binary
+
+Download a standalone binary for your platform from the [latest GitHub
+release]. The macOS binaries are signed with the Seam Labs, Inc. Apple
+Developer ID and notarized by Apple, so macOS runs them without a Gatekeeper
+prompt.
+
+Then install the shell completions with
+
+```
+$ seam completion --install
+```
+
+### Arch Linux
+
+Install the [`seam-bin`][aur] package from the AUR with
+
+```
+$ git clone https://aur.archlinux.org/seam-bin.git
+$ cd seam-bin
+$ makepkg -si
 ```
 
 The AUR and Homebrew packages install [shell completion] themselves. After an
 npm or manual install, run `seam completion --install`.
 
 [aur]: https://aur.archlinux.org/packages/seam-bin
+[Homebrew]: https://formulae.brew.sh/cask/seam
 [latest GitHub release]: https://github.com/seamapi/cli/releases/latest
 [npm]: https://www.npmjs.com/
 [Seam Wizard]: https://github.com/seamapi/wizard
