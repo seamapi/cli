@@ -79,8 +79,8 @@ const examples = [
     summary: 'Pipe request params in as JSON.',
   },
   {
-    name: 'seam completion bash',
-    summary: 'Print a shell completion script for bash, fish, or zsh.',
+    name: 'seam completion {bold --install}',
+    summary: 'Complete seam commands in bash, fish, or zsh.',
   },
 ]
 

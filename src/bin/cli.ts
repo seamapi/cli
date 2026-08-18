@@ -14,8 +14,11 @@ import {
 import { assertKnownArgs, assertNoAuthOverrides } from 'lib/args/validate.js'
 import { getApiBlueprint } from 'lib/blueprint/index.js'
 import {
+  installCompletionForShell,
   printCompletion,
   printCompletionLoader,
+  readCompletionAction,
+  resolveCompletionShell,
 } from 'lib/commands/local/completion.js'
 import { runWizard } from 'lib/commands/local/wizard.js'
 import {
@@ -36,10 +39,6 @@ import { parseJsonParams, readStdinJson } from 'lib/output/read-stdin-json.js'
 import { resolveOutputFormat } from 'lib/output/resolve-output-format.js'
 import { setAuthOverrides } from 'lib/overrides.js'
 import { canPrompt } from 'lib/prompt.js'
-import {
-  completionShells,
-  isCompletionShell,
-} from 'lib/render/completion/index.js'
 import { renderHelp } from 'lib/render/help.js'
 import seamapiCliVersion from 'lib/version.js'
 
@@ -118,22 +117,27 @@ async function cli(args: ParsedArgs, argv: string[]) {
   }
 
   if (args._[0] === 'completion') {
-    const shell = args._[1]
+    const action = readCompletionAction(args)
+    const shellArg = args._[1]
+    const shell = resolveCompletionShell(shellArg, action)
 
-    if (!isCompletionShell(shell)) {
-      output.error(`Usage: seam completion <${completionShells.join('|')}>`)
-      process.exitCode = 1
+    const command = findLocalCommand(['completion', shell])
+    assertKnownArgs(
+      argParams,
+      shellArg == null ? ['completion'] : ['completion', shell],
+      {
+        accepted:
+          command == null ? new Set() : acceptedParamsOf(command.definition),
+        isLocal: true,
+      },
+    )
+
+    if (action === 'install') {
+      await installCompletionForShell(shell)
       return
     }
 
-    const command = findLocalCommand(['completion', shell])
-    assertKnownArgs(argParams, ['completion', shell], {
-      accepted:
-        command == null ? new Set() : acceptedParamsOf(command.definition),
-      isLocal: true,
-    })
-
-    if (args['loader'] === true) {
+    if (action === 'loader') {
       printCompletionLoader(shell)
       return
     }
@@ -253,7 +257,8 @@ const run = async (argv: string[]) => {
   }
 
   const args = parseCliArgs(argv, {
-    booleanKeys: argv[0]?.toLowerCase() === 'completion' ? ['loader'] : [],
+    booleanKeys:
+      argv[0]?.toLowerCase() === 'completion' ? ['install', 'loader'] : [],
   })
 
   const isTty = process.stdout.isTTY === true

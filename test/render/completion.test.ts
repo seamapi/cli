@@ -7,6 +7,7 @@ import {
   completionShells,
   isCompletionShell,
   renderCompletion,
+  renderCompletionEval,
   renderCompletionStub,
 } from 'lib/render/completion/index.js'
 import { testBlueprint } from 'test/fixtures/blueprint.js'
@@ -102,4 +103,35 @@ test('zsh completion: completes the in-flight request when evaluated by the stub
     // eslint-disable-next-line no-template-curly-in-string
     'if (( ${funcstack[(I)_seam]} )); then',
   )
+})
+
+test.each(completionShells)(
+  '%s completion loader: survives being evaluated by a shell config',
+  (shell) => {
+    expect(renderCompletionStub(shell)).not.toMatch(/^local /m)
+  },
+)
+
+test.each(completionShells)('%s completion eval: loads the loader', (shell) => {
+  expect(renderCompletionEval(shell)).toContain(
+    `seam completion --loader ${shell}`,
+  )
+})
+
+test('bash completion loader: completes again with the script it loaded', () => {
+  const stub = renderCompletionStub('bash')
+  expect(stub).toContain('complete -F _seam_completion_loader seam')
+  expect(stub).toContain('return 124')
+})
+
+test('zsh completion loader: registers itself when sourced', () => {
+  const stub = renderCompletionStub('zsh')
+  expect(stub).toContain('if (( $+functions[compdef] )); then')
+  expect(stub).toContain('compdef _seam seam')
+  // eslint-disable-next-line no-template-curly-in-string
+  expect(stub).toContain('if (( ${funcstack[(I)_seam]} )); then')
+})
+
+test('zsh completion loader: leaves the completion system to the shell', () => {
+  expect(renderCompletionStub('zsh')).not.toContain('compinit')
 })
