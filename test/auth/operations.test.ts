@@ -3,15 +3,19 @@ import { afterEach, beforeEach, expect, test } from 'vitest'
 import {
   login,
   logout,
-  selectFakeServer,
-  selectServer,
+  selectEndpoint,
   selectWorkspace,
   storeToken,
 } from 'lib/auth/operations.js'
-import { createMemoryConfigStore } from 'lib/config/memory-config-store.js'
+import { createCliConfig } from 'lib/config/cli-config.js'
+import {
+  createMemoryConfig,
+  createMemoryConfigStore,
+} from 'lib/config/memory-config-store.js'
 import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
+import { resetAuthOverrides, setAuthOverrides } from 'lib/overrides.js'
 
-const server = 'https://connect.example.com'
+const endpoint = 'https://connect.example.com'
 
 /**
  * Validation is a network call, so it is faked at that edge: a capture of
@@ -35,194 +39,168 @@ const clearEnv = (): void => {
   delete process.env[endpointEnvVar]
   delete process.env[tokenEnvVar]
   delete process.env[workspaceIdEnvVar]
+  resetAuthOverrides()
 }
 
 beforeEach(clearEnv)
 afterEach(clearEnv)
 
-test('login: stores a validated token under the current server', async () => {
-  const store = createMemoryConfigStore({ server })
+test('login: stores a validated token under the current endpoint', async () => {
+  const config = createMemoryConfig({ endpoint })
   const { validate, validated } = createValidate()
 
-  await login({ token: 'seam_apikey1_stored' }, store, validate)
+  await login('seam_apikey1_stored', config, validate)
 
   expect(validated).toEqual([
     { token: 'seam_apikey1_stored', workspaceId: undefined },
   ])
-  expect(store.get(`${server}.pat`)).toBe('seam_apikey1_stored')
+  expect(config.getToken(endpoint)).toBe('seam_apikey1_stored')
 })
 
-test('login: stores the token under a server given alongside it', async () => {
-  const store = createMemoryConfigStore({ server })
+test('login: stores the token under an overridden endpoint without selecting it', async () => {
+  setAuthOverrides({ endpoint: 'https://other.example.com', workspaceId: null })
+  const config = createMemoryConfig({ endpoint })
   const { validate } = createValidate()
 
-  await login(
-    { server: 'https://other.example.com', token: 'seam_apikey1_stored' },
-    store,
-    validate,
-  )
+  await login('seam_apikey1_stored', config, validate)
 
-  expect(store.get('server')).toBe('https://other.example.com')
-  expect(store.get('https://other.example.com.pat')).toBe('seam_apikey1_stored')
-  expect(store.has(`${server}.pat`)).toBe(false)
+  expect(config.getToken('https://other.example.com')).toBe(
+    'seam_apikey1_stored',
+  )
+  // The override scopes the command: the selection is left as it was.
+  expect(config.getEndpoint()).toBe(endpoint)
+  expect(config.getToken(endpoint)).toBeNull()
 })
 
 test('login: a new login clears the previous workspace selection', async () => {
-  const store = createMemoryConfigStore({
-    server,
+  const config = createMemoryConfig({
+    endpoint,
     current_workspace_id: 'workspace1',
   })
   const { validate } = createValidate()
 
-  await login({ token: 'seam_apikey1_stored' }, store, validate)
+  await login('seam_apikey1_stored', config, validate)
 
-  expect(store.has('current_workspace_id')).toBe(false)
+  expect(config.getWorkspace()).toBeNull()
 })
 
-test('login: stores a workspace given with the token', async () => {
-  const store = createMemoryConfigStore({ server })
+test('login: validates against the workspace in effect without storing it', async () => {
+  setAuthOverrides({ endpoint: null, workspaceId: 'workspace1' })
+  const config = createMemoryConfig({ endpoint })
   const { validate, validated } = createValidate()
 
-  await login(
-    { token: 'seam_at1_stored', workspaceId: 'workspace1' },
-    store,
-    validate,
-  )
+  await login('seam_at1_stored', config, validate)
 
   expect(validated).toEqual([
     { token: 'seam_at1_stored', workspaceId: 'workspace1' },
   ])
-  expect(store.get('current_workspace_id')).toBe('workspace1')
+  expect(config.getWorkspace()).toBeNull()
 })
 
 test(`login: refuses while ${tokenEnvVar} is set, before storing anything`, async () => {
   process.env[tokenEnvVar] = 'seam_apikey1_env'
-  const store = createMemoryConfigStore({ server })
+  const config = createMemoryConfig({ endpoint })
   const { validate, validated } = createValidate()
 
-  await expect(
-    login({ token: 'seam_apikey1_stored' }, store, validate),
-  ).rejects.toThrow(`Cannot log in while ${tokenEnvVar} is set`)
-  expect(store.has(`${server}.pat`)).toBe(false)
+  await expect(login('seam_apikey1_stored', config, validate)).rejects.toThrow(
+    `Cannot log in while ${tokenEnvVar} is set`,
+  )
+  expect(config.getToken(endpoint)).toBeNull()
   expect(validated).toEqual([])
 })
 
-test(`login: refuses a server while ${endpointEnvVar} is set`, async () => {
-  process.env[endpointEnvVar] = server
-  const store = createMemoryConfigStore()
+test(`login: stores under the endpoint ${endpointEnvVar} names`, async () => {
+  process.env[endpointEnvVar] = 'https://other.example.com'
+  const config = createMemoryConfig({ endpoint })
   const { validate } = createValidate()
 
-  await expect(
-    login({ server: 'https://other.example.com' }, store, validate),
-  ).rejects.toThrow(`Cannot select a server while ${endpointEnvVar} is set`)
-})
+  await login('seam_apikey1_stored', config, validate)
 
-test(`login: refuses a workspace while ${workspaceIdEnvVar} is set`, async () => {
-  process.env[workspaceIdEnvVar] = 'workspace_env'
-  const store = createMemoryConfigStore({ server })
-  const { validate } = createValidate()
-
-  await expect(
-    login(
-      { token: 'seam_at1_stored', workspaceId: 'workspace1' },
-      store,
-      validate,
-    ),
-  ).rejects.toThrow(
-    `Cannot select a workspace while ${workspaceIdEnvVar} is set`,
+  expect(config.getToken('https://other.example.com')).toBe(
+    'seam_apikey1_stored',
   )
+  expect(config.getEndpoint()).toBe(endpoint)
 })
 
-test('storeToken: stores under the current server without validating', () => {
-  const store = createMemoryConfigStore({ server })
+test('storeToken: stores under the current endpoint without validating', () => {
+  const config = createMemoryConfig({ endpoint })
 
-  storeToken('seam_apikey1_stored', store)
+  storeToken('seam_apikey1_stored', config)
 
-  expect(store.get(`${server}.pat`)).toBe('seam_apikey1_stored')
+  expect(config.getToken(endpoint)).toBe('seam_apikey1_stored')
 })
 
 test('logout: removes the stored token, legacy token, and workspace', () => {
   const store = createMemoryConfigStore({
-    server,
-    [`${server}.pat`]: 'seam_apikey1_stored',
+    endpoint,
+    [`${endpoint}.pat`]: 'seam_apikey1_stored',
     pat: 'seam_apikey1_legacy',
     current_workspace_id: 'workspace1',
   })
+  const config = createCliConfig(store)
 
-  logout(store)
+  logout(config)
 
-  expect(store.has(`${server}.pat`)).toBe(false)
+  expect(config.getToken(endpoint)).toBeNull()
+  expect(config.getWorkspace()).toBeNull()
+  // Nothing reads the un-namespaced token, so it is asserted where it lives.
   expect(store.has('pat')).toBe(false)
-  expect(store.has('current_workspace_id')).toBe(false)
 })
 
 test(`logout: refuses while ${tokenEnvVar} is set`, () => {
   process.env[tokenEnvVar] = 'seam_apikey1_env'
-  const store = createMemoryConfigStore({
-    server,
-    [`${server}.pat`]: 'seam_apikey1_stored',
+  const config = createMemoryConfig({
+    endpoint,
+    [`${endpoint}.pat`]: 'seam_apikey1_stored',
   })
 
   expect(() => {
-    logout(store)
+    logout(config)
   }).toThrow(`Cannot log out while ${tokenEnvVar} is set`)
-  expect(store.get(`${server}.pat`)).toBe('seam_apikey1_stored')
+  expect(config.getToken(endpoint)).toBe('seam_apikey1_stored')
 })
 
-test('selectServer: stores the server and clears the workspace', () => {
-  const store = createMemoryConfigStore({ current_workspace_id: 'workspace1' })
+test('selectEndpoint: stores the endpoint and clears the workspace', () => {
+  const config = createMemoryConfig({ current_workspace_id: 'workspace1' })
 
-  selectServer(server, store)
+  selectEndpoint(endpoint, config)
 
-  expect(store.get('server')).toBe(server)
-  expect(store.has('current_workspace_id')).toBe(false)
+  expect(config.getEndpoint()).toBe(endpoint)
+  expect(config.getWorkspace()).toBeNull()
 })
 
-test(`selectServer: refuses while ${endpointEnvVar} is set`, () => {
+test('selectEndpoint: drops an endpoint left under the legacy key', () => {
+  const store = createMemoryConfigStore({ server: 'https://old.example.com' })
+  const config = createCliConfig(store)
+
+  selectEndpoint(endpoint, config)
+
+  expect(config.getEndpoint()).toBe(endpoint)
+  expect(store.has('server')).toBe(false)
+})
+
+test(`selectEndpoint: refuses while ${endpointEnvVar} is set`, () => {
   process.env[endpointEnvVar] = 'http://localhost:3020'
-  const store = createMemoryConfigStore()
+  const config = createMemoryConfig()
 
   expect(() => {
-    selectServer(server, store)
-  }).toThrow(`Cannot select a server while ${endpointEnvVar} is set`)
+    selectEndpoint(endpoint, config)
+  }).toThrow(`Cannot select an endpoint while ${endpointEnvVar} is set`)
 })
 
 test('selectWorkspace: stores the workspace selection', () => {
-  const store = createMemoryConfigStore()
+  const config = createMemoryConfig()
 
-  selectWorkspace('workspace1', store)
+  selectWorkspace('workspace1', config)
 
-  expect(store.get('current_workspace_id')).toBe('workspace1')
+  expect(config.getWorkspace()).toBe('workspace1')
 })
 
 test(`selectWorkspace: refuses while ${workspaceIdEnvVar} is set`, () => {
   process.env[workspaceIdEnvVar] = 'workspace_env'
-  const store = createMemoryConfigStore()
+  const config = createMemoryConfig()
 
   expect(() => {
-    selectWorkspace('workspace1', store)
+    selectWorkspace('workspace1', config)
   }).toThrow(`Cannot select a workspace while ${workspaceIdEnvVar} is set`)
-})
-
-test('selectFakeServer: stores the server and its well-known token', () => {
-  const store = createMemoryConfigStore({ current_workspace_id: 'workspace1' })
-
-  const { server: fakeServer } = selectFakeServer({
-    urlSeed: 'abc123',
-    config: store,
-  })
-
-  expect(fakeServer).toBe('https://abc123.fakeseamconnect.seam.vc')
-  expect(store.get('server')).toBe(fakeServer)
-  expect(store.get(`${fakeServer}.pat`)).toBe('seam_apikey1_token')
-  expect(store.has('current_workspace_id')).toBe(false)
-})
-
-test(`selectFakeServer: refuses while ${endpointEnvVar} is set`, () => {
-  process.env[endpointEnvVar] = server
-  const store = createMemoryConfigStore()
-
-  expect(() => selectFakeServer({ urlSeed: 'abc123', config: store })).toThrow(
-    `Cannot select a server while ${endpointEnvVar} is set`,
-  )
 })

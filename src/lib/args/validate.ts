@@ -1,6 +1,8 @@
 import type { Parameter } from '@seamapi/blueprint'
 
+import type { CommandDefinition } from 'lib/commands/spec.js'
 import { NonInteractiveError, UsageError } from 'lib/errors.js'
+import type { AuthOverrides } from 'lib/overrides.js'
 
 import { toArgName, toGivenArgName } from './parse.js'
 
@@ -40,6 +42,41 @@ export const assertRequiredParams = (
  * Only arguments are checked. Params read from stdin are passed through as
  * given, so a caller may send whatever the API itself accepts.
  */
+/**
+ * Refuse the auth overrides on a command that selects what they override.
+ *
+ * `--endpoint` and `--workspace-id` scope one command and are never stored,
+ * so on `seam select ...` they would read as the value to store and quietly
+ * do nothing of the kind. The positional is what stores.
+ */
+export const assertNoAuthOverrides = (
+  { path, positional }: CommandDefinition,
+  overrides: AuthOverrides,
+): void => {
+  if (path[0] !== 'select') return
+
+  const given = [
+    overrides.endpoint == null ? null : '--endpoint',
+    overrides.workspaceId == null ? null : '--workspace-id',
+  ].filter((flag) => flag != null)
+
+  if (given.length === 0) return
+
+  const command = `seam ${path.join(' ')}`
+
+  throw new UsageError(
+    `${given.join(' and ')} cannot be used with ${command}: ${
+      given.length === 1 ? 'it overrides' : 'they override'
+    } a single command rather than changing what is selected.`,
+    {
+      hint:
+        positional == null
+          ? `Run '${command}' to change what is selected.`
+          : `Run '${command} <${positional.name}>' to change what is selected.`,
+    },
+  )
+}
+
 export const assertKnownArgs = (
   argParams: Record<string, unknown>,
   command: string[],

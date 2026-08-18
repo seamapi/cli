@@ -23,6 +23,17 @@ export interface CommandFlag {
  */
 export type CommandKind = 'cli' | 'api'
 
+/**
+ * A value written after the command rather than behind a flag, e.g., the URL
+ * in `seam select endpoint <url>`. At most one, always required: it is the
+ * one thing the command is about.
+ */
+export interface CommandPositional {
+  /** Name shown in the usage line, without the angle brackets. */
+  name: string
+  description: string
+}
+
 export interface CommandDefinition {
   path: string[]
   kind: CommandKind
@@ -31,6 +42,8 @@ export interface CommandDefinition {
   /** Longer prose about the command, empty when there is none to add. */
   description: string
   flags: CommandFlag[]
+  /** The value the command takes after its path, when it takes one. */
+  positional?: CommandPositional
 }
 
 export interface Subcommand {
@@ -56,6 +69,15 @@ export interface CommandSpec {
 }
 
 export const globalFlags: CommandFlag[] = [
+  {
+    long: 'endpoint',
+    short: null,
+    description:
+      'Seam API endpoint to run this one command against, instead of the selected one.',
+    values: [],
+    takesValue: true,
+    isRequired: false,
+  },
   {
     long: 'help',
     short: 'h',
@@ -83,6 +105,14 @@ export const globalFlags: CommandFlag[] = [
     isRequired: false,
   },
   {
+    long: 'raw',
+    short: null,
+    description: 'Pass request parameters as an inline JSON object.',
+    values: [],
+    takesValue: true,
+    isRequired: false,
+  },
+  {
     long: 'non-interactive',
     short: 'y',
     description:
@@ -92,9 +122,9 @@ export const globalFlags: CommandFlag[] = [
     isRequired: false,
   },
   {
-    long: 'remote-api-defs',
+    long: 'remote-schema',
     short: null,
-    description: 'Use the API definitions served by the Seam API.',
+    description: 'Use the schema served by the Seam API.',
     values: [],
     takesValue: false,
     isRequired: false,
@@ -102,7 +132,7 @@ export const globalFlags: CommandFlag[] = [
   {
     long: 'update',
     short: null,
-    description: 'Force an update of the cached Seam API definitions.',
+    description: 'Force an update of the cached Seam API schema.',
     values: [],
     takesValue: false,
     isRequired: false,
@@ -115,6 +145,15 @@ export const globalFlags: CommandFlag[] = [
     takesValue: false,
     isRequired: false,
   },
+  {
+    long: 'workspace-id',
+    short: null,
+    description:
+      'Workspace to run this one command against, instead of the selected one.',
+    values: [],
+    takesValue: true,
+    isRequired: false,
+  },
 ]
 
 export const flagTokens = (flag: CommandFlag): string[] => {
@@ -125,7 +164,7 @@ export const flagTokens = (flag: CommandFlag): string[] => {
 }
 
 /**
- * Derive the command spec from the API definitions, merged with the commands
+ * Derive the command spec from the API schema, merged with the commands
  * the CLI declares itself (see `commands/registry.ts`, the single source of
  * those declarations).
  */
@@ -220,7 +259,7 @@ const toFlagValues = (parameter: Parameter): string[] => {
 
 /**
  * Whether a word is safe to write into a shell script. Command, flag, and
- * enum names come from the API definitions and are embedded unquoted or
+ * enum names come from the API schema and are embedded unquoted or
  * single-quoted in completion scripts, so never emit one that a shell could
  * read as syntax.
  */
@@ -267,7 +306,7 @@ const toCommandGroups = (commands: CommandDefinition[]): CommandGroup[] => {
     }
   }
 
-  // Groups have no description of their own in the API definitions, so name
+  // Groups have no description of their own in the API schema, so name
   // the commands they hold instead. Leave the list whole: help wraps it, and
   // completion shortens it to fit a menu column.
   const summarizeGroup = (key: string): string =>

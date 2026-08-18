@@ -4,6 +4,7 @@ import {
   acceptedParamsOf,
   buildRegistry,
   findLocalCommand,
+  findLocalCommandTakingPositional,
   localCommands,
 } from 'lib/commands/registry.js'
 import { testBlueprint } from 'test/fixtures/blueprint.js'
@@ -30,13 +31,7 @@ test('registry: every visible local command is in the spec', () => {
   }
 })
 
-test('registry: hidden commands are findable without being offered', () => {
-  const fakeServer = registry.find(['config', 'set', 'fake-server'])
-  expect(fakeServer?.hidden).toBe(true)
-  expect(fakeServer?.requiresAuth).toBe(false)
-})
-
-test('registry: only commands for logging in and selecting a server skip auth', () => {
+test('registry: only commands for logging in and selecting an endpoint skip auth', () => {
   const noAuth = localCommands
     .filter(({ requiresAuth }) => !requiresAuth)
     .map(({ definition }) => definition.path.join(' '))
@@ -45,9 +40,8 @@ test('registry: only commands for logging in and selecting a server skip auth', 
     'completion bash',
     'completion fish',
     'completion zsh',
-    'config set fake-server',
     'login',
-    'select server',
+    'select endpoint',
     'wizard',
   ])
 })
@@ -67,7 +61,26 @@ test('acceptedParamsOf: names the parameters behind the flags', () => {
   const login = findLocalCommand(['login'])
   expect(login).toBeDefined()
   if (login == null) return
-  expect(acceptedParamsOf(login.definition)).toEqual(
-    new Set(['server', 'token', 'workspace_id']),
-  )
+  expect(acceptedParamsOf(login.definition)).toEqual(new Set(['token']))
+})
+
+test('registry: the select commands take a value after their path', () => {
+  expect(
+    findLocalCommandTakingPositional(['select', 'endpoint', 'a-url']),
+  ).toBeDefined()
+  expect(
+    findLocalCommandTakingPositional(['select', 'workspace', 'workspace1'])
+      ?.definition.path,
+  ).toEqual(['select', 'workspace'])
+})
+
+test('registry: a stray word after any other command is not a positional', () => {
+  expect(findLocalCommandTakingPositional(['login', 'a-token'])).toBeUndefined()
+  expect(
+    findLocalCommandTakingPositional(['devices', 'list', 'extra']),
+  ).toBeUndefined()
+  // The command alone takes nothing: there is no word after its path.
+  expect(
+    findLocalCommandTakingPositional(['select', 'endpoint']),
+  ).toBeUndefined()
 })

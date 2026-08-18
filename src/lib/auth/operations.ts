@@ -1,6 +1,4 @@
-import { randomBytes } from 'node:crypto'
-
-import { type ConfigStore, getConfigStore } from 'lib/config/index.js'
+import { type CliConfig, getConfig } from 'lib/config/index.js'
 import { type AuthContext, resolveAuth } from 'lib/context.js'
 import {
   assertEnvVarUnset,
@@ -12,7 +10,7 @@ import {
 import { validateToken } from './validate-token.js'
 
 /** A stored auth setting an environment variable may override. */
-export type AuthSetting = 'server' | 'token' | 'workspaceId'
+export type AuthSetting = 'endpoint' | 'token' | 'workspaceId'
 
 /**
  * Refuse to store a setting the environment overrides.
@@ -29,10 +27,10 @@ export const assertMutable = (
   action: string,
 ): void => {
   const { envVar, source, value } = {
-    server: {
+    endpoint: {
       envVar: endpointEnvVar,
-      source: auth.serverSource,
-      value: auth.server,
+      source: auth.endpointSource,
+      value: auth.endpoint,
     },
     token: { envVar: tokenEnvVar, source: auth.tokenSource, value: auth.token },
     workspaceId: {
@@ -46,124 +44,79 @@ export const assertMutable = (
   assertEnvVarUnset(envVar, value, action)
 }
 
-export interface LoginOptions {
-  server?: string | undefined
-  token?: string | undefined
-  workspaceId?: string | undefined
-}
-
 /**
- * Store the given credentials, validating the token first.
+ * Store a token, validating it first.
  *
- * The token is stored under the server it will be used with, so a given
- * server is stored and re-resolved before the token key is derived.
+ * The token is stored under the endpoint it will be used with, which
+ * `--endpoint` or the environment may have pointed elsewhere for this one
+ * command: logging in to another endpoint stores a token for it without
+ * selecting it. The workspace is only what the token is validated against,
+ * as a Personal Access Token is meaningless without one.
  *
  * Validation reaches the network, so a test may inject its own `validate`.
  */
 export const login = async (
-  { server, token, workspaceId }: LoginOptions,
-  config: ConfigStore = getConfigStore(),
+  token: string,
+  config: CliConfig = getConfig(),
   validate: typeof validateToken = validateToken,
 ): Promise<void> => {
-  let auth = resolveAuth(config)
+  const auth = resolveAuth(config)
 
   // Nothing is stored while the environment overrides it, so refuse before
-  // storing anything rather than part way through.
+  // validating rather than after reaching the network.
   assertMutable(auth, 'token', 'log in')
-  if (server != null) assertMutable(auth, 'server', 'select a server')
-  if (workspaceId != null) {
-    assertMutable(auth, 'workspaceId', 'select a workspace')
-  }
 
-  if (server != null) {
-    config.set('server', server)
-    config.delete('current_workspace_id')
-    auth = resolveAuth(config)
-  }
+  await validate(token, auth.workspaceId ?? undefined)
 
-  if (token != null) {
-    await validate(token, workspaceId)
-    config.set(`${auth.server}.pat`, token)
-    config.delete('current_workspace_id')
-  }
-
-  if (workspaceId != null) {
-    config.set('current_workspace_id', workspaceId)
-  }
+  config.setToken(auth.endpoint, token)
+  // The selection belongs to whoever was logged in before.
+  config.unsetWorkspace()
 }
 
-/** Store the token for the current server, e.g., one just prompted for. */
+/** Store the token for the current endpoint, e.g., one just prompted for. */
 export const storeToken = (
   token: string,
-  config: ConfigStore = getConfigStore(),
+  config: CliConfig = getConfig(),
 ): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log in')
-  config.set(`${auth.server}.pat`, token)
+  config.setToken(auth.endpoint, token)
 }
 
 /** Remove the stored token and workspace selection. */
-export const logout = (config: ConfigStore = getConfigStore()): void => {
+export const logout = (config: CliConfig = getConfig()): void => {
   const auth = resolveAuth(config)
   assertMutable(auth, 'token', 'log out')
-  config.delete(`${auth.server}.pat`)
-  // Configs written before tokens were stored per server may still hold an
-  // un-namespaced token, so drop that too.
-  config.delete('pat')
-  config.delete('current_workspace_id')
+  config.unsetToken(auth.endpoint)
+  config.unsetWorkspace()
 }
 
 /**
- * Store the server to make requests against.
+ * Store the endpoint to make requests against.
  *
- * The workspace selection belongs to the previous server, so it is cleared.
+ * The workspace selection belongs to the previous endpoint, so it is cleared.
  */
-export const selectServer = (
-  server: string,
-  config: ConfigStore = getConfigStore(),
+export const selectEndpoint = (
+  endpoint: string,
+  config: CliConfig = getConfig(),
 ): void => {
-  assertMutable(resolveAuth(config), 'server', 'select a server')
-  config.set('server', server)
-  config.delete('current_workspace_id')
+  assertMutable(resolveAuth(config), 'endpoint', 'select an endpoint')
+  config.setEndpoint(endpoint)
 }
 
 /** Store the workspace requests are made against. */
 export const selectWorkspace = (
   workspaceId: string,
-  config: ConfigStore = getConfigStore(),
+  config: CliConfig = getConfig(),
 ): void => {
   assertMutable(resolveAuth(config), 'workspaceId', 'select a workspace')
-  config.set('current_workspace_id', workspaceId)
+  config.setWorkspace(workspaceId)
 }
 
-/**
- * Point the CLI at a fake Seam Connect server and store the well-known
- * token it accepts. Returns the generated server URL for reporting.
- */
-export const selectFakeServer = ({
-  urlSeed = randomBytes(5).toString('hex'),
-  config = getConfigStore(),
-}: {
-  urlSeed?: string
-  config?: ConfigStore
-} = {}): { server: string; token: string } => {
-  const auth = resolveAuth(config)
-  assertMutable(auth, 'server', 'select a server')
-  assertMutable(auth, 'token', 'log in')
-
-  const server = `https://${urlSeed}.fakeseamconnect.seam.vc`
-  const token = 'seam_apikey1_token'
-  config.set('server', server)
-  config.set(`${server}.pat`, token)
-  config.delete('current_workspace_id')
-
-  return { server, token }
-}
-
-/** Store whether API definitions come from the server instead of npm. */
-export const setUseRemoteApiDefs = (
-  useRemoteApiDefs: boolean,
-  config: ConfigStore = getConfigStore(),
+/** Store whether the API schema comes from the endpoint instead of npm. */
+export const setUseRemoteSchema = (
+  useRemoteSchema: boolean,
+  config: CliConfig = getConfig(),
 ): void => {
-  config.set('use_remote_api_defs', useRemoteApiDefs)
+  config.setUseRemoteSchema(useRemoteSchema)
 }

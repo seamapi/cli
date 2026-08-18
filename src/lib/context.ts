@@ -1,6 +1,6 @@
 import type { Interactivity } from './args/parse.js'
 import type { ApiBlueprint } from './blueprint/index.js'
-import { type ConfigStore, getConfigStore } from './config/index.js'
+import { type CliConfig, getConfig } from './config/index.js'
 import {
   getEndpointFromEnv,
   getTokenFromEnv,
@@ -8,56 +8,69 @@ import {
 } from './env.js'
 import type { SeamApi } from './http/api.js'
 import type { Output } from './output/output.js'
+import { getAuthOverrides } from './overrides.js'
 
-export const defaultServer = 'https://connect.getseam.com'
+export const defaultEndpoint = 'https://connect.getseam.com'
 
 /** Where a resolved value came from, e.g., to refuse writes the env shadows. */
-export type ValueSource = 'env' | 'config' | 'default'
+export type ValueSource = 'flag' | 'env' | 'config' | 'default'
 
 /**
- * The server, token, and workspace requests are made with.
+ * The endpoint, token, and workspace requests are made with.
  *
- * Resolved in one place so the precedence rule exists once: an environment
- * variable wins over the stored value, and the server falls back to Seam.
- * The source tags say where each value came from.
+ * Resolved in one place so the precedence rule exists once: a flag given for
+ * the one command wins over an environment variable, which wins over the
+ * stored value, and the endpoint falls back to Seam. The source tags say
+ * where each value came from.
  */
 export interface AuthContext {
-  server: string
-  serverSource: ValueSource
+  endpoint: string
+  endpointSource: ValueSource
   token: string | null
   tokenSource: Exclude<ValueSource, 'default'> | null
   workspaceId: string | null
   workspaceIdSource: Exclude<ValueSource, 'default'> | null
 }
 
-export const resolveAuth = (
-  config: ConfigStore = getConfigStore(),
-): AuthContext => {
-  const envServer = getEndpointFromEnv()
-  const storedServer = config.get('server')
-  const server =
-    envServer ?? (typeof storedServer === 'string' ? storedServer : null)
+export const resolveAuth = (config: CliConfig = getConfig()): AuthContext => {
+  const { endpoint: flagEndpoint, workspaceId: flagWorkspaceId } =
+    getAuthOverrides()
+
+  const envEndpoint = getEndpointFromEnv()
+  const storedEndpoint = config.getEndpoint()
+  const endpoint = flagEndpoint ?? envEndpoint ?? storedEndpoint
 
   const envToken = getTokenFromEnv()
-  const storedToken = readString(config.get(`${server ?? defaultServer}.pat`))
+  // The token is stored per endpoint, so an overridden endpoint is read with
+  // the token belonging to it rather than the one it replaced.
+  const storedToken = config.getToken(endpoint ?? defaultEndpoint)
 
   const envWorkspaceId = getWorkspaceIdFromEnv()
-  const storedWorkspaceId = readString(config.get('current_workspace_id'))
+  const storedWorkspaceId = config.getWorkspace()
+  const workspaceId = flagWorkspaceId ?? envWorkspaceId ?? storedWorkspaceId
 
   return {
-    server: server ?? defaultServer,
-    serverSource:
-      envServer != null ? 'env' : server != null ? 'config' : 'default',
+    endpoint: endpoint ?? defaultEndpoint,
+    endpointSource:
+      flagEndpoint != null
+        ? 'flag'
+        : envEndpoint != null
+          ? 'env'
+          : endpoint != null
+            ? 'config'
+            : 'default',
     token: envToken ?? storedToken,
     tokenSource:
       envToken != null ? 'env' : storedToken != null ? 'config' : null,
-    workspaceId: envWorkspaceId ?? storedWorkspaceId,
+    workspaceId,
     workspaceIdSource:
-      envWorkspaceId != null
-        ? 'env'
-        : storedWorkspaceId != null
-          ? 'config'
-          : null,
+      flagWorkspaceId != null
+        ? 'flag'
+        : envWorkspaceId != null
+          ? 'env'
+          : storedWorkspaceId != null
+            ? 'config'
+            : null,
   }
 }
 
@@ -66,19 +79,11 @@ export const resolveAuth = (
  * shape it acts on, and how it may interact with the user.
  */
 export interface CliContext {
-  config: ConfigStore
+  config: CliConfig
   auth: AuthContext
   output: Output
   blueprint: ApiBlueprint
   interactivity: Interactivity
   /** The Seam API, constructed on first use and shared for the run. */
   api: () => Promise<SeamApi>
-}
-
-const readString = (value: unknown): string | null => {
-  if (typeof value !== 'string') return null
-
-  const trimmedValue = value.trim()
-
-  return trimmedValue === '' ? null : trimmedValue
 }

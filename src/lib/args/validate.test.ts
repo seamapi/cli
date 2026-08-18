@@ -53,11 +53,15 @@ test('assertKnownArgs: names an endpoint command by its path', () => {
 
 test('assertKnownArgs: names a CLI command by its words', () => {
   expect(() => {
-    assertKnownArgs({ serverr: 'https://example.com' }, ['select', 'server'], {
-      accepted: new Set(['server']),
-      isLocal: true,
-    })
-  }).toThrow('Unknown parameter for select server: --serverr')
+    assertKnownArgs(
+      { endpointt: 'https://example.com' },
+      ['select', 'endpoint'],
+      {
+        accepted: new Set(['endpoint']),
+        isLocal: true,
+      },
+    )
+  }).toThrow('Unknown parameter for select endpoint: --endpointt')
 })
 
 test('assertKnownArgs: names every unknown argument at once, with a hint', () => {

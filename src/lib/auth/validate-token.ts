@@ -3,12 +3,12 @@ import {
   isPersonalAccessToken,
   SeamHttp,
   SeamHttpWithoutWorkspace,
-} from '@seamapi/http/connect'
+} from '@seamapi/http'
 
 import { resolveAuth } from 'lib/context.js'
 
 export const validateToken = async (token: string, workspaceId?: string) => {
-  const options = { endpoint: resolveAuth().server }
+  const options = { endpoint: resolveAuth().endpoint }
 
   if (isPersonalAccessToken(token)) {
     const seam = workspaceId

@@ -3,9 +3,9 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import type { Blueprint, TypesModuleInput } from '@seamapi/blueprint'
-import envPaths from 'env-paths'
 import { extract } from 'tar'
 
+import { rootPaths } from 'lib/config/index.js'
 import { withLoading } from 'lib/output/with-loading.js'
 
 import {
@@ -38,8 +38,7 @@ export const getBlueprint = async (
   options: GetBlueprintOptions = {},
 ): Promise<Blueprint> => {
   const update = options.update ?? false
-  const cacheDirectory =
-    options.cacheDirectory ?? envPaths('seam', { suffix: '' }).cache
+  const cacheDirectory = options.cacheDirectory ?? rootPaths.cache
   const cacheFile = getCacheFile(cacheDirectory)
   const blueprintVersion = await getBlueprintVersion()
 
@@ -59,7 +58,7 @@ export const getBlueprint = async (
     // over failing, unless an update was explicitly requested.
     if (cache != null && !update) return cache.blueprint
     throw new Error(
-      `Could not check for Seam API definition updates: ${toErrorMessage(error)}`,
+      `Could not check for Seam API schema updates: ${toErrorMessage(error)}`,
     )
   }
 
@@ -74,13 +73,13 @@ export const getBlueprint = async (
   let blueprint: Blueprint
   try {
     blueprint = await withLoading(
-      `Downloading Seam API definitions (${typesPackageName}@${manifest.version})`,
+      `Downloading Seam API schema (${typesPackageName}@${manifest.version})`,
       async () => await generateBlueprint(manifest, cacheDirectory),
     )
   } catch (error) {
     if (cache != null && !update) return cache.blueprint
     throw new Error(
-      `Could not update Seam API definitions: ${toErrorMessage(error)}`,
+      `Could not update Seam API schema: ${toErrorMessage(error)}`,
     )
   }
 

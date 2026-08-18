@@ -1,22 +1,18 @@
 {
   "name": "@seamapi/cli",
-  "version": "0.18.2",
+  "version": "0.28.0",
   "description": "A command-line interface (CLI) for interacting with the Seam API.",
   "type": "module",
   "main": "index.js",
   "types": "index.d.ts",
   "exports": {
     ".": {
-      "import": {
-        "types": "./index.d.ts",
-        "default": "./index.js"
-      }
+      "types": "./index.d.ts",
+      "default": "./index.js"
     },
     "./cli": {
-      "import": {
-        "types": "./bin/cli.d.ts",
-        "default": "./bin/cli.js"
-      }
+      "types": "./bin/cli.d.ts",
+      "default": "./bin/cli.js"
     }
   },
   "module": "index.js",
@@ -45,7 +41,6 @@
     "index.js.map",
     "index.d.ts",
     "bin",
-    "completions",
     "lib",
     "src",
     "!test",
@@ -76,13 +71,13 @@
     "report": "vitest run --coverage"
   },
   "engines": {
-    "node": ">=22.11.0",
+    "node": ">=22.12.0",
     "npm": ">=10.0.0"
   },
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "^24.11.0 || ^22.11.0",
+      "version": "^24.11.0 || ^22.12.0",
       "onFail": "warn"
     },
     "packageManager": {
@@ -91,11 +86,13 @@
       "onFail": "warn"
     }
   },
+  "optionalDependencies": {
+    "@seamapi/wizard": "0.8.0"
+  },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@seamapi/blueprint": "1.5.0",
-    "@seamapi/http": "2.2.0",
-    "@seamapi/wizard": "0.5.2",
+    "@seamapi/http": "2.3.0",
     "chalk": "^6.0.0",
     "command-line-usage": "^7.0.4",
     "configstore": "^8.0.0",

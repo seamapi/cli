@@ -3,6 +3,7 @@ import type {
   PromptChoice,
   PromptClient,
   PromptConfirmOptions,
+  PromptMultiselectOptions,
   PromptNumberOptions,
   PromptSelectOptions,
   PromptTextOptions,
@@ -19,6 +20,9 @@ export interface PromptQuestion {
     | 'autocompleteMultiselect'
   message: string
   choices?: Array<PromptChoice<unknown>>
+  /** What the question was seeded with — what the user sees to edit. */
+  initialValue?: unknown
+  initialValues?: unknown[] | undefined
 }
 
 /** Scripted in place of an answer to dismiss that prompt. */
@@ -44,35 +48,53 @@ export class MemoryPromptClient implements PromptClient {
 
   canPrompt = (): boolean => true
 
-  text = async ({ message }: PromptTextOptions): Promise<string> =>
-    this.answer({ kind: 'text', message }) as string
+  text = async ({
+    message,
+    initialValue,
+  }: PromptTextOptions): Promise<string> =>
+    this.answer({ kind: 'text', message, initialValue }) as string
 
-  number = async ({ message }: PromptNumberOptions): Promise<number> =>
-    this.answer({ kind: 'number', message }) as number
+  number = async ({
+    message,
+    initialValue,
+  }: PromptNumberOptions): Promise<number> =>
+    this.answer({ kind: 'number', message, initialValue }) as number
 
-  confirm = async ({ message }: PromptConfirmOptions): Promise<boolean> =>
-    this.answer({ kind: 'confirm', message }) as boolean
+  confirm = async ({
+    message,
+    initialValue,
+  }: PromptConfirmOptions): Promise<boolean> =>
+    this.answer({ kind: 'confirm', message, initialValue }) as boolean
 
   select = async <Value>({
     message,
     choices,
+    initialValue,
   }: PromptSelectOptions<Value>): Promise<Value> =>
-    this.answer({ kind: 'select', message, choices }) as Value
+    this.answer({ kind: 'select', message, choices, initialValue }) as Value
 
   autocomplete = async <Value>({
     message,
     choices,
+    initialValue,
   }: PromptSelectOptions<Value>): Promise<Value> =>
-    this.answer({ kind: 'autocomplete', message, choices }) as Value
+    this.answer({
+      kind: 'autocomplete',
+      message,
+      choices,
+      initialValue,
+    }) as Value
 
   autocompleteMultiselect = async <Value>({
     message,
     choices,
-  }: PromptSelectOptions<Value>): Promise<Value[]> =>
+    initialValues,
+  }: PromptMultiselectOptions<Value>): Promise<Value[]> =>
     this.answer({
       kind: 'autocompleteMultiselect',
       message,
       choices,
+      initialValues,
     }) as Value[]
 
   private answer(question: PromptQuestion): unknown {

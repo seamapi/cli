@@ -53,10 +53,16 @@ export const interactForCustomMetadata = async (
           message: withBackHint('Enter a key to add or edit:'),
         })
 
+        // Editing an existing key continues from the value it has, so a value
+        // is corrected rather than retyped.
+        const currentValue = updatedCustomMetadata[newKey]
+
         let newValue: string | boolean = await promptText({
           message: withBackHint(
             'Enter the new value to add or edit (or null to delete):',
           ),
+          initialValue:
+            currentValue == null ? undefined : currentValue.toString(),
         })
         if (newKey) {
           if (newValue === 'false' || newValue === 'true') {

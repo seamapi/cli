@@ -29,7 +29,7 @@ let stateHome: string
 let configHome: string
 let cacheHome: string
 let loggedOutStateHome: string
-let otherServerConfigHome: string
+let otherEndpointConfigHome: string
 let requests: Array<{
   path: string
   body: unknown
@@ -77,7 +77,7 @@ beforeAll(async () => {
   await mkdir(join(stateHome, 'seam'), { recursive: true })
   await writeFile(
     join(configHome, 'seam', 'cli.json'),
-    JSON.stringify({ server: endpoint }),
+    JSON.stringify({ endpoint }),
   )
   await writeFile(
     join(stateHome, 'seam', 'cli.json'),
@@ -88,16 +88,16 @@ beforeAll(async () => {
   loggedOutStateHome = join(home, 'logged-out-state')
   await mkdir(join(loggedOutStateHome, 'seam'), { recursive: true })
 
-  // Settings pointing at a server nothing is listening on.
-  otherServerConfigHome = join(home, 'other-server-config')
-  await mkdir(join(otherServerConfigHome, 'seam'), { recursive: true })
+  // Settings pointing at an endpoint nothing is listening on.
+  otherEndpointConfigHome = join(home, 'other-endpoint-config')
+  await mkdir(join(otherEndpointConfigHome, 'seam'), { recursive: true })
   await writeFile(
-    join(otherServerConfigHome, 'seam', 'cli.json'),
-    JSON.stringify({ server: 'http://localhost:1' }),
+    join(otherEndpointConfigHome, 'seam', 'cli.json'),
+    JSON.stringify({ endpoint: 'http://localhost:1' }),
   )
 
   // A pre-seeded blueprint cache holding the fixture blueprint, so tests
-  // that pin parameter handling run against known API definitions and
+  // that pin parameter handling run against a known API schema and
   // never touch the npm registry.
   const packageJson = await readFile(join(projectRoot, 'package.json'), 'utf8')
   const pkg = JSON.parse(packageJson) as {
@@ -257,15 +257,15 @@ test('cli: reports an unknown argument rather than sending it', async () => {
 test('cli: reports an unknown argument to a command it handles itself', async () => {
   const { stdout, stderr, exitCode } = await runCli([
     'select',
-    'server',
-    '--serverr',
+    'endpoint',
+    '--endpointt',
     'https://example.com',
   ])
 
   expect(exitCode).toBe(1)
   expect(stdout).toBe('')
-  expect(stderr).toContain('Unknown parameter for select server: --serverr')
-  expect(stderr).toContain("Run 'seam select server --help'")
+  expect(stderr).toContain('Unknown parameter for select endpoint: --endpointt')
+  expect(stderr).toContain("Run 'seam select endpoint --help'")
 })
 
 test('cli: reports an unknown argument to a command taking none', async () => {
@@ -280,6 +280,95 @@ test('cli: takes the arguments a command it handles itself accepts', async () =>
 
   expect(exitCode).toBe(0)
   expect(stdout).toContain('complete -F _seam_completion seam')
+})
+
+test('cli: prints an embedded completion loader without generating completions', async () => {
+  const { stdout, exitCode } = await runCli(['completion', '--loader', 'bash'])
+
+  expect(exitCode).toBe(0)
+  expect(stdout).toContain('bash completion loader for the seam command')
+  expect(stdout).toContain('seam completion bash')
+  expect(stdout).not.toContain('complete -F _seam_completion seam')
+})
+
+test('cli: installs completions into a shell config', async () => {
+  const shellHome = await mkdtemp(join(tmpdir(), 'seam-cli-shell-'))
+  await writeFile(join(shellHome, '.zshrc'), 'export EDITOR=vim\n', 'utf8')
+
+  const { stderr, exitCode } = await runCli(
+    ['completion', '--install', 'zsh', '--no-json'],
+    { env: { HOME: shellHome, ZDOTDIR: shellHome } },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(stderr).toContain(join(shellHome, '.zshrc'))
+
+  const config = await readFile(join(shellHome, '.zshrc'), 'utf8')
+  expect(config).toContain('export EDITOR=vim')
+  expect(config).toContain(
+    'eval "$(seam completion --loader zsh 2> /dev/null)"',
+  )
+})
+
+test('cli: installs a completion file for fish', async () => {
+  const shellHome = await mkdtemp(join(tmpdir(), 'seam-cli-shell-'))
+
+  const { exitCode } = await runCli(['completion', '--install', 'fish'], {
+    env: { HOME: shellHome, XDG_CONFIG_HOME: shellHome },
+  })
+
+  expect(exitCode).toBe(0)
+  const completions = await readFile(
+    join(shellHome, 'fish', 'completions', 'seam.fish'),
+    'utf8',
+  )
+  expect(completions).toContain('seam completion fish')
+})
+
+test('cli: prints a loader holding no completions of its own', async () => {
+  const shellHome = await mkdtemp(join(tmpdir(), 'seam-cli-shell-'))
+
+  const { stdout, exitCode } = await runCli(
+    ['completion', '--loader', 'bash'],
+    {
+      env: { HOME: shellHome, SHELL: '/bin/bash' },
+    },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(stdout).toContain('complete -F _seam_completion_loader seam')
+  expect(stdout).not.toContain('_seam_subcommands')
+})
+
+test('cli: reports a shell it cannot install completions for', async () => {
+  const { stderr, exitCode } = await runCli([
+    'completion',
+    '--install',
+    'nushell',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Unknown shell for seam completion: nushell')
+})
+
+test('cli: refuses to both install and print completions', async () => {
+  const { stderr, exitCode } = await runCli([
+    'completion',
+    '--install',
+    '--loader',
+    'zsh',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Only one of --install, --loader')
+})
+
+test('cli: names the shell to print a completion script for', async () => {
+  const { stderr, exitCode } = await runCli(['completion'])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain('Missing required argument for seam completion')
+  expect(stderr).toContain('seam completion --loader [bash|fish|zsh]')
 })
 
 test('cli: names every unknown argument at once', async () => {
@@ -315,6 +404,19 @@ test('cli: sends an argument once, however it is written', async () => {
 
   expect(exitCode).toBe(0)
   expect(requests[0]?.body).toEqual({ limit: 5 })
+})
+
+test('cli: accepts inline raw json params', async () => {
+  requests = []
+  const { exitCode } = await runCli([
+    'devices',
+    'list',
+    '--raw',
+    '{"limit":2,"nope":true}',
+  ])
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({ limit: 2, nope: true })
 })
 
 test('cli: does not hold params read from stdin to the command', async () => {
@@ -526,10 +628,10 @@ test('cli: SEAM_CLI_WORKSPACE_ID sets the workspace for the request', async () =
   expect(requests[0]?.headers['seam-workspace']).toBe('workspace_from_env')
 })
 
-test('cli: SEAM_CLI_ENDPOINT wins over the stored server', async () => {
+test('cli: SEAM_CLI_ENDPOINT wins over the stored endpoint', async () => {
   requests = []
   const { exitCode } = await runCli(['devices', 'list'], {
-    configHome: otherServerConfigHome,
+    configHome: otherEndpointConfigHome,
     env: { SEAM_CLI_ENDPOINT: endpoint },
   })
 
@@ -537,14 +639,90 @@ test('cli: SEAM_CLI_ENDPOINT wins over the stored server', async () => {
   expect(requests[0]?.path).toBe('/devices/list')
 })
 
-test('cli: uses the stored server without SEAM_CLI_ENDPOINT', async () => {
+test('cli: uses the stored endpoint without SEAM_CLI_ENDPOINT', async () => {
   requests = []
   const { exitCode } = await runCli(['devices', 'list'], {
-    configHome: otherServerConfigHome,
+    configHome: otherEndpointConfigHome,
   })
 
   expect(exitCode).toBe(1)
   expect(requests).toHaveLength(0)
+})
+
+test('cli: --endpoint scopes one command without storing it', async () => {
+  requests = []
+  const settingsFile = join(otherEndpointConfigHome, 'seam', 'cli.json')
+  const before = await readFile(settingsFile, 'utf8')
+
+  const { exitCode } = await runCli(
+    ['devices', 'list', '--endpoint', endpoint],
+    { configHome: otherEndpointConfigHome },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.path).toBe('/devices/list')
+  expect(await readFile(settingsFile, 'utf8')).toBe(before)
+})
+
+test('cli: --endpoint wins over SEAM_CLI_ENDPOINT', async () => {
+  requests = []
+  const { exitCode } = await runCli(
+    ['devices', 'list', '--endpoint', endpoint],
+    {
+      configHome: otherEndpointConfigHome,
+      // Nothing is listening here: reaching the fake proves the flag won.
+      env: { SEAM_CLI_ENDPOINT: 'http://localhost:1' },
+    },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.path).toBe('/devices/list')
+})
+
+test('cli: --workspace-id scopes one command without storing it', async () => {
+  requests = []
+  // A Personal Access Token is what carries a workspace on the wire.
+  const { exitCode } = await runCli(
+    ['devices', 'list', '--workspace-id', 'workspace_from_flag'],
+    { env: { SEAM_CLI_TOKEN: 'seam_at1_from_env' } },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.headers['seam-workspace']).toBe('workspace_from_flag')
+  expect(await readStoredState(stateHome)).not.toHaveProperty(
+    'current_workspace_id',
+  )
+})
+
+test('cli: --workspace-id wins over SEAM_CLI_WORKSPACE_ID', async () => {
+  requests = []
+  const { exitCode } = await runCli(
+    ['devices', 'list', '--workspace-id', 'workspace_from_flag'],
+    {
+      env: {
+        SEAM_CLI_TOKEN: 'seam_at1_from_env',
+        SEAM_CLI_WORKSPACE_ID: 'workspace_from_env',
+      },
+    },
+  )
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.headers['seam-workspace']).toBe('workspace_from_flag')
+})
+
+test('cli: --endpoint is not sent to the API as a parameter', async () => {
+  requests = []
+  const { exitCode } = await runCli([
+    'devices',
+    'list',
+    '--endpoint',
+    endpoint,
+    '--limit',
+    '3',
+  ])
+
+  expect(exitCode).toBe(0)
+  expect(requests[0]?.body).toEqual({ limit: 3 })
 })
 
 test('cli: refuses to log in while SEAM_CLI_TOKEN is set', async () => {
@@ -571,29 +749,81 @@ test('cli: refuses to select a workspace while SEAM_CLI_WORKSPACE_ID is set', as
   )
 })
 
-test('cli: refuses to log in with a workspace while SEAM_CLI_WORKSPACE_ID is set', async () => {
-  const { stderr, exitCode } = await runCli(
-    ['login', '--token', 'seam_apikey1_stored', '--workspace-id', 'workspace1'],
-    { env: { SEAM_CLI_WORKSPACE_ID: 'workspace_from_env' } },
-  )
-
-  expect(exitCode).toBe(1)
-  expect(stderr).toContain(
-    'Cannot select a workspace while SEAM_CLI_WORKSPACE_ID is set',
-  )
-})
-
-test('cli: refuses to select a server while SEAM_CLI_ENDPOINT is set', async () => {
+test('cli: refuses to select an endpoint while SEAM_CLI_ENDPOINT is set', async () => {
   const { stdout, stderr, exitCode } = await runCli(
-    ['select', 'server', '--server', 'https://connect.example.com'],
+    ['select', 'endpoint', 'https://connect.example.com'],
     { env: { SEAM_CLI_ENDPOINT: endpoint } },
   )
 
   expect(exitCode).toBe(1)
   expect(stdout).toBe('')
   expect(stderr).toContain(
-    'Cannot select a server while SEAM_CLI_ENDPOINT is set',
+    'Cannot select an endpoint while SEAM_CLI_ENDPOINT is set',
   )
+})
+
+test('cli: select endpoint stores the url given after it', async () => {
+  // A dedicated config home: the endpoint is shared by every other test.
+  const home = await mkdtemp(join(tmpdir(), 'seam-cli-select-'))
+  await mkdir(join(home, 'seam'), { recursive: true })
+
+  const { exitCode } = await runCli(
+    ['select', 'endpoint', 'https://Connect.Example.com'],
+    { configHome: home },
+  )
+
+  expect(exitCode).toBe(0)
+  // Stored exactly as given: the command path is normalized, the value is not.
+  expect(
+    JSON.parse(await readFile(join(home, 'seam', 'cli.json'), 'utf8')),
+  ).toEqual({ endpoint: 'https://Connect.Example.com' })
+})
+
+test('cli: select workspace stores the id given after it', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'seam-cli-select-'))
+  await mkdir(join(home, 'seam'), { recursive: true })
+  await writeFile(
+    join(home, 'seam', 'cli.json'),
+    JSON.stringify({ [endpoint]: { pat: 'seam_apikey1_token' } }),
+  )
+
+  const { exitCode } = await runCli(['select', 'workspace', 'workspace_1'], {
+    stateHome: home,
+  })
+
+  expect(exitCode).toBe(0)
+  expect(await readStoredState(home)).toMatchObject({
+    current_workspace_id: 'workspace_1',
+  })
+})
+
+test('cli: select endpoint without a url fails when it cannot prompt', async () => {
+  const { stderr, exitCode } = await runCli([
+    'select',
+    'endpoint',
+    '--non-interactive',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain(
+    'Missing required argument for select endpoint: <url>',
+  )
+})
+
+test('cli: refuses the overrides on the commands that select', async () => {
+  const { stderr, exitCode } = await runCli([
+    'select',
+    'endpoint',
+    'https://connect.example.com',
+    '--endpoint',
+    'https://other.example.com',
+  ])
+
+  expect(exitCode).toBe(1)
+  expect(stderr).toContain(
+    '--endpoint cannot be used with seam select endpoint',
+  )
+  expect(stderr).toContain("Run 'seam select endpoint <url>'")
 })
 
 test('cli: logout removes the stored token and workspace', async () => {
@@ -606,7 +836,7 @@ test('cli: logout removes the stored token and workspace', async () => {
     stateFile,
     JSON.stringify({
       [endpoint]: { pat: 'seam_apikey1_token' },
-      // A token stored before tokens were kept per server.
+      // A token stored before tokens were kept per endpoint.
       pat: 'seam_apikey1_legacy',
       current_workspace_id: 'workspace1',
     }),
@@ -703,7 +933,7 @@ test('cli: logout leaves the cli unauthenticated', async () => {
   expect(stderr).toContain('Not logged in')
 })
 
-test('cli: logout keeps a token stored for another server', async () => {
+test('cli: logout keeps a token stored for another endpoint', async () => {
   const home = await createLoggedInStateHome()
   await writeFile(
     join(home, 'seam', 'cli.json'),

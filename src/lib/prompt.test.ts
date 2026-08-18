@@ -6,6 +6,8 @@ import { expect, test } from 'vitest'
 import {
   arrowKeyFor,
   emitArrowKeyAliases,
+  offeredValue,
+  offeredValues,
   type SearchableChoice,
   searchChoices,
 } from 'lib/prompt.js'
@@ -28,13 +30,12 @@ test('searchChoices: matches every term against the label and hint', () => {
 })
 
 test('searchChoices: matches any part of a name, not only its start', () => {
-  const servers = [
+  const endpoints = [
     { label: 'http://localhost:3020' },
     { label: 'https://connect.getseam.com' },
-    { label: 'https://fakeseamconnect.seam.vc' },
   ]
 
-  expect(search('fake', servers)).toEqual([servers[2]])
+  expect(search('seam', endpoints)).toEqual([endpoints[1]])
 })
 
 test('searchChoices: offers every choice until something is typed', () => {
@@ -91,4 +92,26 @@ test('emitArrowKeyAliases: re-emits control keypresses as arrow keys', () => {
     ['\x10', ctrl('p')],
     ['a', { name: 'a', sequence: 'a' }],
   ])
+})
+
+const choices = [
+  { label: 'Sandbox', value: 'ws_1' },
+  { label: 'Production', value: 'ws_2' },
+]
+
+test('offeredValue: keeps a value the list offers', () => {
+  expect(offeredValue(choices, 'ws_2')).toBe('ws_2')
+})
+
+// A value can come from an argument naming something the list does not hold:
+// a deleted device, or a resource on another page of results.
+test('offeredValue: drops a value the list does not offer', () => {
+  expect(offeredValue(choices, 'ws_3')).toBeUndefined()
+  expect(offeredValue(choices, undefined)).toBeUndefined()
+  expect(offeredValue([], 'ws_1')).toBeUndefined()
+})
+
+test('offeredValues: keeps only the values the list offers', () => {
+  expect(offeredValues(choices, ['ws_3', 'ws_1'])).toEqual(['ws_1'])
+  expect(offeredValues(choices, undefined)).toEqual([])
 })

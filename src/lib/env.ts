@@ -1,5 +1,5 @@
 /**
- * Credentials and the server may be given in the environment.
+ * Credentials and the endpoint may be given in the environment.
  *
  * Each variable overrides the corresponding stored value for as long as it
  * is set, so any of them may be used per command or per shell. Commands that
@@ -12,7 +12,7 @@ export const tokenEnvVar = 'SEAM_CLI_TOKEN'
 /** Overrides the workspace stored by `seam select workspace`. */
 export const workspaceIdEnvVar = 'SEAM_CLI_WORKSPACE_ID'
 
-/** Overrides the server stored by `seam select server`. */
+/** Overrides the endpoint stored by `seam select endpoint`. */
 export const endpointEnvVar = 'SEAM_CLI_ENDPOINT'
 
 /** Every variable read here is declared on `ProcessEnv` in `env.d.ts`. */

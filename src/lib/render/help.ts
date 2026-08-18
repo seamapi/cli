@@ -36,7 +36,7 @@ const outputSection = {
   content: [
     'Only the response is written to stdout, so it is safe to pipe. Prompts, progress, and other information are written to stderr.',
     'The response is trimmed to the response key and pagination.',
-    'Request params may be piped or redirected in as a JSON object. Params given as arguments win over params read from stdin.',
+    'Request params may be piped or redirected in as a JSON object, or passed inline with --raw. Params given as arguments win over raw or stdin params.',
   ],
 }
 
@@ -79,8 +79,8 @@ const examples = [
     summary: 'Pipe request params in as JSON.',
   },
   {
-    name: 'seam completion bash',
-    summary: 'Print a shell completion script for bash, fish, or zsh.',
+    name: 'seam completion {bold --install}',
+    summary: 'Complete seam commands in bash, fish, or zsh.',
   },
 ]
 
@@ -131,6 +131,7 @@ const commandSections = (
 ): Section[] => {
   const name = ['seam', ...command.path].join(' ')
   const hasFlags = command.flags.length > 0
+  const { positional } = command
 
   return [
     {
@@ -139,7 +140,26 @@ const commandSections = (
         (line) => line !== '',
       ),
     },
-    { header: 'Usage', content: `${name} [options]` },
+    {
+      header: 'Usage',
+      content:
+        positional == null
+          ? `${name} [options]`
+          : `${name} <${positional.name}> [options]`,
+    },
+    ...(positional == null
+      ? []
+      : [
+          {
+            header: 'Arguments',
+            content: [
+              {
+                name: `{underline <${positional.name}>}`,
+                summary: positional.description,
+              },
+            ],
+          },
+        ]),
     // The command's own parameters are what the request is made of, so keep
     // them apart from the options every seam command takes.
     ...(hasFlags ? [optionSection(command.flags, 'Parameters')] : []),

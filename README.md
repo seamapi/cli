@@ -69,11 +69,15 @@ $ cd seam-bin
 $ makepkg -si
 ```
 
+The AUR and Homebrew packages install [shell completion] themselves. After an
+npm or manual install, run `seam completion --install`.
+
 [aur]: https://aur.archlinux.org/packages/seam-bin
 [Homebrew]: https://formulae.brew.sh/cask/seam
 [latest GitHub release]: https://github.com/seamapi/cli/releases/latest
 [npm]: https://www.npmjs.com/
 [Seam Wizard]: https://github.com/seamapi/wizard
+[shell completion]: #shell-completion
 
 ## Usage
 
@@ -83,8 +87,9 @@ suggestions.
 
 Pass `--interactive` (or `-i`) to always be prompted to review and edit
 properties before the request is made. The prompt is prefilled with whatever
-you passed as arguments, so this is the way to add optional properties, or to
-check a request before making it.
+you passed as arguments or piped in as JSON, and each property you open is
+prefilled with the value it has, ready to edit rather than retype. This is the
+way to add optional properties, or to check a request before making it.
 
 For scripts and CI, pass `--non-interactive` (or `-y`) to never be prompted.
 The command must then be complete: if the command itself is ambiguous, or any
@@ -175,8 +180,8 @@ one yourself. Run `seam <command> --help` to see whether a command paginates.
 
 ### JSON
 
-Request params may be piped or redirected in as a JSON object. Params given as
-arguments win over params read from stdin.
+Request params may be piped or redirected in as a JSON object, or passed
+inline with `--raw`. Params given as arguments win over raw or stdin params.
 
 An argument the command does not accept is an error, so a typo is reported
 rather than sent. Params read from stdin are passed through as given, so
@@ -188,6 +193,9 @@ seam locks unlock-door < params.json
 
 # Or from another program
 echo '{"device_id": "'"$MY_DOOR"'"}' | seam locks unlock-door
+
+# Pass request params inline as JSON
+seam devices list --raw '{"search":"bar"}'
 
 # --device-id wins over any device_id in params.json
 seam devices list --limit 5 < params.json
@@ -219,18 +227,53 @@ Missing required parameter for /locks/unlock_door: --device-id
 An error exits non-zero. A request that fails reports its `error` on stdout,
 so it can be inspected from a pipe; anything else is written to stderr only.
 
+### Selecting an endpoint and a workspace
+
+Two settings say where commands go, and one command each stores them:
+
+```bash
+# Every later command runs against this endpoint
+seam select endpoint https://connect.getseam.com
+
+# ...and this workspace
+seam select workspace $MY_WORKSPACE
+```
+
+Run either without a value to pick one interactively.
+
+To send a single command somewhere else, pass `--endpoint` or
+`--workspace-id` to that command. They override what is selected for that one
+invocation and store nothing:
+
+```bash
+# List devices in another workspace, without switching to it
+seam devices list --workspace-id $OTHER_WORKSPACE
+
+# Run one command against a local Seam Connect instance
+seam devices list --endpoint http://localhost:3020
+
+# Log in to another endpoint: the token is stored for that endpoint,
+# and the selected one is left alone
+seam login --endpoint http://localhost:3020 --token $LOCAL_KEY
+```
+
+Because the two flags never store anything, they are refused on the commands
+that do: `seam select endpoint --endpoint <url>` is an error, and the value
+belongs after the command instead.
+
 ### Environment variables
 
-Everything `seam login`, `seam select workspace`, and `seam select server`
+Everything `seam login`, `seam select workspace`, and `seam select endpoint`
 store may be given in the environment instead:
 
 - `SEAM_CLI_TOKEN`: a Personal Access Token or API Key,
 - `SEAM_CLI_WORKSPACE_ID`: the workspace requests are made against,
-- `SEAM_CLI_ENDPOINT`: the Seam API server requests are made to.
+- `SEAM_CLI_ENDPOINT`: the Seam API endpoint requests are made to.
 
 Any of them, all of them, or none of them may be set. Each one wins over the
-corresponding stored value, which makes them useful for CI, for a single
-command, or for working against another workspace in one shell.
+corresponding stored value and is in turn overridden by `--endpoint` or
+`--workspace-id`, which makes them useful for CI or for working against
+another workspace for a whole shell.
 
 ```bash
 # One command against another workspace
@@ -245,13 +288,13 @@ SEAM_CLI_ENDPOINT=http://localhost:3020 seam devices list
 ```
 
 An API Key is scoped to a single workspace, so it needs no workspace id. A
-Personal Access Token works across workspaces, so it needs one from either
-`SEAM_CLI_WORKSPACE_ID` or `seam select workspace`.
+Personal Access Token works across workspaces, so it needs one from
+`--workspace-id`, `SEAM_CLI_WORKSPACE_ID`, or `seam select workspace`.
 
 The command that would store an overridden value fails rather than storing
 something the environment ignores: `seam login` and `seam logout` while
 `SEAM_CLI_TOKEN` is set, `seam select workspace` while
-`SEAM_CLI_WORKSPACE_ID` is set, and `seam select server` while
+`SEAM_CLI_WORKSPACE_ID` is set, and `seam select endpoint` while
 `SEAM_CLI_ENDPOINT` is set. Unset the variable to use those commands.
 
 ```bash
@@ -282,7 +325,21 @@ seam devices list --help
 The CLI can print a completion script for bash, fish, and zsh that completes
 commands, flags, and flag values such as device types.
 
-Load completions into the current shell with
+Install them into the shell you are in, or one you name, with
+
+```bash
+seam completion --install
+seam completion --install zsh
+```
+
+If you use Zsh you must enable compinit in your `.zshrc` with
+
+```zsh
+autoload -Uz compinit
+compinit
+```
+
+Load completions into the current shell instead with
 
 ```bash
 # bash
@@ -305,18 +362,23 @@ seam completion fish > ~/.config/fish/completions/seam.fish
 seam completion zsh > "${fpath[1]}/_seam"
 ```
 
-System packages install completion loaders instead: small scripts packaged
-under `completions/` in the published package, and released as
-`seam-completions-v<version>.tar.gz` on each [GitHub release]. A loader runs
-`seam completion` the first time the shell completes a seam command, so
-installed completions always match the CLI's current Seam API definitions and
-never go stale between package updates. The `seam-bin` AUR package installs
-the loaders for all three shells.
+System packages install completion loaders instead. The network-free loaders
+are embedded in the CLI and printed with `seam completion --loader <shell>`.
+For example, a package can install the Bash loader with:
 
-Completions are generated from the cached Seam API definitions, so they may
+```sh
+seam completion --loader bash > /usr/share/bash-completion/completions/seam
+```
+
+A loader runs `seam completion` the first time the shell completes a Seam
+command, so installed completions always match the CLI's current Seam API
+schema and never go stale between package updates. The `seam-bin` AUR package
+installs the loaders for all three shells.
+
+Completions are generated from the cached Seam API schema, so they may
 briefly lag a newly released API. Pass `--update` to refresh the cache first,
-e.g., `seam completion bash --update`. They do not reflect definitions served
-by another Seam API server when `seam config use-remote-api-defs` is enabled.
+e.g., `seam completion bash --update`. They do not reflect the schema served
+by another Seam API endpoint when `seam config use-remote-schema` is enabled.
 
 If completions do not appear after installing them system wide:
 

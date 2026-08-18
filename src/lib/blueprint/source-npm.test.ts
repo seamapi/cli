@@ -218,7 +218,7 @@ describe('getBlueprint', () => {
     stubOfflineRegistry()
 
     await expect(getBlueprint({ cacheDirectory })).rejects.toThrow(
-      /could not check for seam api definition updates/i,
+      /could not check for seam api schema updates/i,
     )
   })
 
@@ -228,6 +228,6 @@ describe('getBlueprint', () => {
 
     await expect(
       getBlueprint({ cacheDirectory, update: true }),
-    ).rejects.toThrow(/could not check for seam api definition updates/i)
+    ).rejects.toThrow(/could not check for seam api schema updates/i)
   })
 })

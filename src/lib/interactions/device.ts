@@ -1,12 +1,13 @@
 import { getSeam } from 'lib/http/client.js'
 
 import { interactForResource } from './resource.js'
-export const interactForDevice = async () => {
+export const interactForDevice = async (initialValue?: string) => {
   const seam = await getSeam()
 
   return interactForResource({
     resourceName: 'device',
     fetchResources: () => seam.devices.list(),
+    initialValue,
     toChoice: (device) => ({
       title: device.properties.name ?? '<No Name>',
       value: device.device_id,
