@@ -294,8 +294,7 @@ seam completion --install
 seam completion --install zsh
 ```
 
-Zsh completes nothing until the completion system is on. If your config does
-not turn it on already, add this above the installed line:
+If you use Zsh you must enable compinit in your `.zshrc` with
 
 ```zsh
 autoload -Uz compinit
