@@ -18,8 +18,8 @@
     in
     {
       packages = forEachSystem (pkgs: rec {
-        seam-cli = pkgs.callPackage ./package.nix { };
-        default = seam-cli;
+        seam = pkgs.callPackage ./package.nix { };
+        default = seam;
       });
     };
 }

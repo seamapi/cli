@@ -6,7 +6,7 @@
 }:
 
 buildNpmPackage {
-  pname = "seam-cli";
+  pname = "seam";
   # Kept in sync with the version the build injects into the binary.
   version = (lib.importJSON ./package.json).version;
 
