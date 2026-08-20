@@ -1,8 +1,10 @@
 {
   lib,
+  stdenv,
   bun,
   buildNpmPackage,
   importNpmLock,
+  installShellFiles,
 }:
 
 buildNpmPackage {
@@ -16,7 +18,10 @@ buildNpmPackage {
   npmConfigHook = importNpmLock.npmConfigHook;
 
   # The build script compiles src/bin/cli.ts into a single-file Bun executable.
-  nativeBuildInputs = [ bun ];
+  nativeBuildInputs = [
+    bun
+    installShellFiles
+  ];
   npmBuildScript = "build:standalone";
 
   installPhase = ''
@@ -25,6 +30,16 @@ buildNpmPackage {
     install -Dm755 seam -t $out/bin
 
     runHook postInstall
+  '';
+
+  # The loaders are what `seam completion --install` writes: each one asks the
+  # CLI for the real script the first time it completes, so the completions
+  # cannot drift from the schema the installed binary carries.
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installShellCompletion --cmd seam \
+      --bash <($out/bin/seam completion --loader bash) \
+      --fish <($out/bin/seam completion --loader fish) \
+      --zsh <($out/bin/seam completion --loader zsh)
   '';
 
   # The executable is the Bun runtime with the JavaScript bundle appended to
