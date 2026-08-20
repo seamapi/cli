@@ -48,12 +48,40 @@ $ brew install seam
 
 ### Standalone binary
 
-Download a standalone binary for your platform from the [latest GitHub
-release]. The macOS binaries are signed with the Seam Labs, Inc. Apple
-Developer ID and notarized by Apple, so macOS runs them without a Gatekeeper
-prompt.
+Install the latest release on Linux and macOS with
 
-Then install the shell completions with
+```
+$ curl -fsSL https://raw.githubusercontent.com/seamapi/cli/main/install.sh | sh
+```
+
+or on Windows with
+
+```
+> iwr -useb https://raw.githubusercontent.com/seamapi/cli/main/install.ps1 | iex
+```
+
+The script downloads the binary for your platform, verifies its SHA-256
+checksum against the release's `checksums.txt` before installing, and runs
+`seam completion --install`. It installs to the first of `$SEAM_BIN_PATH`,
+`$XDG_BIN_HOME`, `$XDG_DATA_HOME/../bin`, or `~/.local/bin`
+(`%LOCALAPPDATA%\seam\bin` on Windows). If the install directory is not on
+your `PATH`, the script adds it to your shell configuration, detecting bash,
+fish, or zsh the same way as `seam completion --install`. Pass
+`--version <tag>` to pin a version, `--bin-path <dir>` to choose the install
+directory, and `--no-modify-path` or `--no-install-completion` to leave your
+shell configuration untouched, e.g.
+
+```
+$ curl -fsSL https://raw.githubusercontent.com/seamapi/cli/main/install.sh \
+    | sh -s -- --version v0.29.0 --no-install-completion
+```
+
+Alternatively, download a standalone binary for your platform from the
+[latest GitHub release]. The macOS binaries are signed with the Seam Labs,
+Inc. Apple Developer ID and notarized by Apple, so macOS runs them without a
+Gatekeeper prompt.
+
+After a manual download, install the shell completions with
 
 ```
 $ seam completion --install
