@@ -46,8 +46,6 @@ but it does not include the Seam Wizard.
 $ brew install seam
 ```
 
-Both install the [shell completion] themselves.
-
 ### Standalone binary
 
 Install the latest release on Linux and macOS with
@@ -83,7 +81,7 @@ Alternatively, download a standalone binary for your platform from the
 Inc. Apple Developer ID and notarized by Apple, so macOS runs them without a
 Gatekeeper prompt.
 
-After a manual download, install the shell completions with
+After a manual download, install the [shell completion] with
 
 ```
 $ seam completion --install
@@ -98,8 +96,6 @@ $ git clone https://aur.archlinux.org/seam-bin.git
 $ cd seam-bin
 $ makepkg -si
 ```
-
-The AUR package installs the [shell completion] itself.
 
 ### Nix
 
@@ -116,12 +112,7 @@ $ nix profile install github:seamapi/cli
 ```
 
 The flake compiles the standalone binary from source for `x86_64-linux`,
-`aarch64-linux`, and `aarch64-darwin`, and installs the [shell completion]
-with it. NixOS and Home Manager load that from the profile; elsewhere, run
-
-```
-$ seam completion --install
-```
+`aarch64-linux`, and `aarch64-darwin`.
 
 [aur]: https://aur.archlinux.org/packages/seam-bin
 [Homebrew]: https://formulae.brew.sh/cask/seam
