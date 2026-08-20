@@ -54,6 +54,8 @@
     "build:ts": "tsc --project tsconfig.build.json",
     "prebuild:ts": "del 'index.*' bin lib",
     "postbuild:ts": "tsc-alias --project tsconfig.build.json",
+    "build:standalone": "bun build src/bin/cli.ts --compile --minify --outfile seam",
+    "prebuild:standalone": "npm run prepack",
     "typecheck": "tsc",
     "test": "vitest run --coverage",
     "pretest": "tsx src/index.ts",

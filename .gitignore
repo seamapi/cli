@@ -14,6 +14,13 @@
 # Build directories
 package
 
+# Standalone binary compiled by npm run build:standalone
+seam
+
+# Nix build results
+result
+result-*
+
 # Shell completions generated on prepack
 completions
 

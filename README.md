@@ -81,7 +81,7 @@ Alternatively, download a standalone binary for your platform from the
 Inc. Apple Developer ID and notarized by Apple, so macOS runs them without a
 Gatekeeper prompt.
 
-After a manual download, install the shell completions with
+After a manual download, install the [shell completion] with
 
 ```
 $ seam completion --install
@@ -97,12 +97,27 @@ $ cd seam-bin
 $ makepkg -si
 ```
 
-The AUR and Homebrew packages install [shell completion] themselves. After an
-npm or manual install, run `seam completion --install`.
+### Nix
+
+Run the CLI without installing it with [Nix] with
+
+```
+$ nix run github:seamapi/cli
+```
+
+Install it into your profile with
+
+```
+$ nix profile install github:seamapi/cli
+```
+
+The flake compiles the standalone binary from source for `x86_64-linux`,
+`aarch64-linux`, and `aarch64-darwin`.
 
 [aur]: https://aur.archlinux.org/packages/seam-bin
 [Homebrew]: https://formulae.brew.sh/cask/seam
 [latest GitHub release]: https://github.com/seamapi/cli/releases/latest
+[Nix]: https://nixos.org/
 [npm]: https://www.npmjs.com/
 [Seam Wizard]: https://github.com/seamapi/wizard
 [shell completion]: #shell-completion
