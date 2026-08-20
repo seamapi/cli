@@ -1,0 +1,131 @@
+---
+name: Install script
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - install.sh
+      - install.ps1
+      - .github/workflows/install-script.yml
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - install.sh
+      - install.ps1
+      - .github/workflows/install-script.yml
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Shellcheck
+        run: shellcheck install.sh
+  test:
+    name: Test (${{ matrix.os_name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        include:
+          - os: ubuntu-latest
+            os_name: Linux
+          - os: macos-latest
+            os_name: macOS
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install latest release
+        run: |
+          sh install.sh
+          "$HOME/.local/bin/seam" --version
+      - name: Check installed completions
+        if: ${{ runner.os == 'Linux' }}
+        run: grep 'seam completion --loader' "$HOME/.bashrc"
+      - name: Install pinned version to a custom directory
+        run: |
+          sh install.sh --version v0.29.0 --bin-path "$RUNNER_TEMP/seam-bin" --no-install-completion
+          "$RUNNER_TEMP/seam-bin/seam" --version | grep -F 0.29.0
+      - name: Install to XDG_BIN_HOME
+        run: |
+          XDG_BIN_HOME="$RUNNER_TEMP/xdg-bin" SEAM_NO_COMPLETIONS=1 sh install.sh
+          "$RUNNER_TEMP/xdg-bin/seam" --version
+      - name: Refuse to install on checksum mismatch
+        run: |
+          os=$(uname -s | tr '[:upper:]' '[:lower:]')
+          case "$(uname -m)" in
+            x86_64 | amd64) arch=x64 ;;
+            arm64 | aarch64) arch=arm64 ;;
+          esac
+          asset="seam-v0.0.1-${os}-${arch}"
+          mkdir -p "$RUNNER_TEMP/srv/v0.0.1"
+          echo 'not the real binary' > "$RUNNER_TEMP/srv/v0.0.1/$asset"
+          printf '%s  %s\n' \
+            '0000000000000000000000000000000000000000000000000000000000000000' \
+            "$asset" > "$RUNNER_TEMP/srv/v0.0.1/checksums.txt"
+          python3 -m http.server 8931 --directory "$RUNNER_TEMP/srv" &
+          server_pid=$!
+          sleep 2
+          if SEAM_DOWNLOAD_URL=http://127.0.0.1:8931 \
+            sh install.sh --version v0.0.1 --bin-path "$RUNNER_TEMP/tamper-bin" \
+            --no-install-completion; then
+            echo 'The install must fail on a checksum mismatch' >&2
+            kill "$server_pid"
+            exit 1
+          fi
+          kill "$server_pid"
+          if [ -e "$RUNNER_TEMP/tamper-bin/seam" ]; then
+            echo 'Nothing must be installed on a checksum mismatch' >&2
+            exit 1
+          fi
+  test_windows:
+    name: Test (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install latest release
+        run: |
+          .\install.ps1
+          seam --version
+      - name: Install pinned version to a custom directory
+        run: |
+          .\install.ps1 -Version v0.29.0 -BinPath "$env:RUNNER_TEMP\seam-bin"
+          $version = & "$env:RUNNER_TEMP\seam-bin\seam.exe" --version
+          if ($version -notmatch '0\.29\.0') {
+            throw "Unexpected version: $version"
+          }
+      - name: Refuse to install on checksum mismatch
+        run: |
+          $srv = "$env:RUNNER_TEMP\srv\v0.0.1"
+          New-Item -ItemType Directory -Path $srv -Force | Out-Null
+          Set-Content -Path "$srv\seam-v0.0.1-windows-x64.exe" -Value 'not the real binary'
+          Set-Content -Path "$srv\checksums.txt" -Value ('0' * 64 + '  seam-v0.0.1-windows-x64.exe')
+          $server = Start-Process python -ArgumentList '-m', 'http.server', '8931', '--directory', "$env:RUNNER_TEMP\srv" -PassThru -NoNewWindow
+          Start-Sleep -Seconds 2
+          $env:SEAM_DOWNLOAD_URL = 'http://127.0.0.1:8931'
+          $failed = $false
+          try {
+            .\install.ps1 -Version v0.0.1 -BinPath "$env:RUNNER_TEMP\tamper-bin"
+          } catch {
+            $failed = $true
+          }
+          $env:SEAM_DOWNLOAD_URL = ''
+          Stop-Process -Id $server.Id -Force
+          if (-not $failed) {
+            throw 'The install must fail on a checksum mismatch'
+          }
+          if (Test-Path "$env:RUNNER_TEMP\tamper-bin\seam.exe") {
+            throw 'Nothing must be installed on a checksum mismatch'
+          }
