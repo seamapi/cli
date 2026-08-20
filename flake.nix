@@ -8,7 +8,6 @@
   outputs =
     { nixpkgs, ... }:
     let
-      # Every platform Nixpkgs' bun runs on, which is what the build needs.
       systems = [
         "aarch64-darwin"
         "aarch64-linux"
