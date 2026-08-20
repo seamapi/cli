@@ -28,6 +28,52 @@ jobs:
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: .
+      - name: Generate Scoop manifest
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          version="${GITHUB_REF_NAME#v}"
+          url="https://github.com/${REPOSITORY}"
+          description=$(jq --raw-output '.description' package.json)
+
+          hash=$(awk -v f="seam-v${version}-windows-x64.exe" \
+            '{file = $2; sub(/^\*/, "", file)} file == f {print $1}' \
+            release/checksums.txt)
+          test -n "$hash"
+
+          # In the autoupdate section $version is a Scoop template variable,
+          # not a shell or jq one.
+          jq --null-input \
+            --arg version "$version" \
+            --arg description "$description" \
+            --arg url "$url" \
+            --arg hash "$hash" \
+            '{
+              version: $version,
+              description: $description,
+              homepage: $url,
+              license: "MIT",
+              architecture: {
+                "64bit": {
+                  url: "\($url)/releases/download/v\($version)/seam-v\($version)-windows-x64.exe#/seam.exe",
+                  hash: $hash
+                }
+              },
+              bin: "seam.exe",
+              checkver: {github: $url},
+              autoupdate: {
+                architecture: {
+                  "64bit": {
+                    url: "\($url)/releases/download/v$version/seam-v$version-windows-x64.exe#/seam.exe"
+                  }
+                },
+                hash: {url: "\($url)/releases/download/v$version/checksums.txt"}
+              }
+            }' > release/seam.json
+
+          cat release/seam.json
       - name: Generate release notes
         id: changelog
         run: |
@@ -45,6 +91,7 @@ jobs:
           files: |
             *.tgz
             release/seam-*
+            release/seam.json
             release/checksums.txt
           body_path: ${{ github.workspace }}/${{ steps.changelog.outputs.outfile }}
   npm:
