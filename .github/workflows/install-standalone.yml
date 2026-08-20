@@ -1,5 +1,5 @@
 ---
-name: Install script
+name: Install standalone
 
 on:
   push:
@@ -8,14 +8,14 @@ on:
     paths:
       - install.sh
       - install.ps1
-      - .github/workflows/install-script.yml
+      - .github/workflows/install-standalone.yml
   pull_request:
     branches:
       - '**'
     paths:
       - install.sh
       - install.ps1
-      - .github/workflows/install-script.yml
+      - .github/workflows/install-standalone.yml
 
 jobs:
   lint:
