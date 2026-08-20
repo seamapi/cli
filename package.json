@@ -88,6 +88,7 @@
       "onFail": "warn"
     }
   },
+  "packageManager": "npm@11.19.0",
   "optionalDependencies": {
     "@seamapi/wizard": "0.8.0"
   },
