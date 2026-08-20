@@ -58,8 +58,14 @@ jobs:
           "$RUNNER_TEMP/seam-bin/seam" --version | grep -F 0.29.0
       - name: Install to XDG_BIN_HOME
         run: |
-          XDG_BIN_HOME="$RUNNER_TEMP/xdg-bin" SEAM_NO_COMPLETIONS=1 sh install.sh
+          XDG_BIN_HOME="$RUNNER_TEMP/xdg-bin" SEAM_NO_COMPLETIONS=1 \
+            SEAM_NO_MODIFY_PATH=1 sh install.sh
           "$RUNNER_TEMP/xdg-bin/seam" --version
+      - name: Check modified PATH
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          grep -xF "export PATH=\"$RUNNER_TEMP/seam-bin:\$PATH\"" "$HOME/.bashrc"
+          ! grep -F "$RUNNER_TEMP/xdg-bin" "$HOME/.bashrc"
       - name: Refuse to install on checksum mismatch
         run: |
           os=$(uname -s | tr '[:upper:]' '[:lower:]')

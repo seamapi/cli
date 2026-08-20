@@ -3,7 +3,8 @@
 #
 # Downloads the standalone seam binary for this platform from GitHub Releases,
 # verifies its SHA-256 checksum against the release's checksums.txt in a
-# temporary directory, installs it, and installs shell completions.
+# temporary directory, installs it, adds the install directory to PATH in the
+# shell configuration when needed, and installs shell completions.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/seamapi/cli/main/install.sh | sh
@@ -16,12 +17,16 @@
 #                            XDG_BIN_HOME, then XDG_DATA_HOME/../bin, then
 #                            ~/.local/bin).
 #   --no-install-completion  Do not run `seam completion --install`.
+#   --no-modify-path         Do not add the install directory to PATH in the
+#                            shell configuration.
 #   -h, --help               Show this help.
 #
 # Environment:
 #   SEAM_BIN_PATH        Install directory (same as --bin-path).
 #   SEAM_NO_COMPLETIONS  Set to 1 to skip completions (same as
 #                        --no-install-completion).
+#   SEAM_NO_MODIFY_PATH  Set to 1 to never edit the shell configuration for
+#                        PATH (same as --no-modify-path).
 #   SEAM_DOWNLOAD_URL    Base URL for release downloads, for mirrors and
 #                        testing (default:
 #                        https://github.com/seamapi/cli/releases/download).
@@ -48,11 +53,14 @@ Options:
                            XDG_BIN_HOME, then XDG_DATA_HOME/../bin, then
                            ~/.local/bin).
   --no-install-completion  Do not run 'seam completion --install'.
+  --no-modify-path         Do not add the install directory to PATH in the
+                           shell configuration.
   -h, --help               Show this help.
 
 Environment:
   SEAM_BIN_PATH        Install directory (same as --bin-path).
   SEAM_NO_COMPLETIONS  Set to 1 to skip completions.
+  SEAM_NO_MODIFY_PATH  Set to 1 to never edit the shell configuration for PATH.
   SEAM_DOWNLOAD_URL    Base URL for release downloads (mirrors and testing).
 EOF
 }
@@ -186,6 +194,100 @@ resolve_bin_dir() {
   fi
 }
 
+# shell_name '-/bin/zsh' -> 'zsh'
+shell_name() {
+  [ -n "$1" ] || return 0
+  basename "$1" | sed 's/^-//'
+}
+
+is_shell() {
+  case "$1" in
+    bash | zsh | fish) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Detect the user's shell the same way 'seam completion --install' does
+# (src/lib/completion/detect-shell.ts): walk up to 10 process ancestors,
+# preferring procfs over ps, then fall back to SHELL. Sets _shell.
+detect_shell() {
+  _shell=''
+  _pid="${PPID:-0}"
+  _depth=0
+  while [ "$_depth" -lt 10 ] && [ "$_pid" -gt 1 ] 2> /dev/null; do
+    if [ -r "/proc/${_pid}/comm" ]; then
+      _comm=$(cat "/proc/${_pid}/comm" 2> /dev/null) || _comm=''
+      # In /proc/<pid>/stat the ppid is the second field after the last ')'.
+      _ppid=$(sed 's/^.*) *//' "/proc/${_pid}/stat" 2> /dev/null | awk '{print $2}')
+    elif check_cmd ps; then
+      _psout=$(ps -p "$_pid" -o comm=,ppid= 2> /dev/null) || _psout=''
+      [ -n "$_psout" ] || break
+      _ppid=$(echo "$_psout" | awk '{print $NF}')
+      _comm=$(echo "$_psout" | awk '{$NF = ""; sub(/ +$/, ""); print}')
+    else
+      break
+    fi
+    [ -n "$_comm" ] || break
+    _name=$(shell_name "$_comm")
+    if is_shell "$_name"; then
+      _shell="$_name"
+      return 0
+    fi
+    _pid="$_ppid"
+    _depth=$((_depth + 1))
+  done
+  _name=$(shell_name "${SHELL:-}")
+  if is_shell "$_name"; then
+    _shell="$_name"
+    return 0
+  fi
+  return 1
+}
+
+# Pick the configuration file for _shell the same way
+# 'seam completion --install' does (src/lib/completion/install.ts).
+# Sets _shell_config and _path_line.
+resolve_shell_config() {
+  case "$_shell" in
+    fish)
+      _shell_config="${XDG_CONFIG_HOME:-$(get_home)/.config}/fish/config.fish"
+      _path_line="fish_add_path \"${_bin_dir}\""
+      ;;
+    zsh)
+      _shell_config="${ZDOTDIR:-$(get_home)}/.zshrc"
+      _path_line="export PATH=\"${_bin_dir}:\$PATH\""
+      ;;
+    bash)
+      _home=$(get_home)
+      if [ -f "${_home}/.bashrc" ]; then
+        _shell_config="${_home}/.bashrc"
+      elif [ -f "${_home}/.bash_profile" ]; then
+        _shell_config="${_home}/.bash_profile"
+      else
+        _shell_config="${_home}/.bashrc"
+      fi
+      _path_line="export PATH=\"${_bin_dir}:\$PATH\""
+      ;;
+  esac
+}
+
+modify_path() {
+  if [ "$_modify_path" = 1 ] && detect_shell; then
+    resolve_shell_config
+    mkdir -p "$(dirname "$_shell_config")"
+    if [ -f "$_shell_config" ] && grep -qxF "$_path_line" "$_shell_config"; then
+      say "${_bin_dir} is already added to PATH in ${_shell_config}"
+    else
+      printf '%s\n' "$_path_line" >> "$_shell_config"
+      say "added ${_bin_dir} to PATH in ${_shell_config}"
+    fi
+    say "open a new shell to use ${APP_NAME}, or run 'exec ${_shell}' now"
+  else
+    warn "make sure ${_bin_dir} is added to your PATH, for example:
+  export PATH=\"${_bin_dir}:\$PATH\""
+  fi
+}
+
 cleanup() {
   if [ -n "${_tmp_dir:-}" ]; then
     rm -rf "$_tmp_dir"
@@ -202,6 +304,10 @@ main() {
   if [ "${SEAM_NO_COMPLETIONS:-0}" = 1 ]; then
     _install_completion=0
   fi
+  _modify_path=1
+  if [ "${SEAM_NO_MODIFY_PATH:-0}" = 1 ]; then
+    _modify_path=0
+  fi
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -217,6 +323,10 @@ main() {
         ;;
       --no-install-completion)
         _install_completion=0
+        shift
+        ;;
+      --no-modify-path)
+        _modify_path=0
         shift
         ;;
       -h | --help)
@@ -296,11 +406,7 @@ Check that release ${_tag} exists and has a binary for ${_os}-${_arch}:
 
   case ":${PATH}:" in
     *":${_bin_dir}:"*) ;;
-    *)
-      warn "${_bin_dir} is not on your PATH
-Add it to your shell profile, for example:
-  export PATH=\"${_bin_dir}:\$PATH\""
-      ;;
+    *) modify_path ;;
   esac
   if [ -n "${GITHUB_PATH:-}" ]; then
     echo "$_bin_dir" >> "$GITHUB_PATH"
