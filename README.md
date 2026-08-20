@@ -46,6 +46,16 @@ but it does not include the Seam Wizard.
 $ brew install seam
 ```
 
+### Scoop
+
+On Windows, install the CLI from [Scoop] with
+
+```
+> scoop install https://github.com/seamapi/cli/releases/latest/download/seam.json
+```
+
+Later, update it with `scoop update seam`.
+
 ### Standalone binary
 
 Install the latest release on Linux and macOS with
@@ -103,6 +113,7 @@ The flake compiles the standalone binary from source for `x86_64-linux`,
 [latest GitHub release]: https://github.com/seamapi/cli/releases/latest
 [Nix]: https://nixos.org/
 [npm]: https://www.npmjs.com/
+[Scoop]: https://scoop.sh/
 [Seam Wizard]: https://github.com/seamapi/wizard
 [shell completion]: #shell-completion
 
