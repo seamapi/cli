@@ -90,7 +90,7 @@
   },
   "packageManager": "npm@11.19.0",
   "optionalDependencies": {
-    "@seamapi/wizard": "0.9.2"
+    "@seamapi/wizard": "^0.28.0"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
