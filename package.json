@@ -94,7 +94,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
-    "@seamapi/blueprint": "1.8.0",
+    "@seamapi/blueprint": "1.9.1",
     "@seamapi/http": "^2.16.0",
     "chalk": "^6.0.0",
     "command-line-usage": "^7.0.4",
@@ -106,7 +106,7 @@
     "tar": "^7.5.22"
   },
   "devDependencies": {
-    "@seamapi/types": "^1.994.0",
+    "@seamapi/types": "^1.1047.0",
     "@types/command-line-usage": "^5.0.4",
     "@types/minimist": "^1.2.5",
     "@types/node": "^24.10.9",
