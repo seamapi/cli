@@ -10,6 +10,12 @@ updates:
       include: scope
     allow:
       - dependency-type: production
+      # @seamapi/wizard is declared under optionalDependencies. Allow it by
+      # name so Dependabot always keeps it updated regardless of how the
+      # production dependency-type filter treats optional dependencies. The
+      # caret range (^0.x) cannot cross a minor release, so without this the
+      # wizard goes stale and has to be bumped by hand on every minor release.
+      - dependency-name: '@seamapi/wizard'
     ignore:
       - dependency-name: '*'
         update-types:
