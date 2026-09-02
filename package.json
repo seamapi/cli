@@ -89,9 +89,6 @@
     }
   },
   "packageManager": "npm@11.19.0",
-  "optionalDependencies": {
-    "@seamapi/wizard": "^0.42.0"
-  },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@seamapi/blueprint": "1.9.1",
@@ -127,5 +124,8 @@
     "tsx": "^4.6.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "@seamapi/wizard": "^0.44.2"
   }
 }
