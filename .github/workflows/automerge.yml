@@ -11,7 +11,7 @@ jobs:
     name: Merge
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: github.actor == 'dependabot[bot]'
+    if: github.actor == 'dependabot[bot]' || github.event.pull_request.user.login == 'seambot'
     steps:
       - name: Approve pull request
         run: gh pr review --approve "$PR_URL"
