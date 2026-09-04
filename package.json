@@ -126,6 +126,6 @@
     "vitest": "^4.1.10"
   },
   "peerDependencies": {
-    "@seamapi/wizard": "^0.45.0"
+    "@seamapi/wizard": "^0.48.0"
   }
 }
