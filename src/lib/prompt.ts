@@ -4,6 +4,7 @@ import type { Key } from 'node:readline'
 import {
   autocomplete,
   autocompleteMultiselect,
+  type CANCEL_SYMBOL,
   confirm,
   isCancel,
   type Option,
@@ -127,9 +128,9 @@ const installArrowKeyAliases = (): void => {
   emitArrowKeyAliases(process.stdin)
 }
 
-const unwrap = <Value>(value: Value | symbol): Value => {
+const unwrap = <Value>(value: Value | typeof CANCEL_SYMBOL): Value => {
   if (isCancel(value)) throw new PromptCancelledError()
-  return value as Value
+  return value
 }
 
 // Prompts are rendered to stderr: a selection is not a command result,
