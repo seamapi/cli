@@ -24,12 +24,14 @@ runs:
       if: inputs.install_dependencies == 'true'
       with:
         node-version: ${{ inputs.node_version }}
+        check-latest: true
         registry-url: ${{ inputs.registry_url }}
     - name: Setup Node.js without cache
       uses: actions/setup-node@v7
       if: inputs.install_dependencies == 'false'
       with:
         node-version: ${{ inputs.node_version }}
+        check-latest: true
         registry-url: ${{ inputs.registry_url }}
     - name: Install dependencies
       if: inputs.install_dependencies == 'true'
