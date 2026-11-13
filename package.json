@@ -107,7 +107,7 @@
     "@types/command-line-usage": "^5.0.4",
     "@types/minimist": "^1.2.5",
     "@types/node": "^24.10.9",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.12",
     "concurrently": "^10.0.4",
     "del-cli": "^7.0.0",
     "eslint": "^9.31.0",
@@ -123,9 +123,15 @@
     "tsc-alias": "^1.8.2",
     "tsx": "^4.6.2",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.12"
   },
   "peerDependencies": {
     "@seamapi/wizard": "^0.48.1"
+  },
+  "overrides": {
+    "@modelcontextprotocol/client": "^2.3.0",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.1"
+    }
   }
 }
