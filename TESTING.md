@@ -103,59 +103,14 @@ behavior. The CLI is blueprint-driven and has one chokepoint: preparing a
 `SeamHttpRequest` for an endpoint path. The port mirrors that — prepare a
 request, inspect it, send it:
 
-```ts
-// src/lib/http/api.ts
-export interface SeamApiRequest {
-  readonly url: URL
-  readonly method: string
-  readonly body: unknown
-  fetchResponse: () => Promise<unknown>
-}
+See [`SeamApi` and `HttpSeamApi`](src/lib/http/api.ts) for the authoritative
+request contract and SDK integration. The adapter keeps the URL inspectable
+before sending and uses the SDK resolver for action-attempt waiting.
 
-export interface SeamApi {
-  createRequest: (options: ApiRequestOptions) => SeamApiRequest
-}
-
-export class HttpSeamApi implements SeamApi {
-  constructor(private readonly seam: SeamHttp) {} // the only place SeamHttp appears
-
-  createRequest = ({ path, params, responseKey }: ApiRequestOptions) =>
-    new SeamHttpRequest(this.seam, {
-      pathname: path,
-      method: 'POST',
-      body: params,
-      responseKey: responseKey ?? undefined,
-    })
-}
-```
-
-The real request object is the SDK's own `SeamHttpRequest`, so the URL is
-inspectable before sending and an error status rejects with the SDK's typed
-`SeamHttpApiError`. The fake is the in-process mirror of the e2e server — a
-routes table plus a capture — and it rejects with those same SDK error
-classes, never an imitation:
-
-```ts
-// src/lib/http/memory-seam-api.ts
-export class MemorySeamApi implements SeamApi {
-  readonly requests: Array<{ path: string; params: Record<string, unknown> }> =
-    []
-
-  constructor(private readonly routes: Record<string, MemorySeamApiResponse>) {}
-
-  createRequest = ({ path, params }: ApiRequestOptions): SeamApiRequest => ({
-    url: new URL(`https://memory.seam.example${path}`),
-    method: 'POST',
-    body: params,
-    fetchResponse: async () => {
-      this.requests.push({ path, params })
-      const route = this.routes[path]
-      if (route == null || route.status >= 400) throw toSeamHttpError(route)
-      return route.data
-    },
-  })
-}
-```
+[`MemorySeamApi`](src/lib/http/memory-seam-api.ts) runs that same adapter over
+an in-memory wire, with a routes table and request capture. SDK request caching,
+resolution, and typed errors stay real without an HTTP server or a separate
+polling implementation.
 
 This keeps transport separate from presentation: the error-status → exit-code
 behavior is a classical test with zero HTTP:

@@ -199,16 +199,9 @@ seam devices list > devices.json
 seam devices list | jq '.devices[].device_id'
 ```
 
-### Action attempts
-
-Action commands wait automatically for the action attempt to succeed or fail,
-including in non-interactive mode. To return immediately instead:
-
-```bash
-seam locks unlock-door --device-id "$MY_DOOR" --no-wait-for-action-attempt
-```
-
-Run `seam locks unlock-door --help` for waiting and timing options.
+Action commands wait automatically, including in non-interactive mode. Pass
+`--no-wait-for-action-attempt` to return immediately; run
+`seam locks unlock-door --help` for waiting and timing options.
 
 ### Pagination
 
