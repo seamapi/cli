@@ -1,43 +1,71 @@
-import { SeamHttpApiError, SeamHttpInvalidInputError } from '@seamapi/http'
+import {
+  SeamHttp,
+  SeamHttpApiError,
+  SeamHttpInvalidInputError,
+} from '@seamapi/http'
 
-import type { ApiRequestOptions, SeamApi, SeamApiRequest } from './api.js'
+import { HttpSeamApi } from './api.js'
 
 export interface MemorySeamApiResponse {
   status: number
   data: unknown
 }
 
+type MemoryRoute = MemorySeamApiResponse | MemorySeamApiResponse[] | Error
+
 /**
- * A real {@link SeamApi} answering from a routes table and recording every
- * request, for tests: the in-process mirror of the e2e suite's HTTP server.
- * Error statuses reject with the SDK's own error classes, exactly as the
- * real transport does.
+ * The real API adapter over an in-memory wire: exercises the SDK's request
+ * cache and action-attempt resolver without HTTP or a second polling loop.
  */
-export class MemorySeamApi implements SeamApi {
+export class MemorySeamApi extends HttpSeamApi {
   /** Every request sent, in order — assert on the outbound messages. */
   readonly requests: Array<{ path: string; params: Record<string, unknown> }> =
     []
 
-  constructor(private readonly routes: Record<string, MemorySeamApiResponse>) {}
+  constructor(routes: Record<string, MemoryRoute>) {
+    const seam = new SeamHttp({
+      endpoint: 'https://memory.seam.example',
+      apiKey: 'seam_memory',
+    })
+    super(seam)
 
-  createRequest = ({ path, params }: ApiRequestOptions): SeamApiRequest => ({
-    url: new URL(`https://memory.seam.example${path}`),
-    method: 'POST',
-    body: params,
-    fetchResponse: async () => {
+    seam.client.defaults.adapter = async (config) => {
+      const path = config.url ?? ''
+      const params =
+        config.params ??
+        (typeof config.data === 'string'
+          ? JSON.parse(config.data)
+          : config.data) ??
+        {}
       this.requests.push({ path, params })
 
-      const route = this.routes[path] ?? {
+      const configured = routes[path]
+      let route: MemorySeamApiResponse | Error | undefined
+      if (Array.isArray(configured)) {
+        if (configured.length > 1) {
+          route = configured.shift()
+        } else {
+          route = configured[0]
+        }
+      } else {
+        route = configured
+      }
+      route ??= {
         status: 404,
         data: { error: { type: 'not_found', message: 'Not Found' } },
       }
 
-      if (route.status >= 400) {
-        throw toSeamHttpError(route)
+      if (route instanceof Error) throw route
+      if (route.status >= 400) throw toSeamHttpError(route)
+      return {
+        data: route.data,
+        status: route.status,
+        statusText: 'OK',
+        headers: {},
+        config,
       }
-      return route.data
-    },
-  })
+    }
+  }
 }
 
 const toSeamHttpError = (route: MemorySeamApiResponse): SeamHttpApiError => {
@@ -50,5 +78,5 @@ const toSeamHttpError = (route: MemorySeamApiResponse): SeamHttpApiError => {
 }
 
 export const createMemorySeamApi = (
-  routes: Record<string, MemorySeamApiResponse>,
+  routes: Record<string, MemoryRoute>,
 ): MemorySeamApi => new MemorySeamApi(routes)

@@ -199,6 +199,9 @@ seam devices list > devices.json
 seam devices list | jq '.devices[].device_id'
 ```
 
+The CLI waits for actions to finish by default. To return immediately, pass
+`--no-wait-for-action-attempt`.
+
 ### Pagination
 
 Every command that paginates accepts `--page-cursor` to select a page of

@@ -83,6 +83,48 @@ export const testBlueprint = {
           },
           response: { responseType: 'resource', responseKey: 'access_code' },
         },
+        {
+          path: '/locks/unlock_door',
+          title: 'Unlock Door',
+          description: 'Unlocks a door.',
+          request: {
+            parameters: [
+              {
+                name: 'device_id',
+                description: 'ID of the device.',
+                format: 'id',
+                isRequired: true,
+              },
+            ],
+          },
+          response: { responseType: 'resource', responseKey: 'action_attempt' },
+        },
+        {
+          path: '/action_attempts/get',
+          title: 'Get Action Attempt',
+          description: 'Gets an action attempt.',
+          request: {
+            parameters: [
+              {
+                name: 'action_attempt_id',
+                description: 'ID of the action attempt.',
+                format: 'id',
+                isRequired: true,
+              },
+            ],
+          },
+          response: { responseType: 'resource', responseKey: 'action_attempt' },
+        },
+        {
+          path: '/action_attempts/list',
+          title: 'List Action Attempts',
+          description: 'Lists action attempts.',
+          request: { parameters: [] },
+          response: {
+            responseType: 'resource_list',
+            responseKey: 'action_attempts',
+          },
+        },
       ],
     },
   ],

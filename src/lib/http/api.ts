@@ -1,10 +1,17 @@
-import { type SeamHttp, SeamHttpRequest } from '@seamapi/http'
+import {
+  type SeamHttp,
+  SeamHttpRequest,
+  type SeamHttpRequestOptions,
+} from '@seamapi/http'
 
 import type { AuthContext } from 'lib/context.js'
 
 import { getSeam } from './client.js'
 
-export interface ApiRequestOptions {
+export interface ApiRequestOptions extends Pick<
+  SeamHttpRequestOptions,
+  'waitForActionAttempt'
+> {
   path: string
   params: Record<string, unknown>
   /** Response key documented for the endpoint, e.g., `devices`. */
@@ -13,17 +20,16 @@ export interface ApiRequestOptions {
 
 /**
  * A prepared call to the Seam API: inspectable before it is sent, e.g., to
- * report the URL, then sent with {@link SeamApiRequest.fetchResponse}.
- *
- * The real implementation is the SDK's own `SeamHttpRequest`; sending one
- * rejects with a `SeamHttpApiError` when the API reports an error.
+ * report the URL, then executed through the SDK.
  */
 export interface SeamApiRequest {
   readonly url: URL
   readonly method: string
   readonly body: unknown
-  /** Send the request and return the full response body. */
+  /** Return the full response body without automatic waiting. */
   fetchResponse: () => Promise<unknown>
+  /** Return the response resource with SDK automatic action-attempt waiting. */
+  execute: () => Promise<unknown>
 }
 
 /**
@@ -43,6 +49,7 @@ export class HttpSeamApi implements SeamApi {
     path,
     params,
     responseKey,
+    waitForActionAttempt,
   }: ApiRequestOptions): SeamApiRequest =>
     new SeamHttpRequest<Record<string, unknown>, string | undefined>(
       this.seam,
@@ -51,6 +58,14 @@ export class HttpSeamApi implements SeamApi {
         method: 'POST',
         body: params,
         responseKey: responseKey ?? undefined,
+        options:
+          waitForActionAttempt === undefined ? {} : { waitForActionAttempt },
+        actionAttempts: {
+          get: (params) =>
+            this.seam.actionAttempts.get(params, {
+              waitForActionAttempt: false,
+            }),
+        },
       },
     )
 }

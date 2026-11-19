@@ -1,7 +1,12 @@
 import { isDeepStrictEqual as isEqual } from 'node:util'
 
 import { coerceArgParams } from 'lib/args/coerce.js'
-import { parseCliArgs, toArgName, toArgParams } from 'lib/args/parse.js'
+import {
+  getActionAttemptWaitOptions,
+  parseCliArgs,
+  toArgName,
+  toArgParams,
+} from 'lib/args/parse.js'
 import { assertRequiredParams } from 'lib/args/validate.js'
 import {
   getCommandBlueprintDef,
@@ -36,9 +41,11 @@ export const executeApiCommand = async (
   const stringKeys = parameters
     .filter(({ format }) => format !== 'boolean' && format !== 'number')
     .flatMap(({ name }) => [name, name.replace(/_/g, '-')])
+  const args = parseCliArgs(invocation.argv, { stringKeys })
+  const waitOptions = getActionAttemptWaitOptions(args)
   const { params: argParams, issues } = coerceArgParams(
     parameters,
-    toArgParams(parseCliArgs(invocation.argv, { stringKeys })),
+    toArgParams(args),
   )
 
   if (issues.length > 0) {
@@ -83,7 +90,12 @@ export const executeApiCommand = async (
 
   const api = await ctx.api()
   const body = await requestSeamApi(
-    { path: apiPath, params, responseKey: getResponseKey(path, ctx) },
+    {
+      path: apiPath,
+      params,
+      responseKey: getResponseKey(path, ctx),
+      ...waitOptions,
+    },
     { api, output: ctx.output },
   )
 
