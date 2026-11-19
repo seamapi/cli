@@ -1,11 +1,9 @@
 import type { CliContext } from 'lib/context.js'
 import { isInsideWebBrowser } from 'lib/env.js'
-import { interactForActionAttemptPoll } from 'lib/interactions/index.js'
 import { promptConfirm } from 'lib/prompt.js'
 
 /**
- * Follow-ups a response may call for: opening a connect webview in the
- * browser, and offering to poll a pending action attempt.
+ * Follow-ups a response may call for: opening a connect webview in the browser.
  */
 export const runResponseFollowUps = async (
   data: any,
@@ -15,10 +13,6 @@ export const runResponseFollowUps = async (
 
   if (data?.connect_webview) {
     await handleConnectWebview(data.connect_webview, isNonInteractive)
-  }
-
-  if (data?.action_attempt && !isNonInteractive) {
-    await interactForActionAttemptPoll(data.action_attempt)
   }
 }
 

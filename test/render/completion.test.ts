@@ -65,6 +65,22 @@ test('fish completion: guards each candidate with its command path', () => {
   expect(script).toContain(`complete -c seam -s h -l help -d`)
 })
 
+test.each(completionShells)(
+  '%s completion: includes only final AA controls',
+  (shell) => {
+    const script = renderCompletion(shell, spec)
+    for (const flag of [
+      'wait-for-action-attempt',
+      'no-wait-for-action-attempt',
+      'action-attempt-timeout',
+      'action-attempt-polling-interval',
+    ]) {
+      expect(script).toContain(flag)
+    }
+    expect(script).not.toContain('action-attempt-wait-timeout')
+  },
+)
+
 test.each(completionShells)('%s completion: quotes safely', (shell) => {
   const script = renderCompletion(shell, spec)
   // Descriptions are embedded in single-quoted shell strings.

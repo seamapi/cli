@@ -70,6 +70,42 @@ export interface CommandSpec {
 
 export const globalFlags: CommandFlag[] = [
   {
+    long: 'wait-for-action-attempt',
+    short: null,
+    description:
+      'Wait for action attempts to succeed or fail (default in all modes).',
+    values: [],
+    takesValue: false,
+    isRequired: false,
+  },
+  {
+    long: 'no-wait-for-action-attempt',
+    short: null,
+    description:
+      'Return the initial action attempt without waiting or polling.',
+    values: [],
+    takesValue: false,
+    isRequired: false,
+  },
+  {
+    long: 'action-attempt-timeout',
+    short: null,
+    description:
+      'Action-attempt wait timeout in seconds (positive number, default 10).',
+    values: [],
+    takesValue: true,
+    isRequired: false,
+  },
+  {
+    long: 'action-attempt-polling-interval',
+    short: null,
+    description:
+      'Action-attempt polling interval in seconds (positive number, default 1; fractions allowed).',
+    values: [],
+    takesValue: true,
+    isRequired: false,
+  },
+  {
     long: 'endpoint',
     short: null,
     description:

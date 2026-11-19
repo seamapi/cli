@@ -5,14 +5,9 @@ import type { Output } from 'lib/output/output.js'
 import { selectResponsePayload } from 'lib/output/select-response-payload.js'
 import { withLoading } from 'lib/output/with-loading.js'
 
-import type { SeamApi } from './api.js'
+import type { ApiRequestOptions, SeamApi } from './api.js'
 
-export interface RequestSeamApiOptions {
-  path: string
-  params: Record<string, any>
-  /** Response key for the endpoint, used to trim the reported payload. */
-  responseKey?: string | null | undefined
-}
+export type RequestSeamApiOptions = ApiRequestOptions
 
 export interface RequestSeamApiDependencies {
   api: SeamApi

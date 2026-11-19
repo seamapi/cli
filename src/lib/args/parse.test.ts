@@ -2,9 +2,11 @@ import type { ParsedArgs } from 'minimist'
 import { expect, test } from 'vitest'
 
 import {
+  getActionAttemptWaitOptions,
   getInteractivity,
   parseCliArgs,
   toArgName,
+  toArgParams,
   toGivenArgName,
   toParameterName,
 } from './parse.js'
@@ -71,6 +73,86 @@ test('parseCliArgs: reads a page cursor exactly as given', () => {
   expect(
     parse(['devices', 'list', '--page_cursor', '0755'])['page_cursor'],
   ).toBe('0755')
+})
+
+test.each([
+  [[], undefined],
+  [['--wait-for-action-attempt'], true],
+  [['--no-wait-for-action-attempt'], false],
+  [['--wait-for-action-attempt', '--no-wait-for-action-attempt'], false],
+  [['--no-wait-for-action-attempt', '--wait-for-action-attempt'], true],
+])(
+  'parseCliArgs: preserves absent/explicit wait and last-wins order %j',
+  (flags, expected) => {
+    // Both the first parse and the endpoint-aware parse use the same CLI controls.
+    for (const options of [{}, { stringKeys: ['device-id'] }]) {
+      const args = parseCliArgs(
+        [...flags, 'locks', 'unlock-door', '--device-id', 'device1'],
+        options,
+      )
+      expect(args._).toEqual(['locks', 'unlock-door'])
+      expect(args['wait-for-action-attempt']).toBe(expected)
+      expect(toArgParams(args)).toEqual({ device_id: 'device1' })
+      expect(getActionAttemptWaitOptions(args)).toEqual(
+        expected === undefined ? {} : { waitForActionAttempt: expected },
+      )
+    }
+  },
+)
+
+test('getActionAttemptWaitOptions: converts seconds once, retaining SDK defaults when absent', () => {
+  expect(getActionAttemptWaitOptions(parseCliArgs([]))).toEqual({})
+  expect(
+    getActionAttemptWaitOptions(
+      parseCliArgs([
+        '--action-attempt-timeout',
+        '2.5',
+        '--action-attempt-polling-interval',
+        '0.05',
+      ]),
+    ),
+  ).toEqual({ waitForActionAttempt: { timeout: 2500, pollingInterval: 50 } })
+  expect(
+    getActionAttemptWaitOptions(
+      parseCliArgs([
+        '--action-attempt-timeout',
+        '1',
+        '--action-attempt-timeout',
+        '3',
+      ]),
+    ),
+  ).toEqual({ waitForActionAttempt: { timeout: 3000 } })
+})
+
+test.each(['action-attempt-timeout', 'action-attempt-polling-interval'])(
+  'getActionAttemptWaitOptions: rejects invalid --%s even with opt-out',
+  (flag) => {
+    for (const value of ['', '0', '-1', 'NaN', 'Infinity', 'abc', '1e308']) {
+      expect(() =>
+        getActionAttemptWaitOptions(
+          parseCliArgs(['--no-wait-for-action-attempt', `--${flag}=${value}`]),
+        ),
+      ).toThrow(`--${flag} expects a finite positive number of seconds`)
+    }
+    expect(() =>
+      getActionAttemptWaitOptions(parseCliArgs([`--${flag}`])),
+    ).toThrow()
+  },
+)
+
+test('getActionAttemptWaitOptions: opt-out takes precedence over valid timing controls', () => {
+  const args = parseCliArgs([
+    '--wait-for-action-attempt',
+    '--action-attempt-timeout',
+    '4',
+    '--action-attempt-polling-interval',
+    '.1',
+    '--no-wait-for-action-attempt',
+  ])
+  expect(getActionAttemptWaitOptions(args)).toEqual({
+    waitForActionAttempt: false,
+  })
+  expect(toArgParams(args)).toEqual({})
 })
 
 test('toArgName: renders a parameter as its argument', () => {

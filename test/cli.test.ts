@@ -7,6 +7,11 @@ import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { afterAll, beforeAll, expect, test } from 'vitest'
 
+import {
+  failedActionAttempt,
+  pendingActionAttempt,
+  successfulActionAttempt,
+} from './fixtures/action-attempt.js'
 import { testBlueprint } from './fixtures/blueprint.js'
 
 const projectRoot = fileURLToPath(new URL('..', import.meta.url))
@@ -36,6 +41,10 @@ let requests: Array<{
   headers: Record<string, string | string[] | undefined>
 }> = []
 let failNextRequest = false
+let initialActionAttempt = pendingActionAttempt
+let polledActionAttempt: unknown = successfulActionAttempt
+let failActionPoll = false
+let onActionPoll: (() => void) | undefined
 
 beforeAll(async () => {
   server = createServer((req, res) => {
@@ -55,8 +64,31 @@ beforeAll(async () => {
         return
       }
 
+      const path = new URL(req.url ?? '', 'http://localhost').pathname
+      if (
+        path === '/action_attempts/get' &&
+        req.method === 'GET' &&
+        failActionPoll
+      ) {
+        failActionPoll = false
+        res.writeHead(400, { 'content-type': 'application/json' })
+        res.end(JSON.stringify(errorResponse))
+        return
+      }
+      const payload =
+        path === '/locks/unlock_door' ||
+        (path === '/action_attempts/get' && req.method === 'POST')
+          ? { action_attempt: initialActionAttempt, ok: true }
+          : path === '/action_attempts/get'
+            ? { action_attempt: polledActionAttempt, ok: true }
+            : path === '/action_attempts/list'
+              ? { action_attempts: [pendingActionAttempt], ok: true }
+              : devicesListResponse
       res.writeHead(200, { 'content-type': 'application/json' })
-      res.end(JSON.stringify(devicesListResponse))
+      res.end(JSON.stringify(payload))
+      if (path === '/action_attempts/get' && req.method === 'GET') {
+        onActionPoll?.()
+      }
     })
   })
 
@@ -193,6 +225,172 @@ test('cli: writes only the response to stdout as json', async () => {
   })
   expect(stdout).not.toContain('Making request')
   expect(stderr).not.toContain('device1')
+})
+
+test.for([[], ['-y'], ['--wait-for-action-attempt']])(
+  'cli: waits by default with %j and reuses resolved auth for polling',
+  async (flags) => {
+    requests = []
+    initialActionAttempt = pendingActionAttempt
+    polledActionAttempt = successfulActionAttempt
+    const { stdout, stderr, exitCode } = await runCli(
+      [
+        ...flags,
+        'locks',
+        'unlock-door',
+        '--device-id',
+        'device1',
+        '--action-attempt-timeout',
+        '1',
+        '--action-attempt-polling-interval',
+        '.001',
+        '--endpoint',
+        endpoint,
+        '--workspace-id',
+        'workspace_from_flag',
+      ],
+      {
+        configHome: otherEndpointConfigHome,
+        cacheHome,
+        env: {
+          SEAM_CLI_TOKEN: 'seam_at1_from_env',
+          SEAM_CLI_ENDPOINT: 'http://localhost:1',
+          SEAM_CLI_WORKSPACE_ID: 'workspace_from_env',
+        },
+      },
+    )
+    expect(exitCode).toBe(0)
+    expect(JSON.parse(stdout)).toEqual({
+      action_attempt: successfulActionAttempt,
+    })
+    expect(stderr).toBe('')
+    expect(requests).toHaveLength(2)
+    expect(requests[0]?.path).toBe('/locks/unlock_door')
+    expect(requests[0]?.body).toEqual({ device_id: 'device1' })
+    const pollUrl = new URL(requests[1]?.path ?? '', endpoint)
+    expect(pollUrl.pathname).toBe('/action_attempts/get')
+    expect(pollUrl.searchParams.get('action_attempt_id')).toBe('attempt1')
+    for (const request of requests) {
+      expect(request.headers['authorization']).toBe('Bearer seam_at1_from_env')
+      expect(request.headers['seam-workspace']).toBe('workspace_from_flag')
+    }
+  },
+)
+
+test('cli: explicit opt-out prints pending once without polling or prompts', async () => {
+  requests = []
+  initialActionAttempt = pendingActionAttempt
+  const { stdout, stderr, exitCode } = await runCli(
+    [
+      '--no-wait-for-action-attempt',
+      'locks',
+      'unlock-door',
+      '--device-id',
+      'device1',
+    ],
+    { cacheHome },
+  )
+  expect(exitCode).toBe(0)
+  expect(JSON.parse(stdout)).toEqual({ action_attempt: pendingActionAttempt })
+  expect(stderr).toBe('')
+  expect(requests).toHaveLength(1)
+  expect(requests[0]?.body).toEqual({ device_id: 'device1' })
+})
+
+test('cli: AA failure exits 1 with stderr only; polling HTTP errors keep the error payload', async () => {
+  requests = []
+  polledActionAttempt = failedActionAttempt
+  const args = [
+    'locks',
+    'unlock-door',
+    '--device-id',
+    'device1',
+    '--action-attempt-polling-interval',
+    '.001',
+  ]
+  const failed = await runCli(args, { cacheHome })
+  expect(failed.exitCode).toBe(1)
+  expect(failed.stdout).toBe('')
+  expect(failed.stderr).toContain('The device is offline')
+  expect(requests).toHaveLength(2)
+
+  requests = []
+  failActionPoll = true
+  const httpFailed = await runCli(args, { cacheHome })
+  expect(httpFailed.exitCode).toBe(1)
+  expect(JSON.parse(httpFailed.stdout)).toEqual({ error: errorResponse.error })
+  expect(requests).toHaveLength(2)
+})
+
+test('cli: invalid durations fail before submission even with opt-out', async () => {
+  requests = []
+  const { exitCode, stdout, stderr } = await runCli(
+    [
+      'locks',
+      'unlock-door',
+      '--device-id',
+      'device1',
+      '--no-wait-for-action-attempt',
+      '--action-attempt-timeout',
+      'Infinity',
+    ],
+    { cacheHome },
+  )
+  expect(exitCode).toBe(1)
+  expect(stdout).toBe('')
+  expect(stderr).toContain(
+    '--action-attempt-timeout expects a finite positive number of seconds',
+  )
+  expect(requests).toEqual([])
+})
+
+test('cli: SIGINT during polling stops local waiting without replay or cancellation', async () => {
+  requests = []
+  polledActionAttempt = pendingActionAttempt
+  const child = execa(
+    'node',
+    [
+      '--import',
+      'tsx',
+      entrypoint,
+      'locks',
+      'unlock-door',
+      '--device-id',
+      'device1',
+      '--action-attempt-polling-interval',
+      '.001',
+    ],
+    {
+      cwd: projectRoot,
+      env: {
+        XDG_CONFIG_HOME: configHome,
+        XDG_STATE_HOME: stateHome,
+        XDG_CACHE_HOME: cacheHome,
+        SEAM_CLI_ENDPOINT: endpoint,
+        SEAM_CLI_TOKEN: 'seam_apikey1_token',
+        SEAM_CLI_WORKSPACE_ID: undefined,
+        FORCE_COLOR: '0',
+      },
+      input: '',
+      reject: false,
+    },
+  )
+  onActionPoll = () => {
+    child.kill('SIGINT')
+  }
+  try {
+    const result = await child
+    expect(result.signal).toBe('SIGINT')
+    expect(result.stdout).toBe('')
+    expect(requests).toHaveLength(2)
+    expect(requests[0]?.path).toBe('/locks/unlock_door')
+    expect(new URL(requests[1]?.path ?? '', endpoint).pathname).toBe(
+      '/action_attempts/get',
+    )
+  } finally {
+    onActionPoll = undefined
+    child.kill('SIGKILL')
+  }
 })
 
 test('cli: reads request params piped in as json', async () => {

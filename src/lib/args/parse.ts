@@ -1,5 +1,7 @@
+import type { SeamHttpRequestOptions } from '@seamapi/http'
 import parseArgs, { type ParsedArgs } from 'minimist'
 
+import { UsageError } from 'lib/errors.js'
 import type { AuthOverrides } from 'lib/overrides.js'
 
 /**
@@ -31,6 +33,9 @@ export const interactivityFlags: string[] = [
  */
 export const cliFlags: string[] = [
   ...interactivityFlags,
+  'wait_for_action_attempt',
+  'action_attempt_timeout',
+  'action_attempt_polling_interval',
   'endpoint',
   'h',
   'help',
@@ -57,13 +62,15 @@ export interface ParseCliArgsOptions {
 export const parseCliArgs = (
   argv: string[],
   { stringKeys = [], booleanKeys = [] }: ParseCliArgsOptions = {},
-): ParsedArgs =>
-  parseArgs(argv, {
+): ParsedArgs => {
+  const args = parseArgs(argv, {
     // A page cursor and a code are opaque even before the endpoint's own
     // parameter types are known, so always keep them exactly as given. The
     // overrides are read as given for the same reason: a URL or an id is
     // never a number, however it happens to be spelled.
     string: [
+      'action-attempt-timeout',
+      'action-attempt-polling-interval',
       'code',
       'endpoint',
       'page-cursor',
@@ -72,11 +79,61 @@ export const parseCliArgs = (
       'workspace_id',
       ...stringKeys,
     ],
-    boolean: ['non-interactive', 'interactive', 'json', ...booleanKeys],
+    boolean: [
+      'non-interactive',
+      'interactive',
+      'json',
+      'wait-for-action-attempt',
+      ...booleanKeys,
+    ],
+    // Do not confuse minimist's implicit false with an explicit opt-out.
+    default: { 'wait-for-action-attempt': null },
     // Deliberately not aliased to -n, which is reserved for a future
     // --dry-run flag.
     alias: { 'non-interactive': 'y', interactive: 'i' },
   })
+  if (args['wait-for-action-attempt'] === null) {
+    delete args['wait-for-action-attempt']
+  }
+  return args
+}
+
+/** Validate seconds at the CLI boundary and convert to SDK milliseconds once. */
+export const getActionAttemptWaitOptions = (
+  args: ParsedArgs,
+): Pick<SeamHttpRequestOptions, 'waitForActionAttempt'> => {
+  const timeout = readDuration(
+    args['action-attempt-timeout'],
+    'action-attempt-timeout',
+  )
+  const pollingInterval = readDuration(
+    args['action-attempt-polling-interval'],
+    'action-attempt-polling-interval',
+  )
+  const wait = args['wait-for-action-attempt'] as boolean | undefined
+  if (wait === false) return { waitForActionAttempt: false }
+  if (timeout === undefined && pollingInterval === undefined) {
+    return wait === undefined ? {} : { waitForActionAttempt: wait }
+  }
+  return {
+    waitForActionAttempt: {
+      ...(timeout === undefined ? {} : { timeout }),
+      ...(pollingInterval === undefined ? {} : { pollingInterval }),
+    },
+  }
+}
+
+const readDuration = (value: unknown, flag: string): number | undefined => {
+  if (value === undefined) return undefined
+  const seconds = Number(Array.isArray(value) ? value.at(-1) : value)
+  const milliseconds = seconds * 1_000
+  if (!Number.isFinite(milliseconds) || milliseconds <= 0) {
+    throw new UsageError(
+      `--${flag} expects a finite positive number of seconds`,
+    )
+  }
+  return milliseconds
+}
 
 /**
  * The request params among the parsed arguments: every key normalized to

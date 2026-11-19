@@ -1,10 +1,17 @@
-import { type SeamHttp, SeamHttpRequest } from '@seamapi/http'
+import {
+  type SeamHttp,
+  SeamHttpRequest,
+  type SeamHttpRequestOptions,
+} from '@seamapi/http'
 
 import type { AuthContext } from 'lib/context.js'
 
 import { getSeam } from './client.js'
 
-export interface ApiRequestOptions {
+export interface ApiRequestOptions extends Pick<
+  SeamHttpRequestOptions,
+  'waitForActionAttempt'
+> {
   path: string
   params: Record<string, unknown>
   /** Response key documented for the endpoint, e.g., `devices`. */
@@ -15,14 +22,15 @@ export interface ApiRequestOptions {
  * A prepared call to the Seam API: inspectable before it is sent, e.g., to
  * report the URL, then sent with {@link SeamApiRequest.fetchResponse}.
  *
- * The real implementation is the SDK's own `SeamHttpRequest`; sending one
- * rejects with a `SeamHttpApiError` when the API reports an error.
+ * Uses the SDK's cached request and resolver, retaining the response wrapper.
+ * HTTP failures reject with `SeamHttpApiError`; action failures and timeouts
+ * reject with the SDK's action-attempt errors before returning any payload.
  */
 export interface SeamApiRequest {
   readonly url: URL
   readonly method: string
   readonly body: unknown
-  /** Send the request and return the full response body. */
+  /** Send once, wait if applicable, and return the full response body. */
   fetchResponse: () => Promise<unknown>
 }
 
@@ -43,16 +51,41 @@ export class HttpSeamApi implements SeamApi {
     path,
     params,
     responseKey,
-  }: ApiRequestOptions): SeamApiRequest =>
-    new SeamHttpRequest<Record<string, unknown>, string | undefined>(
-      this.seam,
-      {
-        pathname: path,
-        method: 'POST',
-        body: params,
-        responseKey: responseKey ?? undefined,
+    waitForActionAttempt,
+  }: ApiRequestOptions): SeamApiRequest => {
+    const request = new SeamHttpRequest<
+      Record<string, unknown>,
+      string | undefined
+    >(this.seam, {
+      pathname: path,
+      method: 'POST',
+      body: params,
+      responseKey: responseKey ?? undefined,
+      options:
+        waitForActionAttempt === undefined ? {} : { waitForActionAttempt },
+      actionAttempts: {
+        get: (params) =>
+          this.seam.actionAttempts.get(params, { waitForActionAttempt: false }),
       },
-    )
+    })
+
+    return {
+      url: request.url,
+      method: request.method,
+      body: request.body,
+      fetchResponse: async () => {
+        const response = await request.fetchResponse()
+        if (
+          responseKey !== 'action_attempt' ||
+          waitForActionAttempt === false
+        ) {
+          return response
+        }
+        // execute() reuses the cached submission and runs the SDK resolver.
+        return { ...response, action_attempt: await request.execute() }
+      },
+    }
+  }
 }
 
 export const createSeamApi = async (auth?: AuthContext): Promise<SeamApi> => {

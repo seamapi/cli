@@ -72,6 +72,21 @@ test('command help: documents the flags of the command', () => {
   expect(rendered).toContain('-y')
 })
 
+test('command help: documents default waiting, opt-out and seconds-based timing controls', () => {
+  const rendered = helpText('locks', 'unlock-door')
+  for (const flag of [
+    '--wait-for-action-attempt',
+    '--no-wait-for-action-attempt',
+    '--action-attempt-timeout',
+    '--action-attempt-polling-interval',
+  ]) {
+    expect(rendered).toContain(flag)
+  }
+  expect(rendered).toContain('default in all modes')
+  expect(rendered).toContain('seconds (positive number, default 10)')
+  expect(rendered).toContain('default 1; fractions allowed')
+})
+
 test('command help: keeps parameters apart from the CLI options', () => {
   const rendered = helpText('devices', 'list')
 

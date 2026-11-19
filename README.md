@@ -199,6 +199,45 @@ seam devices list > devices.json
 seam devices list | jq '.devices[].device_id'
 ```
 
+### Action attempts
+
+Commands returning a single `action_attempt` wait automatically until it
+succeeds or fails, in both interactive and non-interactive modes. This also
+applies to `seam action-attempts get`, but not to lists of action attempts.
+`--non-interactive` controls prompts only.
+
+```bash
+# Wait, then print one full action attempt, including its result
+seam locks unlock-door --device-id "$MY_DOOR"
+
+# Return the initial action attempt immediately, without polling
+seam locks unlock-door --device-id "$MY_DOOR" --no-wait-for-action-attempt
+```
+
+`--wait-for-action-attempt` explicitly selects the default;
+`--no-wait-for-action-attempt` opts out. If repeated, the last form wins.
+The wait timeout is **10 seconds**, with a **1 second** polling interval,
+matching native SDK defaults. Override these with
+`--action-attempt-timeout <seconds>` and
+`--action-attempt-polling-interval <seconds>`. Both accept finite positive
+numbers; fractional seconds are supported. Timing flags have no effect when
+waiting is disabled, but their values must still be valid.
+
+Successful waiting prints exactly one response:
+`{ "action_attempt": <full successful action attempt> }`, not just its
+`result`. An action failure or wait timeout exits **1**, with diagnostics on
+stderr and no result on stdout. HTTP errors (including polling errors) retain
+the usual `{ "error": ... }` stdout payload and exit **1**. With opt-out, an
+HTTP-successful request exits **0** and prints its initial action attempt,
+even if it is pending or already errored.
+
+Waiting adds latency compared with older CLI versions that returned pending
+attempts immediately; use the opt-out to retain that behavior in scripts.
+The timeout is a polling budget, not a strict end-to-end HTTP deadline.
+A timeout or Ctrl-C stops local waiting, not the server-side action: its
+outcome may still be unknown, so do not blindly retry a physical action.
+Raw HTTP callers must still poll for themselves.
+
 ### Pagination
 
 Every command that paginates accepts `--page-cursor` to select a page of
