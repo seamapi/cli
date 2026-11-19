@@ -33,6 +33,9 @@ export const requestSeamApi = async (
   let body: unknown
   try {
     body = await withLoading('Making request...', async () => {
+      if (options.responseKey === 'action_attempt') {
+        return { action_attempt: await request.execute() }
+      }
       return await request.fetchResponse()
     })
   } catch (error) {

@@ -199,9 +199,8 @@ seam devices list > devices.json
 seam devices list | jq '.devices[].device_id'
 ```
 
-Action commands wait automatically, including in non-interactive mode. Pass
-`--no-wait-for-action-attempt` to return immediately; run
-`seam locks unlock-door --help` for waiting and timing options.
+The CLI waits for actions to finish by default. To return immediately, pass
+`--no-wait-for-action-attempt`.
 
 ### Pagination
 

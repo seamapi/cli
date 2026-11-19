@@ -40,11 +40,17 @@ export class MemorySeamApi extends HttpSeamApi {
       this.requests.push({ path, params })
 
       const configured = routes[path]
-      const route = (Array.isArray(configured)
-        ? configured.length > 1
-          ? configured.shift()
-          : configured[0]
-        : configured) ?? {
+      let route: MemorySeamApiResponse | Error | undefined
+      if (Array.isArray(configured)) {
+        if (configured.length > 1) {
+          route = configured.shift()
+        } else {
+          route = configured[0]
+        }
+      } else {
+        route = configured
+      }
+      route ??= {
         status: 404,
         data: { error: { type: 'not_found', message: 'Not Found' } },
       }

@@ -59,7 +59,7 @@ test.each([undefined, true])(
     await vi.advanceTimersByTimeAsync(1)
     expect(memory.stdout()).toBe('')
     await vi.advanceTimersByTimeAsync(1000)
-    expect(await result).toEqual({ action_attempt: success, ok: true })
+    expect(await result).toEqual({ action_attempt: success })
     expect(JSON.parse(memory.stdout())).toEqual({ action_attempt: success })
     expect(memory.stderr()).toBe('')
     expect(api.requests).toEqual([

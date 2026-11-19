@@ -75,15 +75,19 @@ beforeAll(async () => {
         res.end(JSON.stringify(errorResponse))
         return
       }
-      const payload =
+      let payload: unknown
+      if (
         path === '/locks/unlock_door' ||
         (path === '/action_attempts/get' && req.method === 'POST')
-          ? { action_attempt: initialActionAttempt, ok: true }
-          : path === '/action_attempts/get'
-            ? { action_attempt: polledActionAttempt, ok: true }
-            : path === '/action_attempts/list'
-              ? { action_attempts: [pendingActionAttempt], ok: true }
-              : devicesListResponse
+      ) {
+        payload = { action_attempt: initialActionAttempt, ok: true }
+      } else if (path === '/action_attempts/get') {
+        payload = { action_attempt: polledActionAttempt, ok: true }
+      } else if (path === '/action_attempts/list') {
+        payload = { action_attempts: [pendingActionAttempt], ok: true }
+      } else {
+        payload = devicesListResponse
+      }
       res.writeHead(200, { 'content-type': 'application/json' })
       res.end(JSON.stringify(payload))
       if (path === '/action_attempts/get' && req.method === 'GET') {
