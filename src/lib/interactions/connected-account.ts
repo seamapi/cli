@@ -9,15 +9,8 @@ export const interactForConnectedAccount = async (initialValue?: string) => {
     fetchResources: () => seam.connectedAccounts.list(),
     initialValue,
     toChoice: (connectedAccount) => {
-      const identifiers = Object.values(
-        connectedAccount.user_identifier ?? {},
-      ).filter((value): value is string => typeof value === 'string')
-
       return {
-        title:
-          connectedAccount.user_identifier?.email ??
-          identifiers[0] ??
-          '<No Name>',
+        title: connectedAccount.display_name || '<No Name>',
         value: connectedAccount.connected_account_id,
         description: `${connectedAccount.account_type} ${connectedAccount.connected_account_id}`,
       }

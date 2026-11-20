@@ -9,7 +9,7 @@ export const interactForDevice = async (initialValue?: string) => {
     fetchResources: () => seam.devices.list(),
     initialValue,
     toChoice: (device) => ({
-      title: device.properties.name ?? '<No Name>',
+      title: device.properties?.name ?? '<No Name>',
       value: device.device_id,
       description: `${device.device_type} ${device.device_id}`,
     }),
