@@ -28,7 +28,7 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         with:
           node_auth_token: ${{ secrets.GH_TOKEN }}
       - name: Format
