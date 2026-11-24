@@ -19,7 +19,6 @@ Bootstrap a new TypeScript module in five minutes or less.
 - Linting with the [JavaScript neostandard Style] using [ESLint].
 - [Prettier] code.
 - Futuristic debuggable unit testing with [AVA].
-- Robust static dependency analysis with [DPDM].
 - Fully automated version management and package publishing with [semantic-release].
 - Continuous testing and package publishing with [GitHub Actions].
 - Consistent coding with [EditorConfig].
@@ -29,7 +28,6 @@ Bootstrap a new TypeScript module in five minutes or less.
 
 [AVA]: https://github.com/avajs/ava
 [code owners]: https://github.blog/2017-07-06-introducing-code-owners/
-[DPDM]: https://github.com/acrazing/dpdm
 [ECMAScript module]: https://nodejs.org/api/esm.html
 [ESLint]: https://eslint.org/
 [EditorConfig]: https://editorconfig.org/
@@ -95,10 +93,11 @@ $ npm install @seamapi/makenew-tsmodule
 
 ### Quickstart
 
+Use the Node.js and npm versions specified in the [Requirements](#requirements).
+
 ```
 $ git clone https://github.com/seamapi/makenew-tsmodule.git
 $ cd makenew-tsmodule
-$ nvm install
 $ npm install
 $ npm run test:watch
 ```
@@ -124,20 +123,8 @@ $ git clone git@github.com:seamapi/makenew-tsmodule.git
 
 ### Requirements
 
-You will need [Node.js] with [npm] and a [Node.js debugging] client.
-
-Be sure that all commands run under the correct Node version, e.g.,
-if using [nvm], install the correct version with
-
-```
-$ nvm install
-```
-
-Set the active version for each shell session with
-
-```
-$ nvm use
-```
+Use [Node.js] and [npm] versions that satisfy `devEngines` in [`package.json`](package.json).
+You will also need a [Node.js debugging] client.
 
 Ensure you are authenticated with the [GitHub Packages npm registry],
 then install the development dependencies with
@@ -149,7 +136,6 @@ $ npm install
 [Node.js]: https://nodejs.org/
 [Node.js debugging]: https://nodejs.org/en/docs/guides/debugging-getting-started/
 [npm]: https://www.npmjs.com/
-[nvm]: https://github.com/creationix/nvm
 [GitHub Packages npm registry]: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry#authenticating-to-github-packages
 
 ### Publishing
