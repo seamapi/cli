@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@seamapi/makenew-tsmodule",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Package skeleton for a TypeScript module.",
   "type": "module",
   "main": "index.js",
@@ -43,7 +43,7 @@
     "prebuild:ts": "del 'index.*' lib",
     "postbuild:ts": "tsc-alias --project tsconfig.build.json",
     "typecheck": "tsc",
-    "test": "c8 ava",
+    "test": "ava",
     "pretest": "tsx src/index.ts",
     "test:update": "ava --update-snapshots",
     "test:watch": "ava --watch",
@@ -54,8 +54,7 @@
     "example": "tsx examples",
     "example:inspect": "tsx --inspect examples",
     "format": "prettier --write --ignore-path .gitignore .",
-    "preformat": "eslint --fix .",
-    "report": "c8 report"
+    "preformat": "eslint --fix ."
   },
   "engines": {
     "node": ">=22.12.0",
@@ -72,10 +71,12 @@
     }
   },
   "packageManager": "npm@11.19.0",
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "ava": "^8.0.1",
-    "c8": "^12.0.0",
     "del-cli": "^8.0.1",
     "eslint": "^10.14.0",
     "eslint-import-resolver-typescript": "^4.4.5",

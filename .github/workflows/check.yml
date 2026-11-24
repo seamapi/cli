@@ -29,7 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         with:
           node_version: ${{ matrix.node }}
       - name: Test
@@ -48,7 +48,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         with:
           node_version: ${{ matrix.node }}
       - name: Lint
@@ -120,7 +120,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         with:
           node_version: ${{ matrix.node }}
       - name: Typecheck

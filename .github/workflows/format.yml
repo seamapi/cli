@@ -28,7 +28,7 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
       - name: Format
         run: npm run format
       - name: Commit
