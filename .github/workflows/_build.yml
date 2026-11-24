@@ -9,10 +9,6 @@ on:
         type: string
         required: false
         default: '26'
-    secrets:
-      node_auth_token:
-        description: The Node.js auth token.
-        required: true
     outputs:
       artifact_name:
         description: The artifact name.
