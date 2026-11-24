@@ -19,7 +19,6 @@ Bootstrap a new TypeScript module in five minutes or less.
 - Linting with the [JavaScript neostandard Style] using [ESLint].
 - [Prettier] code.
 - Futuristic debuggable unit testing with [AVA].
-- Code coverage reporting with [Istanbul] and [c8].
 - Robust static dependency analysis with [DPDM].
 - Fully automated version management and package publishing with [semantic-release].
 - Continuous testing and package publishing with [GitHub Actions].
@@ -37,14 +36,12 @@ Bootstrap a new TypeScript module in five minutes or less.
 [GitHub Actions]: https://github.com/features/actions
 [GitHub Codespaces]: https://github.com/features/packages
 [GitHub Packages]: https://github.com/features/packages
-[Istanbul]: https://istanbul.js.org/
 [JavaScript neostandard Style]: https://github.com/neostandard/neostandard
 [Node.js]: https://nodejs.org/
 [Prettier]: https://prettier.io/
 [semantic-release]: https://semantic-release.gitbook.io/
 [stale]: https://github.com/marketplace/stale
 [TypeScript]: https://www.typescriptlang.org/
-[c8]: https://github.com/bcoe/c8
 [landlubber]: https://github.com/razor-x/landlubber
 [npm]: https://www.npmjs.com/
 [yargs]: https://yargs.js.org/
