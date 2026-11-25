@@ -93,6 +93,9 @@
   "allowScripts": {
     "esbuild@0.28.2": true
   },
+  "peerDependencies": {
+    "@seamapi/wizard": "^0.48.1"
+  },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@seamapi/blueprint": "1.13.4",
@@ -128,14 +131,5 @@
     "tsx": "^4.6.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.12"
-  },
-  "peerDependencies": {
-    "@seamapi/wizard": "^0.48.1"
-  },
-  "overrides": {
-    "@modelcontextprotocol/client": "^2.3.0",
-    "@typescript-eslint/typescript-estree": {
-      "minimatch": "^11.0.1"
-    }
   }
 }
