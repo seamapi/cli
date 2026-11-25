@@ -5,7 +5,7 @@ import {
   getEndpointFromEnv,
   getTokenFromEnv,
   getWorkspaceIdFromEnv,
-} from './env.js'
+} from './env-vars.js'
 import type { SeamApi } from './http/api.js'
 import type { Output } from './output/output.js'
 import { getAuthOverrides } from './overrides.js'

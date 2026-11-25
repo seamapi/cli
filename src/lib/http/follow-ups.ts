@@ -1,5 +1,5 @@
 import type { CliContext } from 'lib/context.js'
-import { isInsideWebBrowser } from 'lib/env.js'
+import { isInsideWebBrowser } from 'lib/env-vars.js'
 import { promptConfirm } from 'lib/prompt.js'
 
 /**

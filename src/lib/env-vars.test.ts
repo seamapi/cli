@@ -9,7 +9,7 @@ import {
   getWorkspaceIdFromEnv,
   tokenEnvVar,
   workspaceIdEnvVar,
-} from './env.js'
+} from './env-vars.js'
 
 const envVars = [tokenEnvVar, workspaceIdEnvVar, endpointEnvVar]
 

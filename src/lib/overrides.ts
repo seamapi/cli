@@ -5,7 +5,7 @@
  * and are never stored: only `seam select endpoint` and `seam select
  * workspace` write those settings. They are held here rather than threaded
  * through every call because auth resolves ambiently, exactly as the
- * environment variables they shadow do (see `env.ts`).
+ * environment variables they shadow do (see `env-vars.ts`).
  *
  * Set once from the parsed arguments before anything resolves auth, and
  * reset between tests.

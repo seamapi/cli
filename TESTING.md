@@ -149,7 +149,7 @@ that is `getOutput`/`setOutput`/`resetOutput` + `createMemoryOutput()`,
 `getConfigStore`/`setConfigStore`/`resetConfigStore` +
 `createMemoryConfigStore()`, and `setPromptClient`/`resetPromptClient` +
 `createMemoryPrompt()`. `vi.mock` on a module path is never the delivery
-mechanism for a fake. Direct env reads (`env.ts`, `resolveAuth`) are a genuine
+mechanism for a fake. Direct env reads (`env-vars.ts`, `resolveAuth`) are a genuine
 ambient edge — setting env vars in the test is fine.
 
 ## Anti-pattern

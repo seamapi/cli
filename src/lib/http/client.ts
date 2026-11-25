@@ -6,7 +6,7 @@ import {
 } from '@seamapi/http'
 
 import { type AuthContext, resolveAuth } from 'lib/context.js'
-import { tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
+import { tokenEnvVar, workspaceIdEnvVar } from 'lib/env-vars.js'
 
 export const getSeam = async (
   auth: AuthContext = resolveAuth(),

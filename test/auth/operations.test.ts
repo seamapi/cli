@@ -12,7 +12,7 @@ import {
   createMemoryConfig,
   createMemoryConfigStore,
 } from 'lib/config/memory-config-store.js'
-import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
+import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env-vars.js'
 import { resetAuthOverrides, setAuthOverrides } from 'lib/overrides.js'
 
 const endpoint = 'https://connect.example.com'

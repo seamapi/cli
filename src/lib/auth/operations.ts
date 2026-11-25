@@ -5,7 +5,7 @@ import {
   endpointEnvVar,
   tokenEnvVar,
   workspaceIdEnvVar,
-} from 'lib/env.js'
+} from 'lib/env-vars.js'
 
 import { validateToken } from './validate-token.js'
 

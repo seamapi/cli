@@ -29,7 +29,7 @@ import {
 } from 'lib/commands/registry.js'
 import { getConfig } from 'lib/config/index.js'
 import { type CliContext, resolveAuth } from 'lib/context.js'
-import { tokenEnvVar } from 'lib/env.js'
+import { tokenEnvVar } from 'lib/env-vars.js'
 import { reportErrorAndExit } from 'lib/errors.js'
 import { createSeamApi, type SeamApi } from 'lib/http/api.js'
 import { interactForCommandSelection } from 'lib/interactions/index.js'

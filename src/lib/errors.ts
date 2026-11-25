@@ -1,6 +1,6 @@
 import chalk from 'chalk'
 
-import { EnvVarOverrideError } from './env.js'
+import { EnvVarOverrideError } from './env-vars.js'
 import type { Output } from './output/output.js'
 
 /**

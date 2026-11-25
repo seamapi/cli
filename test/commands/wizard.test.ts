@@ -7,7 +7,7 @@ import { afterEach, beforeEach, expect, test } from 'vitest'
 import { createWizardAdapter, runWizard } from 'lib/commands/local/wizard.js'
 import { createMemoryConfig } from 'lib/config/index.js'
 import { defaultEndpoint } from 'lib/context.js'
-import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env.js'
+import { endpointEnvVar, tokenEnvVar, workspaceIdEnvVar } from 'lib/env-vars.js'
 
 let directory = ''
 
