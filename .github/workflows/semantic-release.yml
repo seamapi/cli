@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
       - name: Semantic release
         id: release
-        uses: cycjimmy/semantic-release-action@v6
+        uses: cycjimmy/semantic-release-action@v8
         with:
           dry_run: true
   release:

@@ -6,7 +6,7 @@ inputs:
   node_version:
     description: The Node.js version.
     required: false
-    default: '24'
+    default: '26'
   registry_url:
     description: The Node.js package registry URL.
     required: false

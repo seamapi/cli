@@ -1,5 +1,5 @@
 import { globalIgnores } from 'eslint/config'
-import importPlugin from 'eslint-plugin-import'
+import importPlugin from 'eslint-plugin-import-x'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import unusedImports from 'eslint-plugin-unused-imports'
 import neostandard, { resolveIgnoresFromGitignore } from 'neostandard'
@@ -20,13 +20,13 @@ export default [
     files,
     plugins: {
       'unused-imports': unusedImports,
-      import: importPlugin,
+      'import-x': importPlugin,
     },
     settings: {
-      'import/parsers': {
+      'import-x/parsers': {
         '@typescript-eslint/parser': ['.ts', '.tsx'],
       },
-      'import/resolver': {
+      'import-x/resolver': {
         typescript: {
           project: './tsconfig.json',
         },
@@ -41,8 +41,8 @@ export default [
           fixStyle: 'inline-type-imports',
         },
       ],
-      'import/no-duplicates': ['error', { 'prefer-inline': true }],
-      'import/no-cycle': [
+      'import-x/no-duplicates': ['error', { 'prefer-inline': true }],
+      'import-x/no-cycle': [
         'error',
         {
           ignoreExternal: true,

@@ -30,7 +30,7 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
       - name: Cut ${{ github.event.inputs.version }} version
         run: npm version --sign-git-tag=true ${{ github.event.inputs.version }}
       - name: Record prerelease channel
